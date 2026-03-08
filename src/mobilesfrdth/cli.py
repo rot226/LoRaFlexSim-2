@@ -14,7 +14,6 @@ from .scenarios import generate_jobs, parse_grid_spec
 
 MIN_SUPPORTED_PYTHON = (3, 11)
 MAX_SUPPORTED_PYTHON_EXCLUSIVE = (3, 15)
-EXPERIMENTAL_WARNING_PYTHON = (3, 14)
 
 PROFILE_PRESETS: dict[str, str] = {
     "smoke": "N=30,50;speed=1;mode=SNIR_OFF,SNIR_ON;algo=ADR,UCB;reps=1;duration_s=300;seed_base=1234",
@@ -403,12 +402,6 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
         return 2
-
-    if sys.version_info[:2] == EXPERIMENTAL_WARNING_PYTHON:
-        print(
-            "Avertissement: Python 3.14 est autorisé, mais certaines dépendances peuvent être encore expérimentales.",
-            file=sys.stderr,
-        )
 
     parser = build_parser()
     try:
