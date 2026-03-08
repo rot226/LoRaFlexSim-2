@@ -7,6 +7,19 @@ import math
 import random
 
 
+THERMAL_NOISE_DENSITY_DBM_PER_HZ = -174.0
+
+
+def thermal_noise_floor_dbm(*, bandwidth_hz: float = 125_000.0, noise_figure_db: float = 6.0) -> float:
+    """Retourne le plancher de bruit thermique ``N0`` (dBm) pour une bande donnée."""
+
+    effective_bw_hz = max(bandwidth_hz, 1.0)
+    return THERMAL_NOISE_DENSITY_DBM_PER_HZ + 10.0 * math.log10(effective_bw_hz) + noise_figure_db
+
+
+DEFAULT_LORA_NOISE_FLOOR_DBM = thermal_noise_floor_dbm()
+
+
 @dataclass(frozen=True)
 class ChannelConfig:
     """Paramètres des pertes radio.
