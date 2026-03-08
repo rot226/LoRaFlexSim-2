@@ -249,6 +249,9 @@ class GridRunOrchestrator:
             params = dict(job.get("params", {}))
             run_id = str(params.get("run_id", job.get("job_id", "run")))
             logger, handlers, run_dir = self._logger_for_run(run_id)
+            run_started_at_s = monotonic()
+            run_success = False
+            run_recorded = False
             try:
                 elapsed_walltime_s = monotonic() - walltime_start_s
                 if max_walltime_s is not None and elapsed_walltime_s >= max_walltime_s:
@@ -295,6 +298,8 @@ class GridRunOrchestrator:
                 )
                 logger.info("Run terminé: uplinks=%s", result.uplink_count)
                 reports.append(RunExecutionReport(run_id=run_id, success=True, run_dir=run_dir))
+                run_success = True
+                run_recorded = True
             except KeyboardInterrupt:
                 logger.warning("Interruption utilisateur détectée (Ctrl+C). Arrêt propre après ce run.")
                 reports.append(
@@ -305,11 +310,18 @@ class GridRunOrchestrator:
                         error="Interruption utilisateur (Ctrl+C)",
                     )
                 )
+                run_recorded = True
                 interrupted = True
             except Exception as exc:
                 logger.exception("Run en erreur: %s", exc)
                 reports.append(RunExecutionReport(run_id=run_id, success=False, run_dir=run_dir, error=str(exc)))
+                run_recorded = True
             finally:
+                if run_recorded:
+                    run_duration_s = monotonic() - run_started_at_s
+                    run_label = len(reports)
+                    run_status = "succès" if run_success else "échec"
+                    print(f"Run {run_label}/{scheduled_runs} | durée={run_duration_s:.2f}s | {run_status}")
                 for handler in handlers:
                     logger.removeHandler(handler)
                     handler.close()
