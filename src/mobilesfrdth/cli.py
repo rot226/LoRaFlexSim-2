@@ -7,7 +7,6 @@ import json
 import sys
 from pathlib import Path
 from time import monotonic
-from typing import Iterable
 
 from .scenarios import generate_jobs, parse_grid_spec
 
@@ -83,25 +82,6 @@ def _positive_float(value: str, *, name: str) -> float:
 def _dump_json(path: Path, payload: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
-
-
-def _read_job_payloads(results: Iterable[Path]) -> list[dict]:
-    payloads: list[dict] = []
-    for result in results:
-        if result.is_dir():
-            candidate = result / "jobs.json"
-            if not candidate.is_file():
-                raise ValueError(f"Répertoire résultat sans jobs.json: {result}")
-            target = candidate
-        else:
-            target = result
-        with target.open("r", encoding="utf-8") as handle:
-            data = json.load(handle)
-            if isinstance(data, dict):
-                payloads.append(data)
-            else:
-                raise ValueError(f"Format JSON inattendu dans {target} (objet requis).")
-    return payloads
 
 
 def _format_eta(seconds: float | None) -> str:
@@ -207,7 +187,19 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        from .simulator.io import aggregate_runs
+        from .simulator.io import aggregate_runs, summarize_run_completeness
+
+        completeness = summarize_run_completeness(args.results)
+        expected_runs = completeness["expected_runs"]
+        found_runs = int(completeness["found_runs"])
+        missing_runs = int(completeness["missing_runs"])
+        if args.strict_completeness and expected_runs is not None and found_runs != expected_runs:
+            print(
+                "Erreur de complétude: "
+                f"{found_runs} run(s) trouvé(s) pour {expected_runs} attendu(s) "
+                f"(manquants={missing_runs})."
+            )
+            return 2
 
         files = aggregate_runs(
             inputs=args.results,
@@ -225,6 +217,9 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
     manifest = {
         "num_inputs": len(args.results),
         "sources": [str(path) for path in args.results],
+        "expected_runs": expected_runs,
+        "found_runs": found_runs,
+        "missing_runs": missing_runs,
         "files": {name: str(path) for name, path in files.items()},
     }
     output_file = out_dir / "aggregate.json"
@@ -364,6 +359,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--strict",
         action="store_true",
         help="Échoue si un run incomplet est détecté au lieu de l'ignorer.",
+    )
+    aggregate_parser.add_argument(
+        "--strict-completeness",
+        action="store_true",
+        help="Échoue si num_jobs (jobs.json) ne correspond pas au nombre de run dirs trouvés.",
     )
     aggregate_parser.add_argument("--verbose", action="store_true", help="Affiche le détail des dossiers traités.")
     aggregate_parser.set_defaults(func=cmd_aggregate)
