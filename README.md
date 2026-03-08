@@ -25,8 +25,9 @@ powershell -ExecutionPolicy Bypass -File scripts/bootstrap_windows.ps1
 Le script `scripts/bootstrap_windows.ps1` crée `.venv` avec `py -3.11`,
 active l'environnement, affiche la version Python active, vérifie
 `import setuptools`, puis tente `python -m pip install -e . --no-build-isolation`.
-En cas d'échec, il bascule automatiquement en mode fallback `PYTHONPATH=src`
-et affiche la commande exacte à utiliser.
+En cas d'échec, le **chemin recommandé en offline** est le wrapper
+`./scripts/mobilesfrdth.ps1`, qui force `PYTHONPATH=src` puis lance
+`python -m mobilesfrdth`.
 
 ### Windows 11 (offline)
 
@@ -74,6 +75,13 @@ Sous Windows PowerShell :
 ```powershell
 $env:PYTHONPATH = "src"
 python -m mobilesfrdth --help
+```
+
+Wrapper PowerShell recommandé (notamment en offline si `pip install -e .` échoue) :
+
+```powershell
+.\scripts\mobilesfrdth.ps1 --help
+.\scripts\mobilesfrdth.ps1 run ...
 ```
 
 ### Windows 11
