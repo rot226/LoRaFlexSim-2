@@ -307,6 +307,7 @@ def aggregate_runs(
     skip_sinr_cdf: bool = False,
     skip_sf_distribution: bool = False,
     strict: bool = False,
+    verbose: bool = False,
 ) -> dict[str, Path]:
     """Agrège des runs et écrit les CSV dans ``aggregates/``."""
 
@@ -351,7 +352,8 @@ def aggregate_runs(
     processed = 0
     skipped = 0
     for index, run_dir in enumerate(run_dirs, start=1):
-        print(f"{index}/{total} run dirs traités", end="\r" if index < total else "\n", flush=True)
+        if verbose:
+            print(f"{index}/{total} run dirs traités", end="\r" if index < total else "\n", flush=True)
         missing_files = _missing_required_files(run_dir, summary_only=summary_only)
         if missing_files:
             message = (
@@ -413,6 +415,7 @@ def aggregate_runs(
     if processed == 0:
         raise ValueError("Aucun run complet à agréger.")
 
+    print(f"Dossiers traités: {processed}/{total}")
     if skipped:
         print(f"Runs incomplets ignorés: {skipped}")
 

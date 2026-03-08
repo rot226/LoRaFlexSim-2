@@ -137,6 +137,12 @@ def _warn_skip(fig_name: str, reason: str) -> None:
     warnings.warn(f"{fig_name} ignorée: {reason}", stacklevel=2)
 
 
+def _log_figure_result(path: Path, generated: bool, *, verbose: bool) -> None:
+    if not verbose:
+        return
+    status = "générée" if generated else "ignorée"
+    print(f"Figure {status}: {path}")
+
 def _plot_xy_by_algo(rows: list[dict[str, str]], *, fig_name: str, y_col: str, out_path: Path) -> bool:
     needed = {"N", "algo", y_col}
     if not rows:
@@ -294,7 +300,14 @@ def _plot_sf_distribution(rows: list[dict[str, str]], out_path: Path) -> bool:
     return True
 
 
-def generate_minimal_figures(*, aggregates_dir: Path, out_dir: Path, filters: ScenarioFilters, include_bonus: bool = True) -> list[Path]:
+def generate_minimal_figures(
+    *,
+    aggregates_dir: Path,
+    out_dir: Path,
+    filters: ScenarioFilters,
+    include_bonus: bool = True,
+    verbose: bool = False,
+) -> list[Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     payloads = {name: _read_csv_rows(aggregates_dir / filename) for name, filename in REQUIRED_FILES.items()}
 
@@ -303,30 +316,47 @@ def generate_minimal_figures(*, aggregates_dir: Path, out_dir: Path, filters: Sc
     for fig_name, source, metric, local_filter in FIGURE_SPECS:
         selected = _apply_filters(payloads[source], filters.merge(local_filter))
         out_path = out_dir / fig_name
-        if _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path):
+        did_generate = _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path)
+        _log_figure_result(out_path, did_generate, verbose=verbose)
+        if did_generate:
             generated.append(out_path)
 
     fig07 = out_dir / "fig07_tc_vs_speed.png"
-    if _plot_tc_vs_speed(_apply_filters(payloads["convergence_tc"], filters), fig07):
+    did_generate = _plot_tc_vs_speed(_apply_filters(payloads["convergence_tc"], filters), fig07)
+    _log_figure_result(fig07, did_generate, verbose=verbose)
+    if did_generate:
         generated.append(fig07)
 
     fig08 = out_dir / "fig08_fairness_vs_n.png"
-    if _plot_xy_by_algo(_apply_filters(payloads["fairness_airtime_switching"], filters), fig_name=fig08.name, y_col="jain_fairness", out_path=fig08):
+    did_generate = _plot_xy_by_algo(
+        _apply_filters(payloads["fairness_airtime_switching"], filters),
+        fig_name=fig08.name,
+        y_col="jain_fairness",
+        out_path=fig08,
+    )
+    _log_figure_result(fig08, did_generate, verbose=verbose)
+    if did_generate:
         generated.append(fig08)
 
     fig09 = out_dir / "fig09_sf_distribution.png"
-    if _plot_sf_distribution(_apply_filters(payloads["distribution_sf"], filters), fig09):
+    did_generate = _plot_sf_distribution(_apply_filters(payloads["distribution_sf"], filters), fig09)
+    _log_figure_result(fig09, did_generate, verbose=verbose)
+    if did_generate:
         generated.append(fig09)
 
     fig10 = out_dir / "fig10_sinr_cdf.png"
-    if _plot_sinr_cdf(_apply_filters(payloads["sinr_cdf"], filters), fig10):
+    did_generate = _plot_sinr_cdf(_apply_filters(payloads["sinr_cdf"], filters), fig10)
+    _log_figure_result(fig10, did_generate, verbose=verbose)
+    if did_generate:
         generated.append(fig10)
 
     if include_bonus:
         for fig_name, source, metric, local_filter in BONUS_SPECS:
             selected = _apply_filters(payloads[source], filters.merge(local_filter))
             out_path = out_dir / fig_name
-            if _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path):
+            did_generate = _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path)
+            _log_figure_result(out_path, did_generate, verbose=verbose)
+            if did_generate:
                 generated.append(out_path)
 
     return generated

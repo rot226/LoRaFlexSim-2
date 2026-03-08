@@ -167,7 +167,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         resume=args.resume,
         max_runs=args.max_runs,
         max_walltime_s=args.max_walltime,
-        on_run_complete=_on_run_complete,
+        on_run_complete=_on_run_complete if args.verbose else None,
     )
     failures = [
         {"run_id": item.run_id, "error": item.error, "run_dir": str(item.run_dir)}
@@ -216,6 +216,7 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
             skip_sinr_cdf=args.skip_sinr_cdf,
             skip_sf_distribution=args.skip_sf_distribution,
             strict=args.strict,
+            verbose=args.verbose,
         )
     except (ValueError, json.JSONDecodeError, FileNotFoundError) as exc:
         print(f"Erreur pendant l'agrégation: {exc}")
@@ -256,6 +257,7 @@ def cmd_plots(args: argparse.Namespace) -> int:
         out_dir=out_dir,
         filters=ScenarioFilters.from_tokens(args.scenario_filter),
         include_bonus=not args.no_bonus,
+        verbose=args.verbose,
     )
     report = {
         "aggregates_dir": str(aggregates_dir),
@@ -329,6 +331,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Durée murale max en secondes pour la commande run (arrêt propre au-delà).",
     )
+    run_parser.add_argument("--verbose", action="store_true", help="Affiche des détails de progression supplémentaires.")
     run_parser.set_defaults(func=cmd_run)
 
     aggregate_parser = subparsers.add_parser(
@@ -362,6 +365,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Échoue si un run incomplet est détecté au lieu de l'ignorer.",
     )
+    aggregate_parser.add_argument("--verbose", action="store_true", help="Affiche le détail des dossiers traités.")
     aggregate_parser.set_defaults(func=cmd_aggregate)
 
     plots_parser = subparsers.add_parser(
@@ -385,6 +389,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Filtre clé=val1,val2 (répétable), ex: --scenario-filter algo=ucb --scenario-filter mobility_model=rwp.",
     )
     plots_parser.add_argument("--no-bonus", action="store_true", help="Désactive les figures bonus fig11/fig12.")
+    plots_parser.add_argument("--verbose", action="store_true", help="Affiche le statut de chaque figure générée/ignorée.")
     plots_parser.set_defaults(func=cmd_plots)
 
     return parser
