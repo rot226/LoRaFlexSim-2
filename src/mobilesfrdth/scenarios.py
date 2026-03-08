@@ -189,11 +189,30 @@ def _validate_grid_values(grid: dict[str, list[Any]], checks: JobValidationConfi
 
 
 def _build_run_id(params: dict[str, Any], rep: int, seed: int) -> str:
-    model = str(params.get("model", "RWP")).lower()
-    mode = str(params["mode"]).lower()
-    algo = str(params["algo"]).lower()
-    n_val = params["N"]
-    return f"n{n_val}_model-{model}_mode-{mode}_algo-{algo}_rep-{rep:03d}_seed-{seed}"
+    def _normalize_token(value: Any) -> str:
+        if isinstance(value, bool):
+            text = str(value).lower()
+        elif isinstance(value, float):
+            text = f"{value:g}"
+        else:
+            text = str(value)
+        text = text.strip().lower().replace("_", "-")
+        text = re.sub(r"[^a-z0-9.-]+", "-", text)
+        text = re.sub(r"-+", "-", text).strip("-")
+        return text or "na"
+
+    factors = [
+        ("n", params["N"]),
+        ("model", params.get("model", "RWP")),
+        ("mode", params["mode"]),
+        ("algo", params["algo"]),
+        ("speed", params.get("speed", "na")),
+        ("gateways", params.get("gateways", "na")),
+        ("sigma-shadowing", params.get("sigma_shadowing", params.get("sigma", "na"))),
+        ("rep", rep),
+        ("seed", seed),
+    ]
+    return "_".join(f"{name}-{_normalize_token(value)}" for name, value in factors)
 
 
 def validate_run_parameters(
