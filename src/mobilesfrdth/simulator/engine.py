@@ -6,12 +6,16 @@ from dataclasses import dataclass, field
 import heapq
 import json
 import logging
+import math
 from pathlib import Path
 import random
 from time import monotonic
 from typing import Any, Callable
 
 from .io import write_run_outputs
+from .adr.adr_legacy import AdrLegacyConfig, recommend_sf
+from .mab.ucb import UCB1
+from .mab.ucb_forget import UCBForget
 
 
 @dataclass
@@ -28,6 +32,15 @@ class Event:
     time_s: float
     kind: str
     node_id: int
+    sf: int = 7
+    snr_db: float = 0.0
+    sinr_db: float = 0.0
+    success: bool = False
+    delivered: bool = False
+    payload_bytes: int = 0
+    airtime_s: float = 0.0
+    outage: bool = True
+    switch_count: int = 0
 
 
 @dataclass
@@ -45,6 +58,37 @@ class EventDrivenEngine:
     def __init__(self, *, seed: int | None = None) -> None:
         self.rng = random.Random(seed)
 
+    @staticmethod
+    def _airtime_s(*, sf: int, payload_size: int) -> float:
+        sf_factor = 2 ** max(sf - 7, 0)
+        payload_factor = 1.0 + (max(payload_size, 1) / 12.0)
+        return 0.015 * sf_factor * payload_factor
+
+    def _compute_channel_state(
+        self,
+        *,
+        node_count: int,
+        mode: str,
+        interference_db: float,
+        sigma: float,
+    ) -> tuple[float, float]:
+        snr_base = 13.0 - 0.06 * node_count
+        snr_db = snr_base + self.rng.uniform(-1.5, 1.5)
+        if mode == "snir_on":
+            dyn_interference = interference_db + (0.012 * node_count) + abs(self.rng.gauss(0.0, sigma))
+            sinr_db = snr_db - dyn_interference
+        else:
+            sinr_db = snr_db
+        return snr_db, sinr_db
+
+    @staticmethod
+    def _success_probability(*, sf: int, snr_db: float, sinr_db: float, mode: str) -> float:
+        thresholds_db = {7: -7.5, 8: -10.0, 9: -12.5, 10: -15.0, 11: -17.5, 12: -20.0}
+        metric_db = sinr_db if mode == "snir_on" else snr_db
+        margin_db = metric_db - thresholds_db.get(sf, -7.5)
+        p_success = 1.0 / (1.0 + math.exp(-(margin_db - 0.5)))
+        return max(0.01, min(0.999, p_success))
+
     def _schedule_initial_events(self, nodes: list[Node]) -> list[Event]:
         queue: list[Event] = []
         for node in nodes:
@@ -58,19 +102,38 @@ class EventDrivenEngine:
         *,
         nodes: list[Node],
         until_s: float,
+        mode: str = "snir_off",
+        algo: str = "adr",
+        interference_db: float = 0.0,
+        sigma: float = 0.0,
         progress_callback: Callable[[float], None] | None = None,
     ) -> SimulationResult:
         if until_s <= 0:
             return SimulationResult()
 
         node_by_id = {n.node_id: n for n in nodes}
+        node_count = len(nodes)
+        algo_name = algo.lower()
+        mode_name = mode.lower()
+        adr_cfg = AdrLegacyConfig()
+
+        mab_agents: dict[int, UCB1 | UCBForget] = {}
+        sf_arms = [7, 8, 9, 10, 11, 12]
+        for node in nodes:
+            node.meta.setdefault("sf", self.rng.randint(8, 11))
+            node.meta.setdefault("tx_power_dbm", 14.0)
+            node.meta.setdefault("switch_count", 0)
+            if algo_name == "ucb":
+                mab_agents[node.node_id] = UCB1(n_arms=len(sf_arms))
+            elif algo_name == "ucb_forget":
+                mab_agents[node.node_id] = UCBForget(n_arms=len(sf_arms))
+
         queue = self._schedule_initial_events(nodes)
         result = SimulationResult()
         while queue:
             event = heapq.heappop(queue)
             if event.time_s > until_s:
                 break
-            result.events.append(event)
 
             if progress_callback is not None:
                 progress_callback(min(max(event.time_s / until_s, 0.0), 1.0))
@@ -78,6 +141,50 @@ class EventDrivenEngine:
             if event.kind == "uplink":
                 result.uplink_count += 1
                 node = node_by_id[event.node_id]
+
+                current_sf = int(node.meta.get("sf", 7))
+                snr_db, sinr_db = self._compute_channel_state(
+                    node_count=node_count,
+                    mode=mode_name,
+                    interference_db=interference_db,
+                    sigma=sigma,
+                )
+                airtime_s = self._airtime_s(sf=current_sf, payload_size=node.payload_size)
+                p_success = self._success_probability(sf=current_sf, snr_db=snr_db, sinr_db=sinr_db, mode=mode_name)
+                success = self.rng.random() < p_success
+
+                new_sf = current_sf
+                if algo_name == "adr":
+                    new_sf = recommend_sf(current_sf=current_sf, snr_db=snr_db, cfg=adr_cfg)
+                elif algo_name in {"ucb", "ucb_forget"}:
+                    agent = mab_agents[node.node_id]
+                    arm = agent.select_arm()
+                    new_sf = sf_arms[arm]
+                    reward = (1.0 if success else -0.25) - 0.08 * airtime_s
+                    agent.update(arm, reward)
+
+                switched = int(new_sf != current_sf)
+                if switched:
+                    node.meta["switch_count"] = int(node.meta.get("switch_count", 0)) + 1
+                    node.meta["sf"] = new_sf
+
+                result.events.append(
+                    Event(
+                        time_s=event.time_s,
+                        kind="uplink",
+                        node_id=node.node_id,
+                        sf=current_sf,
+                        snr_db=snr_db,
+                        sinr_db=sinr_db,
+                        success=success,
+                        delivered=success,
+                        payload_bytes=node.payload_size,
+                        airtime_s=airtime_s,
+                        outage=not success,
+                        switch_count=switched,
+                    )
+                )
+
                 next_time = event.time_s + max(node.period_s, 1e-6)
                 node.next_uplink_s = next_time
                 heapq.heappush(queue, Event(time_s=next_time, kind="uplink", node_id=node.node_id))
@@ -285,6 +392,10 @@ class GridRunOrchestrator:
                 result = engine.run(
                     nodes=nodes,
                     until_s=duration_s,
+                    mode=str(params.get("mode", "snir_off")),
+                    algo=str(params.get("algo", "adr")),
+                    interference_db=float(params.get("interference_db", params.get("interference", 0.0))),
+                    sigma=float(params.get("sigma", 0.0)),
                     progress_callback=_progress,
                 )
                 run_config = self._build_run_config(params)

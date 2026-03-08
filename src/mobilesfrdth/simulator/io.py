@@ -22,6 +22,7 @@ EVENT_COLUMNS = [
     "event_type",
     "node_id",
     "sf",
+    "snr_db",
     "sinr_db",
     "success",
     "delivered",
@@ -40,6 +41,7 @@ NODE_TIMESERIES_COLUMNS = [
     "success_count",
     "delivery_ratio",
     "throughput_bps",
+    "mean_snr_db",
     "mean_sinr_db",
     "airtime_s",
     "outage_count",
@@ -78,7 +80,7 @@ def _coerce_event(event: Any) -> dict[str, Any]:
         "event_type": getattr(event, "kind", "uplink"),
         "node_id": getattr(event, "node_id", -1),
     }
-    for field in ("sf", "sinr_db", "success", "delivered", "payload_bytes", "airtime_s", "outage", "switch_count"):
+    for field in ("sf", "snr_db", "sinr_db", "success", "delivered", "payload_bytes", "airtime_s", "outage", "switch_count"):
         if hasattr(event, field):
             payload[field] = getattr(event, field)
     return payload
@@ -135,7 +137,8 @@ def write_run_outputs(
         time_s = float(event.get("time_s", 0.0))
         node_id = int(event.get("node_id", -1))
         sf = int(event.get("sf", 7) or 7)
-        sinr_db = float(event.get("sinr_db", 0.0) or 0.0)
+        snr_db = float(event.get("snr_db", 0.0) or 0.0)
+        sinr_db = float(event.get("sinr_db", snr_db) or 0.0)
         success = int(bool(event.get("success", event_type == "uplink")))
         delivered = int(bool(event.get("delivered", success)))
         payload_bytes = int(event.get("payload_bytes", 0) or 0)
@@ -151,6 +154,7 @@ def write_run_outputs(
             "event_type": event_type,
             "node_id": node_id,
             "sf": sf,
+            "snr_db": snr_db,
             "sinr_db": sinr_db,
             "success": success,
             "delivered": delivered,
@@ -185,6 +189,7 @@ def write_run_outputs(
                     "node_id": node_id,
                     "tx_count": 0,
                     "success_count": 0,
+                    "snr_sum": 0.0,
                     "sinr_sum": 0.0,
                     "airtime_s": 0.0,
                     "outage_count": 0,
@@ -194,6 +199,7 @@ def write_run_outputs(
             slot = bins[key]
             slot["tx_count"] += 1
             slot["success_count"] += success
+            slot["snr_sum"] += snr_db
             slot["sinr_sum"] += sinr_db
             slot["airtime_s"] += airtime_s
             slot["outage_count"] += outage
@@ -218,6 +224,7 @@ def write_run_outputs(
                 "success_count": success,
                 "delivery_ratio": der(success, tx),
                 "throughput_bps": throughput(int(slot["delivered_bytes"]), duration),
+                "mean_snr_db": slot["snr_sum"] / max(tx, 1),
                 "mean_sinr_db": slot["sinr_sum"] / max(tx, 1),
                 "airtime_s": slot["airtime_s"],
                 "outage_count": slot["outage_count"],
