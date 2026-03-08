@@ -135,7 +135,7 @@ def test_cli_smoke_grid_pipeline_contracts_and_run_id_uniqueness(monkeypatch, tm
     assert len(run_ids) == len(set(run_ids)), "Collision run_id détectée dans jobs.json"
 
     result_run_dirs = [path for path in (runs_dir / "results").iterdir() if path.is_dir()]
-    assert len(result_run_dirs) == num_jobs
+    assert len(result_run_dirs) == num_jobs, "Le nombre de dossiers results/<run_id> doit égaler num_jobs de jobs.json"
 
     assert cli.main(["aggregate", "--results", str(runs_dir), "--out", str(aggregates_dir)]) == 0
 
