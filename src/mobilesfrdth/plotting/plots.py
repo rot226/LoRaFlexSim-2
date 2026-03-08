@@ -58,15 +58,31 @@ BONUS_SPECS = [
 FILTER_COLUMN_ALIASES = {"n": "N", "N": "N", "mode": "mode", "algo": "algo"}
 MODE_VALUE_ALIASES = {
     "snir_off": "snir_off",
+    "sniroff": "snir_off",
     "off": "snir_off",
     "snir_on": "snir_on",
+    "sniron": "snir_on",
     "on": "snir_on",
 }
 ALGO_VALUE_ALIASES = {
     "adr": "adr",
+    "adr_baseline": "adr",
     "adr_mixra": "adr_mixra",
+    "adrmixra": "adr_mixra",
+    "mixra": "adr_mixra",
     "ucb": "ucb",
     "ucb_forget": "ucb_forget",
+    "ucbforget": "ucb_forget",
+    "ucb_f": "ucb_forget",
+}
+
+METRIC_COLUMN_ALIASES = {
+    "pdr_mean": ("pdr_mean", "pdr"),
+    "der_mean": ("der_mean", "der"),
+    "throughput_bps_mean": ("throughput_bps_mean", "throughput_mean_bps", "throughput_bps"),
+    "jain_fairness_mean": ("jain_fairness_mean", "jain_fairness"),
+    "airtime_total_s_mean": ("airtime_total_s_mean", "airtime_total_s"),
+    "switch_count_mean": ("switch_count_mean", "switch_count"),
 }
 
 
@@ -124,8 +140,14 @@ def validate_aggregates_inputs(aggregates_dir: Path) -> list[str]:
         with csv_path.open("r", encoding="utf-8", newline="") as handle:
             reader = csv.DictReader(handle)
             fieldnames = set(reader.fieldnames or [])
+
         expected = REQUIRED_COLUMNS.get(key, set())
-        missing = sorted(expected - fieldnames)
+        missing: list[str] = []
+        for column in sorted(expected):
+            candidates = METRIC_COLUMN_ALIASES.get(column, (column,))
+            if not any(candidate in fieldnames for candidate in candidates):
+                missing.append(column)
+
         if missing:
             errors.append(f"colonnes manquantes dans {csv_path.name}: {', '.join(missing)}")
     return errors
@@ -157,9 +179,10 @@ def _apply_filters(rows: list[dict[str, str]], filters: ScenarioFilters) -> list
         if keep:
             filtered.append(row)
     if rows and not filtered:
+        filter_expr = _format_filters(filters)
         debug = ", ".join(_format_filter_availability(normalized_rows, filters))
         warnings.warn(
-            f"Aucune ligne après filtrage ({len(rows)} ligne(s) source). Détails: {debug}",
+            f"Aucune ligne après filtrage. filtre={filter_expr}; lignes_candidates={len(rows)}. Détails: {debug}",
             stacklevel=2,
         )
     return filtered
@@ -167,10 +190,11 @@ def _apply_filters(rows: list[dict[str, str]], filters: ScenarioFilters) -> list
 
 def _normalize_filter_value(key: str, value: str) -> str:
     token = value.strip()
+    normalized_token = token.lower().replace("-", "_")
     if key == "mode":
-        return MODE_VALUE_ALIASES.get(token.lower().replace("-", "_"), token.lower())
+        return MODE_VALUE_ALIASES.get(normalized_token, normalized_token)
     if key == "algo":
-        return ALGO_VALUE_ALIASES.get(token.lower().replace("-", "_"), token.lower())
+        return ALGO_VALUE_ALIASES.get(normalized_token, normalized_token)
     if key == "N":
         try:
             return str(int(token))
@@ -201,6 +225,12 @@ def _format_filter_availability(rows: list[dict[str, str]], filters: ScenarioFil
     return details
 
 
+def _format_filters(filters: ScenarioFilters) -> str:
+    if not filters.by_column:
+        return "<none>"
+    return ";".join(f"{key}={','.join(sorted(values))}" for key, values in sorted(filters.by_column.items()))
+
+
 def _warn_skip(fig_name: str, reason: str) -> None:
     warnings.warn(f"{fig_name} ignorée: {reason}", stacklevel=2)
 
@@ -212,7 +242,8 @@ def _log_figure_result(path: Path, generated: bool, *, verbose: bool) -> None:
     print(f"Figure {status}: {path}")
 
 def _plot_xy_by_algo(rows: list[dict[str, str]], *, fig_name: str, y_col: str, out_path: Path) -> bool:
-    needed = {"N", "algo", y_col}
+    resolved_metric = _resolve_metric_column(rows, expected=y_col)
+    needed = {"N", "algo", resolved_metric}
     if not rows:
         _warn_skip(fig_name, "aucune ligne disponible")
         return False
@@ -225,7 +256,7 @@ def _plot_xy_by_algo(rows: list[dict[str, str]], *, fig_name: str, y_col: str, o
     dropped = 0
     for row in rows:
         x = _to_float(row.get("N"))
-        y = _to_float(row.get(y_col))
+        y = _to_float(row.get(resolved_metric))
         if x is None or y is None:
             dropped += 1
             continue
@@ -251,6 +282,20 @@ def _plot_xy_by_algo(rows: list[dict[str, str]], *, fig_name: str, y_col: str, o
     plt.savefig(out_path, dpi=150)
     plt.close()
     return True
+
+
+def _resolve_metric_column(rows: list[dict[str, str]], *, expected: str) -> str:
+    if not rows:
+        return expected
+    for candidate in METRIC_COLUMN_ALIASES.get(expected, (expected,)):
+        if candidate in rows[0]:
+            if candidate != expected:
+                warnings.warn(
+                    f"Colonne '{expected}' absente, repli sur '{candidate}' (compatibilité agrégats).",
+                    stacklevel=3,
+                )
+            return candidate
+    return expected
 
 
 def _plot_tc_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool:
