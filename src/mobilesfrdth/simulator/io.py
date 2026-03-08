@@ -494,3 +494,48 @@ def aggregate_runs(
     files["fairness_airtime_switching"] = fairness_path
 
     return files
+
+
+def summarize_run_completeness(inputs: Iterable[Path]) -> dict[str, int | None]:
+    """Retourne un état de complétude entre runs trouvés et jobs attendus."""
+
+    run_dirs = _collect_run_dirs(inputs)
+    found_runs = len(run_dirs)
+
+    expected_runs = 0
+    has_jobs_manifest = False
+    for path in inputs:
+        jobs_candidates: list[Path] = []
+        if path.is_file() and path.name == "jobs.json":
+            jobs_candidates.append(path)
+        if path.is_dir():
+            direct = path / "jobs.json"
+            nested = path / "results" / "jobs.json"
+            if direct.is_file():
+                jobs_candidates.append(direct)
+            if nested.is_file():
+                jobs_candidates.append(nested)
+
+        for jobs_path in jobs_candidates:
+            with jobs_path.open("r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+            if not isinstance(payload, Mapping):
+                raise ValueError(f"Format JSON inattendu dans {jobs_path} (objet requis).")
+            num_jobs = payload.get("num_jobs")
+            if not isinstance(num_jobs, int):
+                raise ValueError(f"Champ num_jobs manquant ou invalide dans {jobs_path}.")
+            expected_runs += num_jobs
+            has_jobs_manifest = True
+
+    if not has_jobs_manifest:
+        return {
+            "expected_runs": None,
+            "found_runs": found_runs,
+            "missing_runs": 0,
+        }
+
+    return {
+        "expected_runs": expected_runs,
+        "found_runs": found_runs,
+        "missing_runs": max(expected_runs - found_runs, 0),
+    }
