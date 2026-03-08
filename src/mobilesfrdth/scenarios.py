@@ -196,19 +196,19 @@ def _build_run_id(params: dict[str, Any], rep: int, seed: int) -> str:
             text = f"{value:g}"
         else:
             text = str(value)
-        text = text.strip().lower().replace("_", "-")
-        text = re.sub(r"[^a-z0-9.-]+", "-", text)
+        text = text.strip().lower()
+        text = re.sub(r"[^a-z0-9]+", "-", text)
         text = re.sub(r"-+", "-", text).strip("-")
         return text or "na"
 
     factors = [
         ("n", params["N"]),
+        ("speed", params.get("speed", "na")),
         ("model", params.get("model", "RWP")),
         ("mode", params["mode"]),
         ("algo", params["algo"]),
-        ("speed", params.get("speed", "na")),
         ("gateways", params.get("gateways", "na")),
-        ("sigma-shadowing", params.get("sigma_shadowing", params.get("sigma", "na"))),
+        ("sigma_shadowing", params.get("sigma_shadowing", params.get("sigma", "na"))),
         ("rep", rep),
         ("seed", seed),
     ]
