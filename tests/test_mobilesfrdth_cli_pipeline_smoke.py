@@ -158,3 +158,107 @@ def test_cli_smoke_grid_pipeline_contracts_and_run_id_uniqueness(monkeypatch, tm
     plots_payload = json.loads((figures_dir / "plots_summary.json").read_text(encoding="utf-8"))
     generated_figure_names = {pathlib.Path(path).name for path in plots_payload["figures"]}
     assert _NON_BONUS_FIGURES.issubset(generated_figure_names)
+
+
+def test_cli_plots_generates_fig01_to_fig06_with_non_empty_core_campaign(monkeypatch, tmp_path: pathlib.Path) -> None:
+    config_path = pathlib.Path(__file__).resolve().parents[1] / "experiments" / "default.yaml"
+    runs_dir = tmp_path / "runs_core"
+    aggregates_dir = tmp_path / "aggregates_core"
+    figures_dir = tmp_path / "figures_core"
+
+    class _FakeOrchestrator:
+        def __init__(self, *, output_root: pathlib.Path):
+            self.output_root = pathlib.Path(output_root)
+
+        def execute_jobs(self, jobs, **kwargs):
+            reports = []
+            for job in jobs:
+                params = job["params"]
+                run_id = str(params["run_id"])
+                run_dir = self.output_root / "results" / run_id
+                summary_row = {
+                    "N": params["N"],
+                    "speed": params["speed"],
+                    "mobility_model": str(params.get("model", "RWP")).lower(),
+                    "mode": str(params["mode"]),
+                    "algo": str(params["algo"]),
+                    "gateways": 1,
+                    "sigma": 0.0,
+                    "seed": params["seed"],
+                    "rep": params["rep"],
+                    "run_id": run_id,
+                    "duration_s": 10.0,
+                    "node_count": params["N"],
+                    "tx_count": 100,
+                    "success_count": 80,
+                    "generated_packets": 100,
+                    "delivered_bytes": 1600,
+                    "pdr": 0.8,
+                    "der": 0.8,
+                    "throughput_bps": 1280.0,
+                    "Tc_s": 42.0,
+                    "jain_fairness": 0.95,
+                    "airtime_total_s": 12.0,
+                    "airtime_mean_per_node_s": 0.24,
+                    "outage_ratio": 0.01,
+                    "switch_count": 2,
+                }
+                event_row = {
+                    "N": params["N"],
+                    "speed": params["speed"],
+                    "mobility_model": str(params.get("model", "RWP")).lower(),
+                    "mode": str(params["mode"]),
+                    "algo": str(params["algo"]),
+                    "gateways": 1,
+                    "sigma": 0.0,
+                    "seed": params["seed"],
+                    "rep": params["rep"],
+                    "run_id": run_id,
+                    "event_idx": 1,
+                    "time_s": 1.0,
+                    "event_type": "uplink",
+                    "node_id": 0,
+                    "sf": 7,
+                    "sinr_db": 3.5,
+                    "success": 1,
+                    "delivered": 1,
+                    "payload_bytes": 20,
+                    "airtime_s": 0.12,
+                    "outage": 0,
+                    "switch_count": 0,
+                }
+                _write_csv(run_dir / "summary.csv", list(summary_row.keys()), summary_row)
+                _write_csv(run_dir / "events.csv", list(event_row.keys()), event_row)
+                reports.append(SimpleNamespace(run_id=run_id, success=True, run_dir=run_dir, error=None))
+
+            total = len(jobs)
+            return SimpleNamespace(
+                reports=reports,
+                total_jobs=total,
+                skipped_runs=0,
+                scheduled_runs=total,
+                failed_reports=[],
+                interrupted=False,
+            )
+
+    monkeypatch.setattr("mobilesfrdth.simulator.engine.GridRunOrchestrator", _FakeOrchestrator)
+
+    assert cli.main(["run", "--config", str(config_path), "--out", str(runs_dir), "--profile", "core"]) == 0
+
+    jobs_payload = json.loads((runs_dir / "jobs.json").read_text(encoding="utf-8"))
+    assert int(jobs_payload["num_jobs"]) > 0
+
+    assert cli.main(["aggregate", "--results", str(runs_dir), "--out", str(aggregates_dir)]) == 0
+    assert cli.main(["plots", "--aggregates-dir", str(aggregates_dir / "aggregates"), "--out", str(figures_dir)]) == 0
+
+    plots_payload = json.loads((figures_dir / "plots_summary.json").read_text(encoding="utf-8"))
+    generated_figure_names = {pathlib.Path(path).name for path in plots_payload["figures"]}
+    expected = {
+        "fig01_pdr_vs_n_snir_off.png",
+        "fig02_pdr_vs_n_snir_on.png",
+        "fig03_der_vs_n_snir_off.png",
+        "fig04_der_vs_n_snir_on.png",
+        "fig05_throughput_vs_n_snir_off.png",
+        "fig06_throughput_vs_n_snir_on.png",
+    }
+    assert expected.issubset(generated_figure_names)
