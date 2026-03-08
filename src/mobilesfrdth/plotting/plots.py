@@ -24,7 +24,17 @@ REQUIRED_FILES = {
 }
 
 REQUIRED_COLUMNS = {
-    "metric_by_factor": {"N", "algo", "mode", "pdr_mean", "der_mean", "throughput_bps_mean"},
+    "metric_by_factor": {
+        "N",
+        "algo",
+        "mode",
+        "pdr_mean",
+        "der_mean",
+        "throughput_bps_mean",
+        "jain_fairness_mean",
+        "airtime_total_s_mean",
+        "switch_count_mean",
+    },
     "distribution_sf": {"algo", "sf", "ratio"},
     "convergence_tc": {"algo", "speed", "Tc_s"},
     "sinr_cdf": {"algo", "quantile", "sinr_db"},
@@ -41,9 +51,23 @@ FIGURE_SPECS = [
 ]
 
 BONUS_SPECS = [
-    ("fig11_airtime_vs_n.png", "fairness_airtime_switching", "airtime_total_s", {}),
-    ("fig12_switch_count_vs_n.png", "fairness_airtime_switching", "switch_count", {}),
+    ("fig11_airtime_vs_n.png", "metric_by_factor", "airtime_total_s_mean", {}),
+    ("fig12_switch_count_vs_n.png", "metric_by_factor", "switch_count_mean", {}),
 ]
+
+FILTER_COLUMN_ALIASES = {"n": "N", "N": "N", "mode": "mode", "algo": "algo"}
+MODE_VALUE_ALIASES = {
+    "snir_off": "snir_off",
+    "off": "snir_off",
+    "snir_on": "snir_on",
+    "on": "snir_on",
+}
+ALGO_VALUE_ALIASES = {
+    "adr": "adr",
+    "adr_mixra": "adr_mixra",
+    "ucb": "ucb",
+    "ucb_forget": "ucb_forget",
+}
 
 
 @dataclass(frozen=True)
@@ -62,11 +86,12 @@ class ScenarioFilters:
             if not key:
                 warnings.warn(f"Filtre ignoré (clé vide): {token}", stacklevel=2)
                 continue
+            key = FILTER_COLUMN_ALIASES.get(key, key)
             parsed = [item.strip() for item in values.split(",") if item.strip()]
             if not parsed:
                 warnings.warn(f"Filtre ignoré (aucune valeur): {token}", stacklevel=2)
                 continue
-            mapping[key].update(parsed)
+            mapping[key].update(_normalize_filter_value(key, value) for value in parsed)
         return cls(by_column=dict(mapping))
 
     def merge(self, extra: dict[str, set[str]]) -> "ScenarioFilters":
@@ -121,8 +146,9 @@ def _to_float(value: str | None) -> float | None:
 def _apply_filters(rows: list[dict[str, str]], filters: ScenarioFilters) -> list[dict[str, str]]:
     if not filters.by_column:
         return rows
+    normalized_rows = [_normalize_row_for_filtering(row) for row in rows]
     filtered: list[dict[str, str]] = []
-    for row in rows:
+    for row in normalized_rows:
         keep = True
         for key, allowed in filters.by_column.items():
             if key not in row or row.get(key, "") not in allowed:
@@ -130,7 +156,49 @@ def _apply_filters(rows: list[dict[str, str]], filters: ScenarioFilters) -> list
                 break
         if keep:
             filtered.append(row)
+    if rows and not filtered:
+        debug = ", ".join(_format_filter_availability(normalized_rows, filters))
+        warnings.warn(
+            f"Aucune ligne après filtrage ({len(rows)} ligne(s) source). Détails: {debug}",
+            stacklevel=2,
+        )
     return filtered
+
+
+def _normalize_filter_value(key: str, value: str) -> str:
+    token = value.strip()
+    if key == "mode":
+        return MODE_VALUE_ALIASES.get(token.lower().replace("-", "_"), token.lower())
+    if key == "algo":
+        return ALGO_VALUE_ALIASES.get(token.lower().replace("-", "_"), token.lower())
+    if key == "N":
+        try:
+            return str(int(token))
+        except ValueError:
+            return token
+    return token.lower()
+
+
+def _normalize_row_for_filtering(row: dict[str, str]) -> dict[str, str]:
+    normalized = dict(row)
+    for raw_key, canonical_key in FILTER_COLUMN_ALIASES.items():
+        if raw_key in normalized and canonical_key not in normalized:
+            normalized[canonical_key] = normalized[raw_key]
+    for key in ("mode", "algo", "N"):
+        if key in normalized:
+            normalized[key] = _normalize_filter_value(key, normalized.get(key, ""))
+    return normalized
+
+
+def _format_filter_availability(rows: list[dict[str, str]], filters: ScenarioFilters) -> list[str]:
+    details: list[str] = []
+    for key, allowed in filters.by_column.items():
+        with_key = sum(1 for row in rows if key in row)
+        matched = sum(1 for row in rows if row.get(key, "") in allowed)
+        details.append(
+            f"{key}∈{sorted(allowed)}: {matched}/{with_key} ligne(s) compatibles"
+        )
+    return details
 
 
 def _warn_skip(fig_name: str, reason: str) -> None:
@@ -329,9 +397,9 @@ def generate_minimal_figures(
 
     fig08 = out_dir / "fig08_fairness_vs_n.png"
     did_generate = _plot_xy_by_algo(
-        _apply_filters(payloads["fairness_airtime_switching"], filters),
+        _apply_filters(payloads["metric_by_factor"], filters),
         fig_name=fig08.name,
-        y_col="jain_fairness",
+        y_col="jain_fairness_mean",
         out_path=fig08,
     )
     _log_figure_result(fig08, did_generate, verbose=verbose)
