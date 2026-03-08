@@ -37,7 +37,7 @@ REQUIRED_COLUMNS = {
     },
     "distribution_sf": {"algo", "sf", "ratio"},
     "convergence_tc": {"algo", "speed", "Tc_s"},
-    "sinr_cdf": {"algo", "quantile", "sinr_db"},
+    "sinr_cdf": {"algo", "mode", "N", "quantile", "sinr_db"},
     "fairness_airtime_switching": {"N", "algo", "jain_fairness", "airtime_total_s", "switch_count"},
 }
 
@@ -341,30 +341,46 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
     if not rows:
         _warn_skip(fig_name, "fichier sinr_cdf.csv vide ou absent")
         return False
-    needed = {"quantile", "sinr_db", "algo"}
+    needed = {"algo", "mode", "N", "quantile", "sinr_db"}
     missing = [column for column in needed if column not in rows[0]]
     if missing:
         _warn_skip(fig_name, f"colonnes manquantes {missing}")
         return False
 
-    grouped: dict[str, list[tuple[float, float]]] = defaultdict(list)
+    by_group: dict[tuple[str, str, str], list[tuple[float, float]]] = defaultdict(list)
     for row in rows:
         q = _to_float(row.get("quantile"))
         sinr = _to_float(row.get("sinr_db"))
         if q is None or sinr is None:
             continue
-        grouped[row.get("algo", "unknown")].append((q, sinr))
+        algo = row.get("algo", "unknown")
+        mode = row.get("mode", "")
+        n = row.get("N", "")
+        by_group[(algo, mode, n)].append((q, sinr))
 
-    if not grouped:
+    if not by_group:
         _warn_skip(fig_name, "pas de points quantile/sinr exploitables")
         return False
 
+    aggregated: dict[str, dict[float, list[float]]] = defaultdict(lambda: defaultdict(list))
+    for (algo, mode, n), points in sorted(by_group.items()):
+        points.sort(key=lambda item: item[0])
+        quantiles = [item[0] for item in points]
+        if any(q < 0.0 or q > 1.0 for q in quantiles):
+            _warn_skip(fig_name, f"quantile hors [0..1] pour groupe algo={algo}, mode={mode}, N={n}")
+            return False
+        if any(curr < prev for prev, curr in zip(quantiles, quantiles[1:], strict=False)):
+            _warn_skip(fig_name, f"quantile non monotone croissant pour groupe algo={algo}, mode={mode}, N={n}")
+            return False
+
+        for q, sinr in points:
+            aggregated[algo][q].append(sinr)
+
     plt.figure(figsize=(8, 5))
-    for algo in sorted(grouped):
-        points = sorted(grouped[algo], key=lambda item: item[0])
-        xs = [point[1] for point in points]
-        ys = [point[0] for point in points]
-        plt.plot(xs, ys, label=algo)
+    for algo in sorted(aggregated):
+        quantiles = sorted(aggregated[algo])
+        sinrs = [sum(aggregated[algo][q]) / len(aggregated[algo][q]) for q in quantiles]
+        plt.plot(sinrs, quantiles, label=algo)
     plt.grid(alpha=0.3)
     plt.xlabel("SINR (dB)")
     plt.ylabel("Probabilité cumulée")

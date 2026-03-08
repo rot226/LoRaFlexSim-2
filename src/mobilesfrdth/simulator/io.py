@@ -481,13 +481,22 @@ def aggregate_runs(
         for key, values in sorted(sinr_values.items()):
             if not values:
                 continue
+            factors = dict(zip(factor_columns, key, strict=False))
             data = sorted(values)
             n = len(data)
             for q in quantiles:
                 index = min(int(round(q * (n - 1))), n - 1)
-                sinr_rows.append({**dict(zip(factor_columns, key, strict=False)), "quantile": q, "sinr_db": data[index]})
+                sinr_rows.append(
+                    {
+                        "algo": factors.get("algo", ""),
+                        "mode": factors.get("mode", ""),
+                        "N": factors.get("N", ""),
+                        "quantile": q,
+                        "sinr_db": data[index],
+                    }
+                )
         sinr_path = out_dir / "sinr_cdf.csv"
-        _write_csv(sinr_path, factor_columns + ["quantile", "sinr_db"], sinr_rows)
+        _write_csv(sinr_path, ["algo", "mode", "N", "quantile", "sinr_db"], sinr_rows)
         files["sinr_cdf"] = sinr_path
 
     files["convergence_tc"] = convergence_path
