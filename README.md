@@ -14,7 +14,7 @@ sensibilité. Un chemin personnalisé peut être fourni via `flora_noise_path`.
 ## 🛠️ Installation
 
 > **Version Python recommandée : 3.11.x** (versions supportées: **3.11 à 3.14**).
-> **Version testée : 3.14.x (Windows 11)**.
+> **Support officiel : Windows 11 + Python 3.14** (également Linux/macOS sur Python 3.11–3.14).
 
 Procédure d'entrée unique (Windows 11 / PowerShell), à copier-coller depuis la racine du dépôt :
 
