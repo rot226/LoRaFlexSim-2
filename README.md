@@ -76,6 +76,28 @@ $env:PYTHONPATH = "src"
 python -m mobilesfrdth --help
 ```
 
+### Windows 11
+
+PowerShell :
+
+```powershell
+$env:PYTHONPATH = (Resolve-Path .\src).Path
+```
+
+cmd.exe :
+
+```cmd
+set PYTHONPATH=src
+```
+
+Test immédiat :
+
+```bash
+python -m mobilesfrdth --help
+```
+
+> Note : `set` en PowerShell != `set` en cmd.
+
 ```bash
 pip install -e .
 mobilesfrdth run ...
