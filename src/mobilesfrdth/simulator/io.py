@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import csv
 import json
-import math
 import warnings
 from collections import Counter, defaultdict
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
-from .metrics import convergence_tc, der, jain_fairness, outage_ratio, pdr, throughput
+from .metrics import convergence_tc_performance, der, jain_fairness, outage_ratio, pdr, throughput
 
 SCENARIO_ID_COLUMNS = ["N", "speed", "mobility_model", "mode", "algo", "gateways", "sigma", "seed", "rep"]
 EVENT_COLUMNS = [
@@ -129,7 +128,6 @@ def write_run_outputs(
     delivered_bytes = 0
     outage_events = 0
     total_switch_count = 0
-    tc_candidate = math.inf
 
     for idx, item in enumerate(events):
         event = _coerce_event(item)
@@ -174,9 +172,6 @@ def write_run_outputs(
             total_switch_count += switch_count
             node_successes[node_id] += success
             node_airtime[node_id] += airtime_s
-
-            if math.isinf(tc_candidate) and tx_count > 0 and pdr(success_count, tx_count) >= 0.95:
-                tc_candidate = time_s
 
             bin_index = int(time_s // time_bin_s)
             key = (bin_index, node_id)
@@ -243,11 +238,24 @@ def write_run_outputs(
         pdr_by_bin[bin_index]["success"] += int(row["success_count"])
 
     pdr_series: list[float] = []
+    der_series: list[float] = []
+    cumulative_tx = 0
+    cumulative_success = 0
+    cumulative_generated = 0
     for bin_index in sorted(pdr_by_bin):
         bucket = pdr_by_bin[bin_index]
         pdr_series.append(pdr(bucket["success"], bucket["tx"]))
+        cumulative_tx += int(bucket["tx"])
+        cumulative_success += int(bucket["success"])
+        cumulative_generated += int(bucket["tx"])
+        der_series.append(der(cumulative_success, cumulative_generated))
 
-    tc_from_timeseries = convergence_tc(pdr_series, dt_s=time_bin_s)
+    tc_from_timeseries = convergence_tc_performance(
+        pdr_samples=pdr_series,
+        der_samples=der_series,
+        dt_s=time_bin_s,
+        target_ratio=0.9,
+    )
 
     summary_row = {
         **scenario,
@@ -261,7 +269,7 @@ def write_run_outputs(
         "pdr": pdr(success_count, tx_count),
         "der": der(success_count, generated_packets),
         "throughput_bps": throughput(delivered_bytes, duration_s),
-        "Tc_s": tc_from_timeseries if pdr_series else tc_candidate,
+        "Tc_s": tc_from_timeseries,
         "jain_fairness": jain_fairness(node_successes.values()),
         "airtime_total_s": airtime_total,
         "airtime_mean_per_node_s": airtime_total / max(len(node_ids), 1),
