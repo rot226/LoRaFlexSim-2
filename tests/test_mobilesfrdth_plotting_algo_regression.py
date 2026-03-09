@@ -151,6 +151,24 @@ def test_metric_by_factor_uses_full_factor_key_with_model_and_sigma_shadowing_al
     assert by_algo["adr"]["pdr_mean"] == "0.11"
     assert by_algo["ucb"]["pdr_mean"] == "0.77"
 
+
+
+def test_metric_by_factor_exposes_sigma_shadowing_column(tmp_path):
+    run_a = tmp_path / "results" / "run_adr"
+    run_b = tmp_path / "results" / "run_ucb"
+    _write_csv(run_a / "summary.csv", SUMMARY_COLUMNS, [_summary_row("run_adr", algo="adr", pdr=0.1)])
+    _write_csv(run_b / "summary.csv", SUMMARY_COLUMNS, [_summary_row("run_ucb", algo="ucb", pdr=0.8)])
+
+    files = aggregate_runs(inputs=[tmp_path], output_root=tmp_path / "out", summary_only=True)
+
+    with files["metric_by_factor"].open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+
+    assert rows
+    assert "sigma_shadowing" in rows[0]
+    assert rows[0]["sigma_shadowing"] == rows[0]["sigma"]
+
+
 def test_plot_xy_by_algo_uses_distinct_series_per_algo(monkeypatch, tmp_path):
     rows = [
         {"N": "50", "algo": "adr", "pdr_mean": "0.10"},
@@ -161,6 +179,7 @@ def test_plot_xy_by_algo_uses_distinct_series_per_algo(monkeypatch, tmp_path):
         {"N": "100", "algo": "ucb", "pdr_mean": "0.32"},
         {"N": "50", "algo": "ucb_forget", "pdr_mean": "0.40"},
         {"N": "100", "algo": "ucb_forget", "pdr_mean": "0.42"},
+        {"N": "50", "algo": "", "pdr_mean": "0.99"},
     ]
 
     captured: list[dict[str, object]] = []
@@ -180,6 +199,7 @@ def test_plot_xy_by_algo_uses_distinct_series_per_algo(monkeypatch, tmp_path):
 
     curves = {item["label"]: item["ys"] for item in captured}
     assert set(curves) == {"adr", "adr_mixra", "ucb", "ucb_forget"}
+    assert "" not in curves
     assert len(set(curves.values())) == 4
 
 

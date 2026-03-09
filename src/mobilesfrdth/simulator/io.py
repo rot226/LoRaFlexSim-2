@@ -353,7 +353,7 @@ def aggregate_runs(
     sf_counter: dict[tuple[str, ...], Counter[str]] = defaultdict(Counter)
     sinr_values: dict[tuple[str, ...], list[float]] = defaultdict(list)
 
-    factor_columns = ["N", "speed", "mobility_model", "mode", "algo", "gateways", "sigma"]
+    factor_columns = ["N", "speed", "mobility_model", "mode", "algo", "gateways", "sigma_shadowing"]
     factor_aliases: dict[str, tuple[str, ...]] = {
         "N": ("N",),
         "speed": ("speed",),
@@ -361,7 +361,7 @@ def aggregate_runs(
         "mode": ("mode",),
         "algo": ("algo",),
         "gateways": ("gateways",),
-        "sigma": ("sigma", "sigma_shadowing"),
+        "sigma_shadowing": ("sigma_shadowing", "sigma"),
     }
 
     def _factor_value(row: Mapping[str, str], column: str) -> str:
@@ -460,6 +460,7 @@ def aggregate_runs(
         metric_by_factor_rows.append(
             {
                 **dict(zip(factor_columns, key, strict=False)),
+                "sigma": key[-1],
                 "num_runs": num_runs,
                 "pdr_mean": bucket["pdr_sum"] / max(num_runs, 1),
                 "der_mean": bucket["der_sum"] / max(num_runs, 1),
@@ -473,6 +474,7 @@ def aggregate_runs(
         )
     metric_by_factor_path = out_dir / "metric_by_factor.csv"
     _write_csv(metric_by_factor_path, factor_columns + [
+        "sigma",
         "num_runs",
         "pdr_mean",
         "der_mean",
