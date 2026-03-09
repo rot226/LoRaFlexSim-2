@@ -381,7 +381,7 @@ def build_parser() -> argparse.ArgumentParser:
     aggregate_parser.set_defaults(func=cmd_aggregate)
 
     plots_parser = subparsers.add_parser(
-        "plots", help="Génère les figures fig01..fig10 (et bonus fig11..fig12) depuis aggregates/*.csv."
+        "plots", help="Génère les figures fig01..fig10 (et bonus fig11..fig16) depuis aggregates/*.csv."
     )
     plots_parser.add_argument(
         "--aggregates-dir",
@@ -406,7 +406,7 @@ def build_parser() -> argparse.ArgumentParser:
         default="core",
         help="Profil de filtres documentés à appliquer pour chaque figure (core ou full).",
     )
-    plots_parser.add_argument("--no-bonus", action="store_true", help="Désactive les figures bonus fig11/fig12.")
+    plots_parser.add_argument("--no-bonus", action="store_true", help="Désactive les figures bonus fig11..fig16.")
     plots_parser.add_argument("--verbose", action="store_true", help="Affiche le statut de chaque figure générée/ignorée.")
     plots_parser.set_defaults(func=cmd_plots)
 
