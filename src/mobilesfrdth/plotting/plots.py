@@ -59,6 +59,10 @@ FIGURE_SPECS = [
 BONUS_SPECS = [
     ("fig11_airtime_vs_n.png", "metric_by_factor", "airtime_total_s_mean", {}),
     ("fig12_switch_count_vs_n.png", "metric_by_factor", "switch_count_mean", {}),
+    ("fig13_pdr_ci_vs_n_snir_on.png", "metric_by_factor", "pdr_mean", {"mode": {"snir_on"}}),
+    ("fig14_delta_pdr_snir_on_minus_off.png", "metric_by_factor", "pdr_mean", {}),
+    ("fig15_switching_vs_speed.png", "metric_by_factor", "switch_count_mean", {"algo": {"ucb", "ucb_forget"}}),
+    ("fig16_airtime_reliability_pareto.png", "metric_by_factor", "pdr_mean", {}),
 ]
 
 ARTICLE_PROFILE_FILTERS: dict[str, dict[str, dict[str, set[str]]]] = {
@@ -75,6 +79,10 @@ ARTICLE_PROFILE_FILTERS: dict[str, dict[str, dict[str, set[str]]]] = {
         "fig10_sinr_cdf.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
         "fig11_airtime_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
         "fig12_switch_count_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig13_pdr_ci_vs_n_snir_on.png": {"mode": {"snir_on"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig14_delta_pdr_snir_on_minus_off.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig15_switching_vs_speed.png": {"algo": {"ucb", "ucb_forget"}},
+        "fig16_airtime_reliability_pareto.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
     },
     "full": {
         "fig01_pdr_vs_n_snir_off.png": {"mode": {"snir_off"}},
@@ -89,6 +97,10 @@ ARTICLE_PROFILE_FILTERS: dict[str, dict[str, dict[str, set[str]]]] = {
         "fig10_sinr_cdf.png": {"mode": {"snir_on"}},
         "fig11_airtime_vs_n.png": {"mode": {"snir_off", "snir_on"}},
         "fig12_switch_count_vs_n.png": {"mode": {"snir_off", "snir_on"}},
+        "fig13_pdr_ci_vs_n_snir_on.png": {"mode": {"snir_on"}},
+        "fig14_delta_pdr_snir_on_minus_off.png": {},
+        "fig15_switching_vs_speed.png": {"algo": {"ucb", "ucb_forget"}},
+        "fig16_airtime_reliability_pareto.png": {},
     },
 }
 
@@ -527,6 +539,176 @@ def _plot_sf_distribution(rows: list[dict[str, str]], out_path: Path) -> bool:
     return True
 
 
+def _plot_delta_pdr_on_minus_off(rows: list[dict[str, str]], out_path: Path) -> bool:
+    fig_name = out_path.name
+    if not rows:
+        _warn_skip(fig_name, "aucune ligne disponible")
+        return False
+    pdr_col = _resolve_metric_column(rows, expected="pdr_mean")
+    needed = {"N", "algo", "mode", pdr_col}
+    missing = [column for column in needed if column not in rows[0]]
+    if missing:
+        _warn_skip(fig_name, f"colonnes manquantes {missing}")
+        return False
+
+    by_mode: dict[str, dict[float, dict[str, list[float]]]] = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+    for row in rows:
+        n_value = _to_float(row.get("N"))
+        pdr = _to_float(row.get(pdr_col))
+        mode = row.get("mode", "")
+        if n_value is None or pdr is None or mode not in {"snir_on", "snir_off"}:
+            continue
+        by_mode[row.get("algo", "unknown")][n_value][mode].append(pdr)
+
+    if not by_mode:
+        _warn_skip(fig_name, "aucune paire N/algo exploitable")
+        return False
+
+    plt.figure(figsize=(8, 5))
+    for algo in sorted(by_mode):
+        xs: list[float] = []
+        means: list[float] = []
+        errors: list[float] = []
+        for n_value in sorted(by_mode[algo]):
+            pair = by_mode[algo][n_value]
+            on_samples = pair.get("snir_on", [])
+            off_samples = pair.get("snir_off", [])
+            if not on_samples or not off_samples:
+                continue
+            ci_on = ci95_from_samples(on_samples)
+            ci_off = ci95_from_samples(off_samples)
+            if ci_on is None or ci_off is None:
+                continue
+            xs.append(n_value)
+            means.append(ci_on.mean - ci_off.mean)
+            errors.append((ci_on.half_width**2 + ci_off.half_width**2) ** 0.5)
+        if xs:
+            plt.errorbar(xs, means, yerr=errors, marker="o", capsize=3, label=algo)
+
+    if not plt.gca().lines:
+        plt.close()
+        _warn_skip(fig_name, "aucune paire SNIR_ON/SNIR_OFF alignée")
+        return False
+
+    plt.axhline(0.0, color="black", linewidth=1.0, linestyle="--", alpha=0.6)
+    plt.grid(alpha=0.3)
+    plt.xlabel(normalized_axis_label("N"))
+    plt.ylabel("ΔPDR (SNIR_ON - SNIR_OFF) [-]")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=PLOT_DPI)
+    plt.close()
+    return True
+
+
+def _duration_hours_from_row(row: dict[str, str]) -> float:
+    hours = _to_float(row.get("duration_h") or row.get("duration_hours") or row.get("simulation_hours"))
+    if hours is not None and hours > 0:
+        return hours
+    seconds = _to_float(row.get("duration_s") or row.get("sim_time_s") or row.get("steps"))
+    if seconds is not None and seconds > 0:
+        return seconds / 3600.0
+    return 1.0
+
+
+def _plot_switching_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool:
+    fig_name = out_path.name
+    if not rows:
+        _warn_skip(fig_name, "aucune ligne disponible")
+        return False
+    switch_col = _resolve_metric_column(rows, expected="switch_count_mean")
+    needed = {"speed", "algo", switch_col}
+    missing = [column for column in needed if column not in rows[0]]
+    if missing:
+        _warn_skip(fig_name, f"colonnes manquantes {missing}")
+        return False
+
+    grouped: dict[str, dict[float, list[float]]] = defaultdict(lambda: defaultdict(list))
+    for row in rows:
+        speed = _to_float(row.get("speed"))
+        switch_count = _to_float(row.get(switch_col))
+        if speed is None or switch_count is None:
+            continue
+        grouped[row.get("algo", "unknown")][speed].append(switch_count / _duration_hours_from_row(row))
+
+    if not grouped:
+        _warn_skip(fig_name, "pas de couples speed/switch_count exploitables")
+        return False
+
+    plt.figure(figsize=(8, 5))
+    for algo in sorted(grouped):
+        speeds = sorted(grouped[algo])
+        means: list[float] = []
+        errors: list[float] = []
+        for speed in speeds:
+            ci = ci95_from_samples(grouped[algo][speed])
+            if ci is None:
+                continue
+            means.append(ci.mean)
+            errors.append(ci.half_width)
+        plt.errorbar(speeds, means, yerr=errors, marker="o", capsize=3, label=algo)
+
+    plt.grid(alpha=0.3)
+    plt.xlabel(normalized_axis_label("speed"))
+    plt.ylabel("Instabilité [switch_count/h]")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=PLOT_DPI)
+    plt.close()
+    return True
+
+
+def _plot_airtime_reliability_pareto(rows: list[dict[str, str]], out_path: Path) -> bool:
+    fig_name = out_path.name
+    if not rows:
+        _warn_skip(fig_name, "aucune ligne disponible")
+        return False
+    pdr_col = _resolve_metric_column(rows, expected="pdr_mean")
+    airtime_col = _resolve_metric_column(rows, expected="airtime_total_s_mean")
+    needed = {"algo", pdr_col, airtime_col}
+    missing = [column for column in needed if column not in rows[0]]
+    if missing:
+        _warn_skip(fig_name, f"colonnes manquantes {missing}")
+        return False
+
+    grouped: dict[str, list[tuple[float, float]]] = defaultdict(list)
+    for row in rows:
+        pdr = _to_float(row.get(pdr_col))
+        airtime = _to_float(row.get(airtime_col))
+        if pdr is None or airtime is None:
+            continue
+        grouped[row.get("algo", "unknown")].append((airtime, pdr))
+
+    if not grouped:
+        _warn_skip(fig_name, "pas de couples airtime/PDR exploitables")
+        return False
+
+    plt.figure(figsize=(8, 5))
+    for algo in sorted(grouped):
+        xs = [pair[0] for pair in grouped[algo]]
+        ys = [pair[1] for pair in grouped[algo]]
+        plt.scatter(xs, ys, alpha=0.7, s=25, label=algo)
+
+        frontier = sorted(grouped[algo], key=lambda item: (item[0], -item[1]))
+        pareto: list[tuple[float, float]] = []
+        best_pdr = float("-inf")
+        for point in frontier:
+            if point[1] > best_pdr:
+                pareto.append(point)
+                best_pdr = point[1]
+        if len(pareto) >= 2:
+            plt.plot([p[0] for p in pareto], [p[1] for p in pareto], linewidth=1.2, alpha=0.9)
+
+    plt.grid(alpha=0.3)
+    plt.xlabel(normalized_axis_label("airtime_total_s_mean"))
+    plt.ylabel(normalized_axis_label("pdr_mean"))
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=PLOT_DPI)
+    plt.close()
+    return True
+
+
 def generate_minimal_figures(
     *,
     aggregates_dir: Path,
@@ -637,7 +819,14 @@ def generate_minimal_figures(
             effective_filters = filters.merge(local_filter).merge(_resolve_profile_filter(article_profile, fig_name))
             selected = _apply_filters(payloads[source], effective_filters)
             out_path = out_dir / fig_name
-            did_generate = _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path)
+            if fig_name == "fig14_delta_pdr_snir_on_minus_off.png":
+                did_generate = _plot_delta_pdr_on_minus_off(selected, out_path)
+            elif fig_name == "fig15_switching_vs_speed.png":
+                did_generate = _plot_switching_vs_speed(selected, out_path)
+            elif fig_name == "fig16_airtime_reliability_pareto.png":
+                did_generate = _plot_airtime_reliability_pareto(selected, out_path)
+            else:
+                did_generate = _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path)
             traces.append(
                 FigureTrace(
                     figure=fig_name,
@@ -687,7 +876,7 @@ def generate_minimal_figures(
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Génère les figures fig01..fig10 (et bonus fig11..fig12) depuis aggregates/*.csv")
+    parser = argparse.ArgumentParser(description="Génère les figures fig01..fig10 (et bonus fig11..fig16) depuis aggregates/*.csv")
     parser.add_argument("--aggregates-dir", required=True, type=Path, help="Répertoire contenant les CSV agrégés.")
     parser.add_argument("--out", required=True, type=Path, help="Répertoire cible pour les PNG.")
     parser.add_argument(
@@ -696,7 +885,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         help="Filtre clé=val1,val2 (répétable), ex: --scenario-filter mode=snir_on --scenario-filter algo=ucb,legacy",
     )
-    parser.add_argument("--no-bonus", action="store_true", help="N'écrit pas les figures bonus fig11/fig12.")
+    parser.add_argument("--no-bonus", action="store_true", help="N'écrit pas les figures bonus fig11..fig16.")
     parser.add_argument(
         "--article-profile",
         choices=sorted(ARTICLE_PROFILE_FILTERS),

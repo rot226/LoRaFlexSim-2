@@ -113,6 +113,23 @@ mobilesfrdth aggregate ...
 mobilesfrdth plots ...
 ```
 
+### Filtres de scénario utilisés pour les figures `mobilesfrdth plots`
+
+Le pipeline `src/mobilesfrdth/plotting/plots.py` applique des filtres par figure
+(éventuellement combinés avec `--scenario-filter ...`) afin de produire des
+figures reproductibles.
+
+Pour les nouvelles figures bonus :
+
+- `fig13_pdr_ci_vs_n_snir_on.png` : `mode=snir_on`.
+- `fig14_delta_pdr_snir_on_minus_off.png` : comparaison appariée
+  `ΔPDR = PDR(SNIR_ON) - PDR(SNIR_OFF)` par algorithme (donc nécessite les deux
+  modes SNIR pour chaque point).
+- `fig15_switching_vs_speed.png` : focus instabilité `switch_count/h` en
+  fonction de la vitesse, restreint à `algo ∈ {ucb, ucb_forget}`.
+- `fig16_airtime_reliability_pareto.png` : nuage de compromis airtime moyen vs
+  fiabilité (`PDR`) et front de Pareto par algorithme.
+
 ### Reprise de campagne `mobilesfrdth run` (sans perte)
 
 La sous-commande `run` expose maintenant des options de reprise et de limitation
