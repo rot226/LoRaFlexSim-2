@@ -15,6 +15,11 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+from .utils import ci95_from_samples, normalized_axis_label, setup_plot_style, PLOT_DPI
+
+
+setup_plot_style()
+
 
 REQUIRED_FILES = {
     "metric_by_factor": "metric_by_factor.csv",
@@ -66,7 +71,7 @@ ARTICLE_PROFILE_FILTERS: dict[str, dict[str, dict[str, set[str]]]] = {
         "fig06_throughput_vs_n_snir_on.png": {"mode": {"snir_on"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
         "fig07_tc_vs_speed.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
         "fig08_fairness_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
-        "fig_sf_histogram_snir_on.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig09_sf_distribution_snir_on.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
         "fig10_sinr_cdf.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
         "fig11_airtime_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
         "fig12_switch_count_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
@@ -80,7 +85,7 @@ ARTICLE_PROFILE_FILTERS: dict[str, dict[str, dict[str, set[str]]]] = {
         "fig06_throughput_vs_n_snir_on.png": {"mode": {"snir_on"}},
         "fig07_tc_vs_speed.png": {"speed": {"1", "3", "5"}},
         "fig08_fairness_vs_n.png": {"mode": {"snir_off", "snir_on"}},
-        "fig_sf_histogram_snir_on.png": {"mode": {"snir_on"}},
+        "fig09_sf_distribution_snir_on.png": {"mode": {"snir_on"}},
         "fig10_sinr_cdf.png": {"mode": {"snir_on"}},
         "fig11_airtime_vs_n.png": {"mode": {"snir_off", "snir_on"}},
         "fig12_switch_count_vs_n.png": {"mode": {"snir_off", "snir_on"}},
@@ -302,7 +307,7 @@ def _plot_xy_by_algo(rows: list[dict[str, str]], *, fig_name: str, y_col: str, o
         _warn_skip(fig_name, f"colonnes manquantes {missing}")
         return False
 
-    clean_rows: list[dict[str, str]] = []
+    grouped: dict[str, dict[float, list[float]]] = defaultdict(lambda: defaultdict(list))
     dropped = 0
     for row in rows:
         x = _to_float(row.get("N"))
@@ -310,35 +315,33 @@ def _plot_xy_by_algo(rows: list[dict[str, str]], *, fig_name: str, y_col: str, o
         if x is None or y is None:
             dropped += 1
             continue
-        normalized = dict(row)
-        normalized["_x"] = str(x)
-        normalized["_y"] = str(y)
-        clean_rows.append(normalized)
+        grouped[row.get("algo", "unknown")][x].append(y)
 
     if dropped:
         warnings.warn(f"{fig_name}: {dropped} lignes ignorées (valeurs non numériques).", stacklevel=2)
-
-    algos = sorted({row.get("algo", "unknown") for row in clean_rows})
-    if not algos:
+    if not grouped:
         _warn_skip(fig_name, "aucune donnée traçable après nettoyage")
         return False
 
     plt.figure(figsize=(8, 5))
-    for algo in algos:
-        algo_rows = [row for row in clean_rows if row.get("algo", "unknown") == algo]
-        points = sorted(
-            ((float(row["_x"]), float(row["_y"])) for row in algo_rows),
-            key=lambda item: item[0],
-        )
-        xs = [point[0] for point in points]
-        ys = [point[1] for point in points]
-        plt.plot(xs, ys, marker="o", label=algo)
+    for algo in sorted(grouped):
+        xs = sorted(grouped[algo])
+        means: list[float] = []
+        errors: list[float] = []
+        for x in xs:
+            ci = ci95_from_samples(grouped[algo][x])
+            if ci is None:
+                continue
+            means.append(ci.mean)
+            errors.append(ci.half_width)
+        plt.errorbar(xs, means, yerr=errors, marker="o", capsize=3, label=algo)
+
     plt.grid(alpha=0.3)
-    plt.xlabel("N")
-    plt.ylabel(y_col)
+    plt.xlabel(normalized_axis_label("N"))
+    plt.ylabel(normalized_axis_label(y_col))
     plt.legend()
     plt.tight_layout()
-    plt.savefig(out_path, dpi=150)
+    plt.savefig(out_path, dpi=PLOT_DPI)
     plt.close()
     return True
 
@@ -383,14 +386,21 @@ def _plot_tc_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool:
     plt.figure(figsize=(8, 5))
     for algo in sorted(grouped):
         speeds = sorted(grouped[algo])
-        means = [sum(grouped[algo][speed]) / len(grouped[algo][speed]) for speed in speeds]
-        plt.plot(speeds, means, marker="o", label=algo)
+        means: list[float] = []
+        errors: list[float] = []
+        for speed in speeds:
+            ci = ci95_from_samples(grouped[algo][speed])
+            if ci is None:
+                continue
+            means.append(ci.mean)
+            errors.append(ci.half_width)
+        plt.errorbar(speeds, means, yerr=errors, marker="o", capsize=3, label=algo)
     plt.grid(alpha=0.3)
-    plt.xlabel("speed")
-    plt.ylabel("Tc_s moyen")
+    plt.xlabel(normalized_axis_label("speed"))
+    plt.ylabel(normalized_axis_label("Tc_s"))
     plt.legend()
     plt.tight_layout()
-    plt.savefig(out_path, dpi=150)
+    plt.savefig(out_path, dpi=PLOT_DPI)
     plt.close()
     return True
 
@@ -433,10 +443,6 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
             _warn_skip(fig_name, f"quantile non monotone croissant pour groupe algo={algo}, mode={mode}, N={n}, speed={speed}")
             return False
 
-        if len({sinr for _, sinr in points}) <= 1:
-            _warn_skip(fig_name, f"SINR constant pour groupe algo={algo}, mode={mode}, N={n}, speed={speed}")
-            return False
-
         for q, sinr in points:
             aggregated[algo][q].append(sinr)
 
@@ -446,11 +452,11 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
         sinrs = [sum(aggregated[algo][q]) / len(aggregated[algo][q]) for q in quantiles]
         plt.plot(sinrs, quantiles, label=algo)
     plt.grid(alpha=0.3)
-    plt.xlabel("SINR (dB)")
-    plt.ylabel("Probabilité cumulée")
+    plt.xlabel(normalized_axis_label("sinr_db"))
+    plt.ylabel(normalized_axis_label("quantile"))
     plt.legend()
     plt.tight_layout()
-    plt.savefig(out_path, dpi=150)
+    plt.savefig(out_path, dpi=PLOT_DPI)
     plt.close()
     return True
 
@@ -510,13 +516,13 @@ def _plot_sf_distribution(rows: list[dict[str, str]], out_path: Path) -> bool:
         xs = [x + offset for x in x_positions]
         plt.bar(xs, data_percent[algo], width=width, label=algo)
     plt.grid(axis="y", alpha=0.3)
-    plt.xlabel("Spreading Factor")
-    plt.ylabel("Pourcentage (%)")
+    plt.xlabel(normalized_axis_label("sf"))
+    plt.ylabel(normalized_axis_label("ratio"))
     plt.xticks(x_positions, [str(sf) for sf in sf_values])
     plt.ylim(0, 100)
     plt.legend(title="Algo")
     plt.tight_layout()
-    plt.savefig(out_path, dpi=150)
+    plt.savefig(out_path, dpi=PLOT_DPI)
     plt.close()
     return True
 
@@ -594,7 +600,7 @@ def generate_minimal_figures(
     if did_generate:
         generated.append(fig08)
 
-    fig09 = out_dir / "fig_sf_histogram_snir_on.png"
+    fig09 = out_dir / "fig09_sf_distribution_snir_on.png"
     fig09_filters = filters.merge(_resolve_profile_filter(article_profile, fig09.name))
     did_generate = _plot_sf_distribution(_apply_filters(payloads["distribution_sf"], fig09_filters), fig09)
     traces.append(
@@ -644,6 +650,19 @@ def generate_minimal_figures(
             _log_figure_result(out_path, did_generate, verbose=verbose)
             if did_generate:
                 generated.append(out_path)
+
+    manifest_path = out_dir / "plots_manifest.csv"
+    with manifest_path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=["figure", "source_csv", "filters_appliques"])
+        writer.writeheader()
+        for trace in traces:
+            writer.writerow(
+                {
+                    "figure": trace.figure,
+                    "source_csv": REQUIRED_FILES.get(trace.source, trace.source),
+                    "filters_appliques": json.dumps(trace.filters, ensure_ascii=False, sort_keys=True),
+                }
+            )
 
     summary_payload = {
         "article_profile": article_profile,

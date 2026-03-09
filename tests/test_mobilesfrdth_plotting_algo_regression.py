@@ -169,7 +169,7 @@ def test_plot_xy_by_algo_uses_distinct_series_per_algo(monkeypatch, tmp_path):
         captured.append({"label": kwargs.get("label"), "xs": tuple(xs), "ys": tuple(ys)})
         return []
 
-    monkeypatch.setattr(plots.plt, "plot", fake_plot)
+    monkeypatch.setattr(plots.plt, "errorbar", fake_plot)
     monkeypatch.setattr(plots.plt, "legend", lambda *args, **kwargs: None)
 
     out_path = tmp_path / "fig01_pdr_vs_n_snir_off.png"
@@ -212,7 +212,7 @@ def test_plot_sinr_cdf_single_curve_per_algo_sorted_quantiles(monkeypatch, tmp_p
     assert tuple(by_algo["ucb"]["ys"]) == (0.0, 0.5, 1.0)
 
 
-def test_plot_sinr_cdf_rejects_constant_sinr_group(tmp_path):
+def test_plot_sinr_cdf_accepts_constant_sinr_group(tmp_path):
     rows = [
         {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "0.0", "sinr_db": "3.0"},
         {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "0.5", "sinr_db": "3.0"},
@@ -220,10 +220,7 @@ def test_plot_sinr_cdf_rejects_constant_sinr_group(tmp_path):
     ]
 
     out_path = tmp_path / "fig10_sinr_cdf.png"
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        generated = plots._plot_sinr_cdf(rows, out_path)
+    generated = plots._plot_sinr_cdf(rows, out_path)
 
-    assert generated is False
-    assert any("SINR constant" in str(item.message) for item in caught)
+    assert generated is True
 
