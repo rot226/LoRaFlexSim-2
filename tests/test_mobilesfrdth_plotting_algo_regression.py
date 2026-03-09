@@ -205,11 +205,11 @@ def test_plot_xy_by_algo_uses_distinct_series_per_algo(monkeypatch, tmp_path):
 
 def test_plot_sinr_cdf_single_curve_per_algo_sorted_quantiles(monkeypatch, tmp_path):
     rows = [
-        {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "0.5", "sinr_db": "4.0"},
-        {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "0.0", "sinr_db": "1.0"},
+        {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "0.666667", "sinr_db": "4.0"},
+        {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "0.333333", "sinr_db": "1.0"},
         {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "1.0", "sinr_db": "8.0"},
-        {"algo": "ucb", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "0.5", "sinr_db": "5.0"},
-        {"algo": "ucb", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "0.0", "sinr_db": "2.0"},
+        {"algo": "ucb", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "0.666667", "sinr_db": "5.0"},
+        {"algo": "ucb", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "0.333333", "sinr_db": "2.0"},
         {"algo": "ucb", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "1.0", "sinr_db": "9.0"},
     ]
 
@@ -227,20 +227,20 @@ def test_plot_sinr_cdf_single_curve_per_algo_sorted_quantiles(monkeypatch, tmp_p
 
     assert generated is True
     assert len(captured) == 2
-    by_algo = {item["label"]: item for item in captured}
-    assert tuple(by_algo["adr"]["ys"]) == (0.0, 0.5, 1.0)
-    assert tuple(by_algo["ucb"]["ys"]) == (0.0, 0.5, 1.0)
+    by_label = {item["label"]: item for item in captured}
+    assert tuple(by_label["adr | snir_on | N=50 | speed=1"]["ys"]) == (0.333333, 0.666667, 1.0)
+    assert tuple(by_label["ucb | snir_on | N=50 | speed=1"]["ys"]) == (0.333333, 0.666667, 1.0)
 
 
-def test_plot_sinr_cdf_accepts_constant_sinr_group(tmp_path):
+def test_plot_sinr_cdf_rejects_constant_sinr_group(tmp_path):
     rows = [
-        {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "0.0", "sinr_db": "3.0"},
-        {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "0.5", "sinr_db": "3.0"},
+        {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "0.333333", "sinr_db": "3.0"},
+        {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "0.666667", "sinr_db": "3.0"},
         {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "1.0", "sinr_db": "3.0"},
     ]
 
     out_path = tmp_path / "fig10_sinr_cdf.png"
     generated = plots._plot_sinr_cdf(rows, out_path)
 
-    assert generated is True
+    assert generated is False
 

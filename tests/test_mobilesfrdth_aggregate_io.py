@@ -114,7 +114,11 @@ def test_aggregate_runs_sinr_cdf_has_strict_columns(tmp_path):
 
     with files["sinr_cdf"].open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
-        assert reader.fieldnames == ["algo", "mode", "N", "speed", "quantile", "sinr_db"]
+        assert reader.fieldnames == ["N", "speed", "mobility_model", "mode", "algo", "gateways", "sigma_shadowing", "quantile", "sinr_db", "sample_count"]
+        rows = list(reader)
+        assert rows
+        assert rows[0]["quantile"] == "1.0"
+        assert rows[0]["sample_count"] == "1"
 
 
 

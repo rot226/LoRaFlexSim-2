@@ -450,25 +450,38 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
         _warn_skip(fig_name, "pas de points quantile/sinr exploitables")
         return False
 
-    aggregated: dict[str, dict[float, list[float]]] = defaultdict(lambda: defaultdict(list))
+    plt.figure(figsize=(8, 5))
+    plotted = 0
     for (algo, mode, n, speed), points in sorted(by_group.items()):
-        points.sort(key=lambda item: item[0])
+        points.sort(key=lambda item: (item[0], item[1]))
         quantiles = [item[0] for item in points]
-        if any(q < 0.0 or q > 1.0 for q in quantiles):
-            _warn_skip(fig_name, f"quantile hors [0..1] pour groupe algo={algo}, mode={mode}, N={n}, speed={speed}")
+        sinrs = [item[1] for item in points]
+        if any(q <= 0.0 or q > 1.0 for q in quantiles):
+            _warn_skip(fig_name, f"quantile hors ]0..1] pour groupe algo={algo}, mode={mode}, N={n}, speed={speed}")
+            plt.close()
             return False
         if any(curr < prev for prev, curr in zip(quantiles, quantiles[1:], strict=False)):
             _warn_skip(fig_name, f"quantile non monotone croissant pour groupe algo={algo}, mode={mode}, N={n}, speed={speed}")
+            plt.close()
+            return False
+        if any(curr < prev for prev, curr in zip(sinrs, sinrs[1:], strict=False)):
+            _warn_skip(fig_name, f"sinr_db non monotone croissant pour groupe algo={algo}, mode={mode}, N={n}, speed={speed}")
+            plt.close()
+            return False
+        if sinrs[-1] <= sinrs[0]:
+            _warn_skip(fig_name, f"étendue SINR nulle pour groupe algo={algo}, mode={mode}, N={n}, speed={speed}")
+            plt.close()
             return False
 
-        for q, sinr in points:
-            aggregated[algo][q].append(sinr)
+        label = f"{algo} | {mode} | N={n} | speed={speed}"
+        plt.plot(sinrs, quantiles, label=label)
+        plotted += 1
 
-    plt.figure(figsize=(8, 5))
-    for algo in sorted(aggregated):
-        quantiles = sorted(aggregated[algo])
-        sinrs = [sum(aggregated[algo][q]) / len(aggregated[algo][q]) for q in quantiles]
-        plt.plot(sinrs, quantiles, label=algo)
+    if plotted == 0:
+        _warn_skip(fig_name, "aucune courbe CDF traçable")
+        plt.close()
+        return False
+
     plt.grid(alpha=0.3)
     plt.xlabel(normalized_axis_label("sinr_db"))
     plt.ylabel(normalized_axis_label("quantile"))
