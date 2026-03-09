@@ -158,6 +158,11 @@ def test_cli_smoke_grid_pipeline_contracts_and_run_id_uniqueness(monkeypatch, tm
     plots_payload = json.loads((figures_dir / "plots_summary.json").read_text(encoding="utf-8"))
     generated_figure_names = {pathlib.Path(path).name for path in plots_payload["figures"]}
     assert _NON_BONUS_FIGURES.issubset(generated_figure_names)
+    assert plots_payload["article_profile"] == "core"
+    fig02_filters = {
+        entry["figure"]: entry["filters"] for entry in plots_payload["figure_filters"]
+    }["fig02_pdr_vs_n_snir_on.png"]
+    assert fig02_filters["mode"] == ["snir_on"]
 
 
 def test_cli_plots_generates_fig01_to_fig06_with_non_empty_core_campaign(monkeypatch, tmp_path: pathlib.Path) -> None:
@@ -249,7 +254,20 @@ def test_cli_plots_generates_fig01_to_fig06_with_non_empty_core_campaign(monkeyp
     assert int(jobs_payload["num_jobs"]) > 0
 
     assert cli.main(["aggregate", "--results", str(runs_dir), "--out", str(aggregates_dir)]) == 0
-    assert cli.main(["plots", "--aggregates-dir", str(aggregates_dir / "aggregates"), "--out", str(figures_dir)]) == 0
+    assert (
+        cli.main(
+            [
+                "plots",
+                "--aggregates-dir",
+                str(aggregates_dir / "aggregates"),
+                "--out",
+                str(figures_dir),
+                "--article-profile",
+                "full",
+            ]
+        )
+        == 0
+    )
 
     plots_payload = json.loads((figures_dir / "plots_summary.json").read_text(encoding="utf-8"))
     generated_figure_names = {pathlib.Path(path).name for path in plots_payload["figures"]}
@@ -262,3 +280,8 @@ def test_cli_plots_generates_fig01_to_fig06_with_non_empty_core_campaign(monkeyp
         "fig06_throughput_vs_n_snir_on.png",
     }
     assert expected.issubset(generated_figure_names)
+    assert plots_payload["article_profile"] == "full"
+    fig07_filters = {
+        entry["figure"]: entry["filters"] for entry in plots_payload["figure_filters"]
+    }["fig07_tc_vs_speed.png"]
+    assert fig07_filters["speed"] == ["1", "3", "5"]

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
@@ -54,6 +55,37 @@ BONUS_SPECS = [
     ("fig11_airtime_vs_n.png", "metric_by_factor", "airtime_total_s_mean", {}),
     ("fig12_switch_count_vs_n.png", "metric_by_factor", "switch_count_mean", {}),
 ]
+
+ARTICLE_PROFILE_FILTERS: dict[str, dict[str, dict[str, set[str]]]] = {
+    "core": {
+        "fig01_pdr_vs_n_snir_off.png": {"mode": {"snir_off"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig02_pdr_vs_n_snir_on.png": {"mode": {"snir_on"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig03_der_vs_n_snir_off.png": {"mode": {"snir_off"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig04_der_vs_n_snir_on.png": {"mode": {"snir_on"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig05_throughput_vs_n_snir_off.png": {"mode": {"snir_off"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig06_throughput_vs_n_snir_on.png": {"mode": {"snir_on"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig07_tc_vs_speed.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig08_fairness_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig09_sf_distribution.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig10_sinr_cdf.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig11_airtime_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig12_switch_count_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+    },
+    "full": {
+        "fig01_pdr_vs_n_snir_off.png": {"mode": {"snir_off"}},
+        "fig02_pdr_vs_n_snir_on.png": {"mode": {"snir_on"}},
+        "fig03_der_vs_n_snir_off.png": {"mode": {"snir_off"}},
+        "fig04_der_vs_n_snir_on.png": {"mode": {"snir_on"}},
+        "fig05_throughput_vs_n_snir_off.png": {"mode": {"snir_off"}},
+        "fig06_throughput_vs_n_snir_on.png": {"mode": {"snir_on"}},
+        "fig07_tc_vs_speed.png": {"speed": {"1", "3", "5"}},
+        "fig08_fairness_vs_n.png": {"mode": {"snir_off", "snir_on"}},
+        "fig09_sf_distribution.png": {"mode": {"snir_off", "snir_on"}},
+        "fig10_sinr_cdf.png": {"mode": {"snir_on"}},
+        "fig11_airtime_vs_n.png": {"mode": {"snir_off", "snir_on"}},
+        "fig12_switch_count_vs_n.png": {"mode": {"snir_off", "snir_on"}},
+    },
+}
 
 FILTER_COLUMN_ALIASES = {"n": "N", "N": "N", "mode": "mode", "algo": "algo"}
 MODE_VALUE_ALIASES = {
@@ -118,6 +150,15 @@ class ScenarioFilters:
             else:
                 merged[key] = set(values)
         return ScenarioFilters(merged)
+
+
+@dataclass(frozen=True)
+class FigureTrace:
+    figure: str
+    source: str
+    metric: str
+    filters: dict[str, list[str]]
+    generated: bool
 
 
 def _read_csv_rows(path: Path) -> list[dict[str, str]]:
@@ -229,6 +270,15 @@ def _format_filters(filters: ScenarioFilters) -> str:
     if not filters.by_column:
         return "<none>"
     return ";".join(f"{key}={','.join(sorted(values))}" for key, values in sorted(filters.by_column.items()))
+
+
+def _filters_to_serializable(filters: ScenarioFilters) -> dict[str, list[str]]:
+    return {key: sorted(values) for key, values in sorted(filters.by_column.items())}
+
+
+def _resolve_profile_filter(article_profile: str, figure_name: str) -> dict[str, set[str]]:
+    profile_filters = ARTICLE_PROFILE_FILTERS[article_profile]
+    return {key: set(values) for key, values in profile_filters.get(figure_name, {}).items()}
 
 
 def _warn_skip(fig_name: str, reason: str) -> None:
@@ -434,61 +484,145 @@ def generate_minimal_figures(
     aggregates_dir: Path,
     out_dir: Path,
     filters: ScenarioFilters,
+    article_profile: str = "core",
     include_bonus: bool = True,
     verbose: bool = False,
-) -> list[Path]:
+) -> tuple[list[Path], list[FigureTrace]]:
+    if article_profile not in ARTICLE_PROFILE_FILTERS:
+        raise ValueError(f"Profil article inconnu: {article_profile}")
+
     out_dir.mkdir(parents=True, exist_ok=True)
     payloads = {name: _read_csv_rows(aggregates_dir / filename) for name, filename in REQUIRED_FILES.items()}
 
     generated: list[Path] = []
+    traces: list[FigureTrace] = []
 
     for fig_name, source, metric, local_filter in FIGURE_SPECS:
-        selected = _apply_filters(payloads[source], filters.merge(local_filter))
+        effective_filters = filters.merge(local_filter).merge(_resolve_profile_filter(article_profile, fig_name))
+        selected = _apply_filters(payloads[source], effective_filters)
         out_path = out_dir / fig_name
         did_generate = _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path)
+        traces.append(
+            FigureTrace(
+                figure=fig_name,
+                source=source,
+                metric=metric,
+                filters=_filters_to_serializable(effective_filters),
+                generated=did_generate,
+            )
+        )
         _log_figure_result(out_path, did_generate, verbose=verbose)
         if did_generate:
             generated.append(out_path)
 
     fig07 = out_dir / "fig07_tc_vs_speed.png"
-    did_generate = _plot_tc_vs_speed(_apply_filters(payloads["convergence_tc"], filters), fig07)
+    fig07_filters = filters.merge(_resolve_profile_filter(article_profile, fig07.name))
+    did_generate = _plot_tc_vs_speed(_apply_filters(payloads["convergence_tc"], fig07_filters), fig07)
+    traces.append(
+        FigureTrace(
+            figure=fig07.name,
+            source="convergence_tc",
+            metric="Tc_s",
+            filters=_filters_to_serializable(fig07_filters),
+            generated=did_generate,
+        )
+    )
     _log_figure_result(fig07, did_generate, verbose=verbose)
     if did_generate:
         generated.append(fig07)
 
     fig08 = out_dir / "fig08_fairness_vs_n.png"
+    fig08_filters = filters.merge(_resolve_profile_filter(article_profile, fig08.name))
     did_generate = _plot_xy_by_algo(
-        _apply_filters(payloads["metric_by_factor"], filters),
+        _apply_filters(payloads["metric_by_factor"], fig08_filters),
         fig_name=fig08.name,
         y_col="jain_fairness_mean",
         out_path=fig08,
+    )
+    traces.append(
+        FigureTrace(
+            figure=fig08.name,
+            source="metric_by_factor",
+            metric="jain_fairness_mean",
+            filters=_filters_to_serializable(fig08_filters),
+            generated=did_generate,
+        )
     )
     _log_figure_result(fig08, did_generate, verbose=verbose)
     if did_generate:
         generated.append(fig08)
 
     fig09 = out_dir / "fig09_sf_distribution.png"
-    did_generate = _plot_sf_distribution(_apply_filters(payloads["distribution_sf"], filters), fig09)
+    fig09_filters = filters.merge(_resolve_profile_filter(article_profile, fig09.name))
+    did_generate = _plot_sf_distribution(_apply_filters(payloads["distribution_sf"], fig09_filters), fig09)
+    traces.append(
+        FigureTrace(
+            figure=fig09.name,
+            source="distribution_sf",
+            metric="ratio",
+            filters=_filters_to_serializable(fig09_filters),
+            generated=did_generate,
+        )
+    )
     _log_figure_result(fig09, did_generate, verbose=verbose)
     if did_generate:
         generated.append(fig09)
 
     fig10 = out_dir / "fig10_sinr_cdf.png"
-    did_generate = _plot_sinr_cdf(_apply_filters(payloads["sinr_cdf"], filters), fig10)
+    fig10_filters = filters.merge(_resolve_profile_filter(article_profile, fig10.name))
+    did_generate = _plot_sinr_cdf(_apply_filters(payloads["sinr_cdf"], fig10_filters), fig10)
+    traces.append(
+        FigureTrace(
+            figure=fig10.name,
+            source="sinr_cdf",
+            metric="sinr_db",
+            filters=_filters_to_serializable(fig10_filters),
+            generated=did_generate,
+        )
+    )
     _log_figure_result(fig10, did_generate, verbose=verbose)
     if did_generate:
         generated.append(fig10)
 
     if include_bonus:
         for fig_name, source, metric, local_filter in BONUS_SPECS:
-            selected = _apply_filters(payloads[source], filters.merge(local_filter))
+            effective_filters = filters.merge(local_filter).merge(_resolve_profile_filter(article_profile, fig_name))
+            selected = _apply_filters(payloads[source], effective_filters)
             out_path = out_dir / fig_name
             did_generate = _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path)
+            traces.append(
+                FigureTrace(
+                    figure=fig_name,
+                    source=source,
+                    metric=metric,
+                    filters=_filters_to_serializable(effective_filters),
+                    generated=did_generate,
+                )
+            )
             _log_figure_result(out_path, did_generate, verbose=verbose)
             if did_generate:
                 generated.append(out_path)
 
-    return generated
+    summary_payload = {
+        "article_profile": article_profile,
+        "requested_filters": _filters_to_serializable(filters),
+        "figures": [
+            {
+                "figure": trace.figure,
+                "source": trace.source,
+                "metric": trace.metric,
+                "filters": trace.filters,
+                "generated": trace.generated,
+            }
+            for trace in traces
+        ],
+    }
+    (out_dir / "plots_summary.json").write_text(
+        json.dumps(summary_payload, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+    return generated, traces
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -502,15 +636,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="Filtre clé=val1,val2 (répétable), ex: --scenario-filter mode=snir_on --scenario-filter algo=ucb,legacy",
     )
     parser.add_argument("--no-bonus", action="store_true", help="N'écrit pas les figures bonus fig11/fig12.")
+    parser.add_argument(
+        "--article-profile",
+        choices=sorted(ARTICLE_PROFILE_FILTERS),
+        default="core",
+        help="Profil d'article figé pour imposer les filtres documentés par figure (core ou full).",
+    )
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    generated = generate_minimal_figures(
+    generated, _ = generate_minimal_figures(
         aggregates_dir=args.aggregates_dir,
         out_dir=args.out,
         filters=ScenarioFilters.from_tokens(args.scenario_filter),
+        article_profile=args.article_profile,
         include_bonus=not args.no_bonus,
     )
     print(f"{len(generated)} figure(s) générée(s).")

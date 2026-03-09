@@ -247,18 +247,30 @@ def cmd_plots(args: argparse.Namespace) -> int:
             print(f"- {err}")
         return 2
 
-    generated = generate_minimal_figures(
+    generated, traces = generate_minimal_figures(
         aggregates_dir=aggregates_dir,
         out_dir=out_dir,
         filters=ScenarioFilters.from_tokens(args.scenario_filter),
+        article_profile=args.article_profile,
         include_bonus=not args.no_bonus,
         verbose=args.verbose,
     )
     report = {
+        "article_profile": args.article_profile,
         "aggregates_dir": str(aggregates_dir),
         "out_dir": str(out_dir),
         "num_figures": len(generated),
         "figures": [str(path) for path in generated],
+        "figure_filters": [
+            {
+                "figure": trace.figure,
+                "source": trace.source,
+                "metric": trace.metric,
+                "filters": trace.filters,
+                "generated": trace.generated,
+            }
+            for trace in traces
+        ],
     }
     output_file = out_dir / "plots_summary.json"
     _dump_json(output_file, report)
@@ -387,6 +399,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         default=[],
         help="Filtre clé=val1,val2 (répétable), ex: --scenario-filter algo=ucb --scenario-filter mobility_model=rwp.",
+    )
+    plots_parser.add_argument(
+        "--article-profile",
+        choices=["core", "full"],
+        default="core",
+        help="Profil de filtres documentés à appliquer pour chaque figure (core ou full).",
     )
     plots_parser.add_argument("--no-bonus", action="store_true", help="Désactive les figures bonus fig11/fig12.")
     plots_parser.add_argument("--verbose", action="store_true", help="Affiche le statut de chaque figure générée/ignorée.")
