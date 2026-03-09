@@ -91,6 +91,41 @@ def convergence_tc(
     return math.inf
 
 
+def convergence_tc_performance(
+    *,
+    pdr_samples: Sequence[float],
+    der_samples: Sequence[float],
+    dt_s: float,
+    moving_window_bins: int = 3,
+    stationary_tail_bins: int = 5,
+    target_ratio: float = 0.9,
+) -> float:
+    """Temps de convergence basé sur les séries de performance ``PDR`` et ``DER``.
+
+    ``Tc`` est défini comme le premier instant où les deux métriques atteignent
+    ``target_ratio`` (90% par défaut) de leur régime stationnaire estimé via une
+    moyenne glissante.
+    """
+
+    tc_pdr = convergence_tc(
+        pdr_samples,
+        dt_s=dt_s,
+        moving_window_bins=moving_window_bins,
+        stationary_tail_bins=stationary_tail_bins,
+        target_ratio=target_ratio,
+    )
+    tc_der = convergence_tc(
+        der_samples,
+        dt_s=dt_s,
+        moving_window_bins=moving_window_bins,
+        stationary_tail_bins=stationary_tail_bins,
+        target_ratio=target_ratio,
+    )
+    if math.isinf(tc_pdr) or math.isinf(tc_der):
+        return math.inf
+    return max(tc_pdr, tc_der)
+
+
 def jain_fairness(values: Iterable[float]) -> float:
     """Indice d'équité de Jain.
 

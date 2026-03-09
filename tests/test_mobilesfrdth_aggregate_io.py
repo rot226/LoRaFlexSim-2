@@ -170,6 +170,7 @@ def test_tc_is_computed_from_node_timeseries_and_varies_with_scenario(tmp_path):
     tc_small = _tc("tc_small")
     tc_large = _tc("tc_large")
 
-    assert tc_small != tc_large
     assert tc_small > 0.0
     assert tc_large > 0.0
+    # Sensibilité SNIR_ON: charge/vitesse plus élevées -> convergence plus lente.
+    assert tc_large > tc_small
