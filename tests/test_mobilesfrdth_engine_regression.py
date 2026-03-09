@@ -64,3 +64,25 @@ def test_non_regression_metrics_vary_with_network_size_and_mode(tmp_path: pathli
         or large_off["throughput_bps"] != large_on["throughput_bps"]
         or large_off["switch_count"] != large_on["switch_count"]
     )
+
+
+def test_switch_count_stays_zero_when_sf_constant(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "mobilesfrdth.simulator.engine.recommend_sf",
+        lambda *, current_sf, snr_db, cfg: current_sf,
+    )
+    engine = EventDrivenEngine(seed=42)
+    nodes = [Node(node_id=1, period_s=30.0, payload_size=12)]
+
+    result = engine.run(
+        nodes=nodes,
+        until_s=300.0,
+        mode="snir_off",
+        algo="adr",
+        interference_db=0.0,
+        sigma=0.0,
+    )
+
+    assert result.events
+    assert all(event.switch_count == 0 for event in result.events)
+    assert nodes[0].meta["switch_count"] == 0

@@ -121,6 +121,7 @@ class EventDrivenEngine:
         sf_arms = [7, 8, 9, 10, 11, 12]
         for node in nodes:
             node.meta.setdefault("sf", self.rng.randint(8, 11))
+            node.meta.setdefault("sf_previous", int(node.meta.get("sf", 7)))
             node.meta.setdefault("tx_power_dbm", 14.0)
             node.meta.setdefault("switch_count", 0)
             if algo_name == "ucb":
@@ -143,6 +144,7 @@ class EventDrivenEngine:
                 node = node_by_id[event.node_id]
 
                 current_sf = int(node.meta.get("sf", 7))
+                sf_previous = int(node.meta.get("sf_previous", current_sf))
                 snr_db, sinr_db = self._compute_channel_state(
                     node_count=node_count,
                     mode=mode_name,
@@ -163,10 +165,11 @@ class EventDrivenEngine:
                     reward = (1.0 if success else -0.25) - 0.08 * airtime_s
                     agent.update(arm, reward)
 
-                switched = int(new_sf != current_sf)
+                switched = int(new_sf != sf_previous)
                 if switched:
                     node.meta["switch_count"] = int(node.meta.get("switch_count", 0)) + 1
-                    node.meta["sf"] = new_sf
+                node.meta["sf"] = new_sf
+                node.meta["sf_previous"] = new_sf
 
                 result.events.append(
                     Event(
