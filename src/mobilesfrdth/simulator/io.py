@@ -506,12 +506,13 @@ def aggregate_runs(
                         "algo": factors.get("algo", ""),
                         "mode": factors.get("mode", ""),
                         "N": factors.get("N", ""),
+                        "speed": factors.get("speed", ""),
                         "quantile": q,
                         "sinr_db": data[index],
                     }
                 )
         sinr_path = out_dir / "sinr_cdf.csv"
-        _write_csv(sinr_path, ["algo", "mode", "N", "quantile", "sinr_db"], sinr_rows)
+        _write_csv(sinr_path, ["algo", "mode", "N", "speed", "quantile", "sinr_db"], sinr_rows)
         files["sinr_cdf"] = sinr_path
 
     files["convergence_tc"] = convergence_path

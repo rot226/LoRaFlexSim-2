@@ -52,7 +52,7 @@ def test_aggregate_runs_summary_only_reads_only_summary(tmp_path, capsys):
     files = aggregate_runs(inputs=[tmp_path], output_root=tmp_path / "out", summary_only=True)
 
     captured = capsys.readouterr()
-    assert "Agrégation des runs: 1/1" in captured.out
+    assert "Dossiers traités: 1/1" in captured.out
     assert set(files) == {"metric_by_factor", "convergence_tc", "fairness_airtime_switching"}
     for path in files.values():
         assert path.is_file()
@@ -88,3 +88,31 @@ def test_aggregate_runs_skip_flags_control_event_outputs(tmp_path):
     assert "distribution_sf" in files
     assert "sinr_cdf" not in files
     assert files["distribution_sf"].is_file()
+
+
+def test_aggregate_runs_sinr_cdf_has_strict_columns(tmp_path):
+    run_dir = tmp_path / "results" / "run_001"
+    _write_csv(run_dir / "summary.csv", SUMMARY_COLUMNS, _summary_row("run_001"))
+    _write_csv(
+        run_dir / "events.csv",
+        ["event_type", "N", "speed", "mobility_model", "mode", "algo", "gateways", "sigma", "sf", "sinr_db"],
+        {
+            "event_type": "uplink",
+            "N": "50",
+            "speed": "3",
+            "mobility_model": "rwp",
+            "mode": "snir_on",
+            "algo": "ucb",
+            "gateways": "1",
+            "sigma": "2",
+            "sf": "9",
+            "sinr_db": "6.5",
+        },
+    )
+
+    files = aggregate_runs(inputs=[tmp_path], output_root=tmp_path / "out", summary_only=False)
+
+    with files["sinr_cdf"].open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        assert reader.fieldnames == ["algo", "mode", "N", "speed", "quantile", "sinr_db"]
+

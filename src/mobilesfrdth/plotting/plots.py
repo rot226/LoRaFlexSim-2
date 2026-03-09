@@ -38,7 +38,7 @@ REQUIRED_COLUMNS = {
     },
     "distribution_sf": {"algo", "sf", "ratio"},
     "convergence_tc": {"algo", "speed", "Tc_s"},
-    "sinr_cdf": {"algo", "mode", "N", "quantile", "sinr_db"},
+    "sinr_cdf": {"algo", "mode", "N", "speed", "quantile", "sinr_db"},
     "fairness_airtime_switching": {"N", "algo", "jain_fairness", "airtime_total_s", "switch_count"},
 }
 
@@ -400,13 +400,13 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
     if not rows:
         _warn_skip(fig_name, "fichier sinr_cdf.csv vide ou absent")
         return False
-    needed = {"algo", "mode", "N", "quantile", "sinr_db"}
+    needed = {"algo", "mode", "N", "speed", "quantile", "sinr_db"}
     missing = [column for column in needed if column not in rows[0]]
     if missing:
         _warn_skip(fig_name, f"colonnes manquantes {missing}")
         return False
 
-    by_group: dict[tuple[str, str, str], list[tuple[float, float]]] = defaultdict(list)
+    by_group: dict[tuple[str, str, str, str], list[tuple[float, float]]] = defaultdict(list)
     for row in rows:
         q = _to_float(row.get("quantile"))
         sinr = _to_float(row.get("sinr_db"))
@@ -415,21 +415,26 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
         algo = row.get("algo", "unknown")
         mode = row.get("mode", "")
         n = row.get("N", "")
-        by_group[(algo, mode, n)].append((q, sinr))
+        speed = row.get("speed", "")
+        by_group[(algo, mode, n, speed)].append((q, sinr))
 
     if not by_group:
         _warn_skip(fig_name, "pas de points quantile/sinr exploitables")
         return False
 
     aggregated: dict[str, dict[float, list[float]]] = defaultdict(lambda: defaultdict(list))
-    for (algo, mode, n), points in sorted(by_group.items()):
+    for (algo, mode, n, speed), points in sorted(by_group.items()):
         points.sort(key=lambda item: item[0])
         quantiles = [item[0] for item in points]
         if any(q < 0.0 or q > 1.0 for q in quantiles):
-            _warn_skip(fig_name, f"quantile hors [0..1] pour groupe algo={algo}, mode={mode}, N={n}")
+            _warn_skip(fig_name, f"quantile hors [0..1] pour groupe algo={algo}, mode={mode}, N={n}, speed={speed}")
             return False
         if any(curr < prev for prev, curr in zip(quantiles, quantiles[1:], strict=False)):
-            _warn_skip(fig_name, f"quantile non monotone croissant pour groupe algo={algo}, mode={mode}, N={n}")
+            _warn_skip(fig_name, f"quantile non monotone croissant pour groupe algo={algo}, mode={mode}, N={n}, speed={speed}")
+            return False
+
+        if len({sinr for _, sinr in points}) <= 1:
+            _warn_skip(fig_name, f"SINR constant pour groupe algo={algo}, mode={mode}, N={n}, speed={speed}")
             return False
 
         for q, sinr in points:
