@@ -86,3 +86,35 @@ def test_switch_count_stays_zero_when_sf_constant(monkeypatch) -> None:
     assert result.events
     assert all(event.switch_count == 0 for event in result.events)
     assert nodes[0].meta["switch_count"] == 0
+
+
+def test_all_algorithms_update_sf_via_common_interface(monkeypatch) -> None:
+    def _run(algo: str) -> int:
+        engine = EventDrivenEngine(seed=7)
+        calls: list[str] = []
+
+        def fake_select(**kwargs):
+            calls.append(kwargs["algo_name"])
+            return kwargs["current_sf"]
+
+        monkeypatch.setattr(engine, "_select_next_sf", fake_select)
+        nodes = [Node(node_id=1, period_s=30.0, payload_size=12)]
+        result = engine.run(
+            nodes=nodes,
+            until_s=90.0,
+            mode="snir_off",
+            algo=algo,
+            interference_db=0.0,
+            sigma=0.0,
+        )
+        assert result.events
+        assert calls and all(name == algo for name in calls)
+        return nodes[0].meta["sf"]
+
+    sf_adr = _run("adr")
+    sf_ucb = _run("ucb")
+    sf_ucb_forget = _run("ucb_forget")
+
+    assert isinstance(sf_adr, int)
+    assert isinstance(sf_ucb, int)
+    assert isinstance(sf_ucb_forget, int)

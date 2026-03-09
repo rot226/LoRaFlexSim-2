@@ -97,6 +97,32 @@ class EventDrivenEngine:
             heapq.heappush(queue, Event(time_s=node.next_uplink_s, kind="uplink", node_id=node.node_id))
         return queue
 
+    def _select_next_sf(
+        self,
+        *,
+        algo_name: str,
+        current_sf: int,
+        snr_db: float,
+        success: bool,
+        airtime_s: float,
+        node_id: int,
+        adr_cfg: AdrLegacyConfig,
+        mab_agents: dict[int, UCB1 | UCBForget],
+        sf_arms: list[int],
+    ) -> int:
+        """Calcule le SF cible via une interface commune, quel que soit l'algo."""
+
+        if algo_name == "adr":
+            return recommend_sf(current_sf=current_sf, snr_db=snr_db, cfg=adr_cfg)
+        if algo_name in {"ucb", "ucb_forget"}:
+            agent = mab_agents[node_id]
+            arm = agent.select_arm()
+            new_sf = sf_arms[arm]
+            reward = (1.0 if success else -0.25) - 0.08 * airtime_s
+            agent.update(arm, reward)
+            return new_sf
+        return current_sf
+
     def run(
         self,
         *,
@@ -155,15 +181,17 @@ class EventDrivenEngine:
                 p_success = self._success_probability(sf=current_sf, snr_db=snr_db, sinr_db=sinr_db, mode=mode_name)
                 success = self.rng.random() < p_success
 
-                new_sf = current_sf
-                if algo_name == "adr":
-                    new_sf = recommend_sf(current_sf=current_sf, snr_db=snr_db, cfg=adr_cfg)
-                elif algo_name in {"ucb", "ucb_forget"}:
-                    agent = mab_agents[node.node_id]
-                    arm = agent.select_arm()
-                    new_sf = sf_arms[arm]
-                    reward = (1.0 if success else -0.25) - 0.08 * airtime_s
-                    agent.update(arm, reward)
+                new_sf = self._select_next_sf(
+                    algo_name=algo_name,
+                    current_sf=current_sf,
+                    snr_db=snr_db,
+                    success=success,
+                    airtime_s=airtime_s,
+                    node_id=node.node_id,
+                    adr_cfg=adr_cfg,
+                    mab_agents=mab_agents,
+                    sf_arms=sf_arms,
+                )
 
                 switched = int(new_sf != sf_previous)
                 if switched:
