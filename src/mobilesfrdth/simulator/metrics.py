@@ -44,15 +44,20 @@ def convergence_tc(
     samples: Sequence[float],
     *,
     dt_s: float,
-    target: float,
-    tolerance: float = 0.05,
-    stable_bins: int = 3,
+    target: float | None = None,
+    moving_window_bins: int = 3,
+    stationary_tail_bins: int = 5,
+    target_ratio: float = 0.9,
 ) -> float:
     """Temps de convergence ``Tc`` d'une série temporelle.
 
-    On cherche le premier indice ``i`` tel que pour les ``stable_bins`` échantillons
-    consécutifs à partir de ``i``:
-    ``abs(samples[j] - target) <= tolerance * abs(target)``.
+    La métrique est d'abord lissée par moyenne glissante de taille
+    ``moving_window_bins``. Le régime stationnaire est estimé comme la moyenne des
+    ``stationary_tail_bins`` derniers points de cette métrique lissée (ou moins si la
+    série est courte). On cherche ensuite le premier indice ``i`` tel que:
+    ``smoothed[i] >= target_ratio * stationary_estimate``.
+
+    Le paramètre ``target`` reste possible pour forcer une cible explicite.
 
     Formule explicite: ``Tc = i * dt_s``.
     Retourne ``inf`` si non convergé.
@@ -62,15 +67,27 @@ def convergence_tc(
         return math.inf
     if dt_s <= 0:
         raise ValueError("dt_s doit être > 0")
-    if stable_bins < 1:
-        raise ValueError("stable_bins doit être >= 1")
+    if moving_window_bins < 1:
+        raise ValueError("moving_window_bins doit être >= 1")
+    if stationary_tail_bins < 1:
+        raise ValueError("stationary_tail_bins doit être >= 1")
+    if target_ratio <= 0:
+        raise ValueError("target_ratio doit être > 0")
 
-    band = tolerance * max(abs(target), _EPSILON)
-    length = len(samples)
-    for start in range(0, length - stable_bins + 1):
-        window = samples[start : start + stable_bins]
-        if all(abs(value - target) <= band for value in window):
-            return float(start) * float(dt_s)
+    smoothed: list[float] = []
+    for idx in range(len(samples)):
+        start = max(0, idx - moving_window_bins + 1)
+        window = samples[start : idx + 1]
+        smoothed.append(sum(window) / len(window))
+
+    stationary_window = smoothed[-min(stationary_tail_bins, len(smoothed)) :]
+    stationary_estimate = target if target is not None else (sum(stationary_window) / len(stationary_window))
+    threshold = target_ratio * stationary_estimate
+
+    start_index = min(moving_window_bins - 1, len(smoothed) - 1)
+    for idx in range(start_index, len(smoothed)):
+        if smoothed[idx] >= threshold:
+            return float(idx) * float(dt_s)
     return math.inf
 
 

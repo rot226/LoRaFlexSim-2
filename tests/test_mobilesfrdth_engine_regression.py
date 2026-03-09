@@ -10,7 +10,9 @@ from mobilesfrdth.simulator.engine import EventDrivenEngine, Node
 from mobilesfrdth.simulator.io import write_run_outputs
 
 
-def _run_summary(tmp_path: pathlib.Path, *, run_id: str, n: int, mode: str) -> dict[str, float]:
+def _run_summary(
+    tmp_path: pathlib.Path, *, run_id: str, n: int, mode: str, speed: float = 1.0
+) -> dict[str, float]:
     engine = EventDrivenEngine(seed=123)
     nodes = [Node(node_id=i + 1, period_s=30.0, payload_size=20) for i in range(n)]
     result = engine.run(
@@ -26,7 +28,7 @@ def _run_summary(tmp_path: pathlib.Path, *, run_id: str, n: int, mode: str) -> d
         run_id=run_id,
         run_config={
             "N": n,
-            "speed": 1.0,
+            "speed": speed,
             "mobility_model": "rwp",
             "mode": mode,
             "algo": "adr",
@@ -46,6 +48,7 @@ def _run_summary(tmp_path: pathlib.Path, *, run_id: str, n: int, mode: str) -> d
         "pdr": float(row["pdr"]),
         "throughput_bps": float(row["throughput_bps"]),
         "switch_count": float(row["switch_count"]),
+        "Tc_s": float(row["Tc_s"]),
     }
 
 
@@ -64,6 +67,7 @@ def test_non_regression_metrics_vary_with_network_size_and_mode(tmp_path: pathli
         or large_off["throughput_bps"] != large_on["throughput_bps"]
         or large_off["switch_count"] != large_on["switch_count"]
     )
+
 
 
 def test_switch_count_stays_zero_when_sf_constant(monkeypatch) -> None:
