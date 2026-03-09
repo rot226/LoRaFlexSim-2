@@ -319,9 +319,15 @@ def _plot_xy_by_algo(rows: list[dict[str, str]], *, fig_name: str, y_col: str, o
         _warn_skip(fig_name, f"colonnes manquantes {missing}")
         return False
 
+    allowed_algos = {row.get("algo", "").strip() for row in rows if row.get("algo", "").strip()}
+    normalized_rows = _apply_filters(rows, ScenarioFilters(by_column={"algo": allowed_algos})) if allowed_algos else []
+    if rows and not normalized_rows:
+        _warn_skip(fig_name, "aucune ligne après filtrage strict par algo")
+        return False
+
     grouped: dict[str, dict[float, list[float]]] = defaultdict(lambda: defaultdict(list))
     dropped = 0
-    for row in rows:
+    for row in normalized_rows:
         x = _to_float(row.get("N"))
         y = _to_float(row.get(resolved_metric))
         if x is None or y is None:
