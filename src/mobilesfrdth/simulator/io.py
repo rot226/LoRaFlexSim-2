@@ -11,7 +11,7 @@ from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
-from .metrics import der, jain_fairness, outage_ratio, pdr, throughput
+from .metrics import convergence_tc, der, jain_fairness, outage_ratio, pdr, throughput
 
 SCENARIO_ID_COLUMNS = ["N", "speed", "mobility_model", "mode", "algo", "gateways", "sigma", "seed", "rep"]
 EVENT_COLUMNS = [
@@ -236,6 +236,19 @@ def write_run_outputs(
     node_ids = {int(row["node_id"]) for row in event_rows if int(row["node_id"]) >= 0}
     airtime_total = sum(float(v) for v in node_airtime.values())
 
+    pdr_by_bin: dict[int, dict[str, int]] = defaultdict(lambda: {"tx": 0, "success": 0})
+    for row in node_timeseries_rows:
+        bin_index = int(float(row["bin_start_s"]) // time_bin_s)
+        pdr_by_bin[bin_index]["tx"] += int(row["tx_count"])
+        pdr_by_bin[bin_index]["success"] += int(row["success_count"])
+
+    pdr_series: list[float] = []
+    for bin_index in sorted(pdr_by_bin):
+        bucket = pdr_by_bin[bin_index]
+        pdr_series.append(pdr(bucket["success"], bucket["tx"]))
+
+    tc_from_timeseries = convergence_tc(pdr_series, dt_s=time_bin_s)
+
     summary_row = {
         **scenario,
         "run_id": run_id,
@@ -248,7 +261,7 @@ def write_run_outputs(
         "pdr": pdr(success_count, tx_count),
         "der": der(success_count, generated_packets),
         "throughput_bps": throughput(delivered_bytes, duration_s),
-        "Tc_s": tc_candidate,
+        "Tc_s": tc_from_timeseries if pdr_series else tc_candidate,
         "jain_fairness": jain_fairness(node_successes.values()),
         "airtime_total_s": airtime_total,
         "airtime_mean_per_node_s": airtime_total / max(len(node_ids), 1),

@@ -4,7 +4,7 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
-from mobilesfrdth.simulator.io import SUMMARY_COLUMNS, aggregate_runs
+from mobilesfrdth.simulator.io import SUMMARY_COLUMNS, aggregate_runs, write_run_outputs
 
 
 def _write_csv(path: pathlib.Path, headers: list[str], row: dict[str, object]) -> None:
@@ -116,3 +116,56 @@ def test_aggregate_runs_sinr_cdf_has_strict_columns(tmp_path):
         reader = csv.DictReader(handle)
         assert reader.fieldnames == ["algo", "mode", "N", "speed", "quantile", "sinr_db"]
 
+
+
+def test_tc_is_computed_from_node_timeseries_and_varies_with_scenario(tmp_path):
+    def _events(success_pattern: list[int], *, per_bin: int = 10) -> list[dict[str, object]]:
+        events: list[dict[str, object]] = []
+        for bin_index, successes in enumerate(success_pattern):
+            time_s = float(bin_index * 10 + 1)
+            for packet in range(per_bin):
+                ok = packet < successes
+                events.append(
+                    {
+                        "event_type": "uplink",
+                        "time_s": time_s,
+                        "node_id": packet % 5,
+                        "success": ok,
+                        "delivered": ok,
+                        "payload_bytes": 20,
+                        "snr_db": 5.0,
+                        "sinr_db": 4.0,
+                        "airtime_s": 0.05,
+                        "outage": int(not ok),
+                        "switch_count": 0,
+                    }
+                )
+        return events
+
+    write_run_outputs(
+        output_root=tmp_path,
+        run_id="tc_small",
+        run_config={"N": 40, "speed": 0.5, "mobility_model": "rwp", "mode": "snir_on", "algo": "adr", "gateways": 1, "sigma": 1, "seed": 1, "rep": 0},
+        events=_events([1, 3, 5, 7, 8, 9]),
+        duration_s=60.0,
+        time_bin_s=10.0,
+    )
+    write_run_outputs(
+        output_root=tmp_path,
+        run_id="tc_large",
+        run_config={"N": 140, "speed": 3.0, "mobility_model": "rwp", "mode": "snir_on", "algo": "adr", "gateways": 1, "sigma": 1, "seed": 2, "rep": 0},
+        events=_events([0, 0, 1, 2, 3, 9]),
+        duration_s=60.0,
+        time_bin_s=10.0,
+    )
+
+    def _tc(run_id: str) -> float:
+        with (tmp_path / "results" / run_id / "summary.csv").open("r", encoding="utf-8", newline="") as handle:
+            return float(next(csv.DictReader(handle))["Tc_s"])
+
+    tc_small = _tc("tc_small")
+    tc_large = _tc("tc_large")
+
+    assert tc_small != tc_large
+    assert tc_small > 0.0
+    assert tc_large > 0.0
