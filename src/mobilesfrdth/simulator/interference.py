@@ -9,22 +9,25 @@ from typing import Mapping
 from .channel import DEFAULT_LORA_NOISE_FLOOR_DBM
 
 SNR_THRESHOLDS_DB: dict[int, float] = {
-    # Sensibilité LoRa typique BW125kHz (ordre de grandeur Semtech)
-    7: -7.5,
-    8: -10.0,
-    9: -12.5,
-    10: -15.0,
-    11: -17.5,
-    12: -20.0,
+    # Seuils de décodage calibrés (BW125kHz) pour obtenir un comportement plus
+    # contrasté entre faibles et fortes charges réseau.
+    7: -6.8,
+    8: -9.4,
+    9: -11.7,
+    10: -14.3,
+    11: -16.9,
+    12: -19.4,
 }
 
 INTER_SF_ALPHA_MATRIX: dict[int, dict[int, float]] = {
-    7: {7: 1.0, 8: 0.55, 9: 0.48, 10: 0.42, 11: 0.36, 12: 0.32},
-    8: {7: 0.58, 8: 1.0, 9: 0.52, 10: 0.46, 11: 0.40, 12: 0.36},
-    9: {7: 0.62, 8: 0.56, 9: 1.0, 10: 0.50, 11: 0.44, 12: 0.40},
-    10: {7: 0.66, 8: 0.60, 9: 0.54, 10: 1.0, 11: 0.48, 12: 0.44},
-    11: {7: 0.70, 8: 0.64, 9: 0.58, 10: 0.52, 11: 1.0, 12: 0.48},
-    12: {7: 0.74, 8: 0.68, 9: 0.62, 10: 0.56, 11: 0.50, 12: 1.0},
+    # Matrice alpha(SF_i, SF_s): co-SF dominant, inter-SF partiellement
+    # orthogonaux mais avec fuite croissante pour SF élevés.
+    7: {7: 1.0, 8: 0.34, 9: 0.24, 10: 0.17, 11: 0.12, 12: 0.09},
+    8: {7: 0.37, 8: 1.0, 9: 0.29, 10: 0.21, 11: 0.15, 12: 0.12},
+    9: {7: 0.43, 8: 0.34, 9: 1.0, 10: 0.27, 11: 0.20, 12: 0.16},
+    10: {7: 0.48, 8: 0.39, 9: 0.33, 10: 1.0, 11: 0.24, 12: 0.20},
+    11: {7: 0.54, 8: 0.45, 9: 0.37, 10: 0.30, 11: 1.0, 12: 0.24},
+    12: {7: 0.60, 8: 0.52, 9: 0.44, 10: 0.35, 11: 0.30, 12: 1.0},
 }
 
 
@@ -35,6 +38,11 @@ class InterferenceConfig:
     snir_enabled: bool = False
     inter_sf_enabled: bool = True
     noise_floor_dbm: float = DEFAULT_LORA_NOISE_FLOOR_DBM
+    density_impact_enabled: bool = True
+    density_penalty_db_per_log: float = 1.05
+    co_sf_penalty_db_per_log: float = 1.35
+    inter_sf_penalty_db_per_log: float = 0.45
+    max_density_penalty_db: float = 8.5
     snr_thresholds_db: Mapping[int, float] = field(default_factory=lambda: dict(SNR_THRESHOLDS_DB))
     alpha_matrix: Mapping[int, Mapping[int, float]] = field(default_factory=lambda: {sf_i: dict(values) for sf_i, values in INTER_SF_ALPHA_MATRIX.items()})
 
@@ -48,6 +56,30 @@ class InterferenceConfig:
         if sf_interferer in self.alpha_matrix:
             return float(self.alpha_matrix[sf_interferer].get(sf_signal, 0.0))
         return 0.0
+
+
+def density_collision_penalty_db(*, signal_sf: int, interferers: list[tuple[float, int]], cfg: InterferenceConfig) -> float:
+    """Pénalité empirique (dB) due à la densité et aux collisions.
+
+    Cette pénalité encode les pertes additionnelles non captées par la seule somme
+    de puissances (saturation passerelle, recouvrements partiels, collisions co-SF).
+    """
+
+    if not cfg.density_impact_enabled:
+        return 0.0
+
+    total_interferers = len(interferers)
+    if total_interferers <= 0:
+        return 0.0
+
+    co_sf_interferers = sum(1 for _, sf in interferers if sf == signal_sf)
+    inter_sf_interferers = max(total_interferers - co_sf_interferers, 0)
+    penalty_db = (
+        cfg.density_penalty_db_per_log * math.log1p(total_interferers)
+        + cfg.co_sf_penalty_db_per_log * math.log1p(co_sf_interferers)
+        + cfg.inter_sf_penalty_db_per_log * math.log1p(inter_sf_interferers)
+    )
+    return min(penalty_db, cfg.max_density_penalty_db)
 
 
 def dbm_to_mw(power_dbm: float) -> float:
@@ -98,4 +130,5 @@ def transmission_success(
         return metric >= threshold, metric
 
     metric = sinr_db(signal_dbm, signal_sf=signal_sf, interferers=interferers, cfg=cfg)
+    metric -= density_collision_penalty_db(signal_sf=signal_sf, interferers=interferers, cfg=cfg)
     return metric >= threshold, metric
