@@ -20,7 +20,7 @@ _NON_BONUS_FIGURES = {
     "fig06_throughput_vs_n_snir_on.png",
     "fig07_tc_vs_speed.png",
     "fig08_fairness_vs_n.png",
-    "fig_sf_histogram_snir_on.png",
+    "fig09_sf_distribution_snir_on.png",
     "fig10_sinr_cdf.png",
 }
 
