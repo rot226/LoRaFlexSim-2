@@ -21,6 +21,38 @@ PLOT_STYLE = {
     "lines.markersize": 4,
 }
 
+IEEE_PLOT_STYLE = {
+    "font.family": "DejaVu Sans",
+    "font.size": 9,
+    "axes.labelsize": 9,
+    "axes.titlesize": 10,
+    "legend.fontsize": 8,
+    "xtick.labelsize": 8,
+    "ytick.labelsize": 8,
+    "axes.prop_cycle": plt.cycler(
+        color=[
+            "#0072B2",  # blue
+            "#E69F00",  # orange
+            "#009E73",  # green
+            "#D55E00",  # vermillion
+            "#CC79A7",  # purple
+            "#56B4E9",  # light blue
+            "#F0E442",  # yellow
+            "#000000",  # black
+        ]
+    ),
+    "axes.edgecolor": "#2E2E2E",
+    "axes.linewidth": 0.8,
+    "grid.color": "#BDBDBD",
+    "grid.linestyle": "--",
+    "grid.linewidth": 0.5,
+    "grid.alpha": 0.55,
+    "lines.linewidth": 1.9,
+    "lines.markersize": 5,
+    "figure.dpi": PLOT_DPI,
+    "savefig.dpi": PLOT_DPI,
+}
+
 
 @dataclass(frozen=True)
 class ConfidenceInterval:
@@ -51,8 +83,10 @@ AXIS_LABELS = {
 }
 
 
-def setup_plot_style() -> None:
+def setup_plot_style(*, ieee_ready: bool = False) -> None:
     plt.rcParams.update(PLOT_STYLE)
+    if ieee_ready:
+        plt.rcParams.update(IEEE_PLOT_STYLE)
 
 
 def normalized_axis_label(name: str) -> str:

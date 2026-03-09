@@ -8,6 +8,7 @@ import json
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 
 import matplotlib
@@ -17,8 +18,6 @@ import matplotlib.pyplot as plt
 
 from .utils import ci95_from_samples, normalized_axis_label, setup_plot_style, PLOT_DPI
 
-
-setup_plot_style()
 
 
 REQUIRED_FILES = {
@@ -175,6 +174,7 @@ class FigureTrace:
     source: str
     metric: str
     filters: dict[str, list[str]]
+    num_points: int
     generated: bool
 
 
@@ -359,9 +359,36 @@ def _plot_xy_by_algo(rows: list[dict[str, str]], *, fig_name: str, y_col: str, o
     plt.ylabel(normalized_axis_label(y_col))
     plt.legend()
     plt.tight_layout()
-    plt.savefig(out_path, dpi=PLOT_DPI)
+    _save_figure_variants(out_path)
     plt.close()
     return True
+
+
+def _save_figure_variants(out_path: Path) -> None:
+    png_path = out_path.with_suffix(".png")
+    pdf_path = out_path.with_suffix(".pdf")
+    plt.savefig(png_path, dpi=PLOT_DPI)
+    plt.savefig(pdf_path)
+
+
+def _stable_figure_name(filename: str) -> str:
+    stem = Path(filename).stem
+    if stem.startswith("fig") and len(stem) >= 5 and stem[3:5].isdigit():
+        return f"{stem[:5]}_{stem[6:] if len(stem) > 6 and stem[5] == '_' else stem[5:]}.png"
+    return filename
+
+
+def _count_points(rows: list[dict[str, str]], metric: str) -> int:
+    resolved = _resolve_metric_column(rows, expected=metric)
+    if not rows:
+        return 0
+    if metric == "sinr_db":
+        return sum(1 for row in rows if _to_float(row.get("sinr_db")) is not None and _to_float(row.get("quantile")) is not None)
+    if metric == "ratio":
+        return sum(1 for row in rows if _to_float(row.get("sf")) is not None and _to_float(row.get("ratio")) is not None)
+    if metric == "Tc_s":
+        return sum(1 for row in rows if _to_float(row.get("speed")) is not None and _to_float(row.get("Tc_s")) is not None)
+    return sum(1 for row in rows if _to_float(row.get("N")) is not None and _to_float(row.get(resolved)) is not None)
 
 
 def _resolve_metric_column(rows: list[dict[str, str]], *, expected: str) -> str:
@@ -418,7 +445,7 @@ def _plot_tc_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool:
     plt.ylabel(normalized_axis_label("Tc_s"))
     plt.legend()
     plt.tight_layout()
-    plt.savefig(out_path, dpi=PLOT_DPI)
+    _save_figure_variants(out_path)
     plt.close()
     return True
 
@@ -487,7 +514,7 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
     plt.ylabel(normalized_axis_label("quantile"))
     plt.legend()
     plt.tight_layout()
-    plt.savefig(out_path, dpi=PLOT_DPI)
+    _save_figure_variants(out_path)
     plt.close()
     return True
 
@@ -564,7 +591,8 @@ def _plot_sf_distribution(rows: list[dict[str, str]], out_path: Path) -> bool:
         axes_list[-1].set_xlabel(normalized_axis_label("sf"))
         fig.supylabel(normalized_axis_label("ratio"))
         fig.tight_layout()
-        fig.savefig(out_path, dpi=PLOT_DPI)
+        fig.savefig(out_path.with_suffix(".png"), dpi=PLOT_DPI)
+        fig.savefig(out_path.with_suffix(".pdf"))
         plt.close(fig)
     else:
         width = 0.8 / max(len(algos), 1)
@@ -581,7 +609,7 @@ def _plot_sf_distribution(rows: list[dict[str, str]], out_path: Path) -> bool:
         plt.yticks(y_ticks)
         plt.legend(title="Algo", ncols=2)
         plt.tight_layout()
-        plt.savefig(out_path, dpi=PLOT_DPI)
+        _save_figure_variants(out_path)
         plt.close()
     return True
 
@@ -643,7 +671,7 @@ def _plot_delta_pdr_on_minus_off(rows: list[dict[str, str]], out_path: Path) -> 
     plt.ylabel("ΔPDR (SNIR_ON - SNIR_OFF) [-]")
     plt.legend()
     plt.tight_layout()
-    plt.savefig(out_path, dpi=PLOT_DPI)
+    _save_figure_variants(out_path)
     plt.close()
     return True
 
@@ -700,7 +728,7 @@ def _plot_switching_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool
     plt.ylabel("Instabilité [switch_count/h]")
     plt.legend()
     plt.tight_layout()
-    plt.savefig(out_path, dpi=PLOT_DPI)
+    _save_figure_variants(out_path)
     plt.close()
     return True
 
@@ -748,7 +776,7 @@ def _plot_ucb_tracking_lag_vs_speed(rows: list[dict[str, str]], out_path: Path) 
     plt.ylabel("Délai de ré-adaptation Tc [s]")
     plt.legend(title="Algo")
     plt.tight_layout()
-    plt.savefig(out_path, dpi=PLOT_DPI)
+    _save_figure_variants(out_path)
     plt.close()
     return True
 
@@ -805,7 +833,7 @@ def _plot_outage_tail_prob_vs_n(rows: list[dict[str, str]], out_path: Path, *, t
     plt.ylim(0, 1)
     plt.legend(title="Algo")
     plt.tight_layout()
-    plt.savefig(out_path, dpi=PLOT_DPI)
+    _save_figure_variants(out_path)
     plt.close()
     return True
 
@@ -861,7 +889,7 @@ def _plot_fairness_reliability_tradeoff(rows: list[dict[str, str]], out_path: Pa
     plt.ylim(0, 1.05)
     plt.legend(fontsize=8, ncols=2)
     plt.tight_layout()
-    plt.savefig(out_path, dpi=PLOT_DPI)
+    _save_figure_variants(out_path)
     plt.close()
     return True
 def _plot_airtime_reliability_pareto(rows: list[dict[str, str]], out_path: Path) -> bool:
@@ -910,7 +938,7 @@ def _plot_airtime_reliability_pareto(rows: list[dict[str, str]], out_path: Path)
     plt.ylabel(normalized_axis_label("pdr_mean"))
     plt.legend()
     plt.tight_layout()
-    plt.savefig(out_path, dpi=PLOT_DPI)
+    _save_figure_variants(out_path)
     plt.close()
     return True
 
@@ -923,10 +951,12 @@ def generate_minimal_figures(
     article_profile: str = "core",
     include_bonus: bool = True,
     verbose: bool = False,
+    ieee_ready: bool = False,
 ) -> tuple[list[Path], list[FigureTrace]]:
     if article_profile not in ARTICLE_PROFILE_FILTERS:
         raise ValueError(f"Profil article inconnu: {article_profile}")
 
+    setup_plot_style(ieee_ready=ieee_ready)
     out_dir.mkdir(parents=True, exist_ok=True)
     payloads = {name: _read_csv_rows(aggregates_dir / filename) for name, filename in REQUIRED_FILES.items()}
 
@@ -936,14 +966,15 @@ def generate_minimal_figures(
     for fig_name, source, metric, local_filter in FIGURE_SPECS:
         effective_filters = filters.merge(local_filter).merge(_resolve_profile_filter(article_profile, fig_name))
         selected = _apply_filters(payloads[source], effective_filters)
-        out_path = out_dir / fig_name
+        out_path = out_dir / _stable_figure_name(fig_name)
         did_generate = _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path)
         traces.append(
             FigureTrace(
-                figure=fig_name,
+                figure=out_path.name,
                 source=source,
                 metric=metric,
                 filters=_filters_to_serializable(effective_filters),
+                num_points=_count_points(selected, metric),
                 generated=did_generate,
             )
         )
@@ -951,7 +982,7 @@ def generate_minimal_figures(
         if did_generate:
             generated.append(out_path)
 
-    fig07 = out_dir / "fig07_tc_vs_speed.png"
+    fig07 = out_dir / _stable_figure_name("fig07_tc_vs_speed.png")
     fig07_filters = filters.merge(_resolve_profile_filter(article_profile, fig07.name))
     did_generate = _plot_tc_vs_speed(_apply_filters(payloads["convergence_tc"], fig07_filters), fig07)
     traces.append(
@@ -960,6 +991,7 @@ def generate_minimal_figures(
             source="convergence_tc",
             metric="Tc_s",
             filters=_filters_to_serializable(fig07_filters),
+            num_points=_count_points(_apply_filters(payloads["convergence_tc"], fig07_filters), "Tc_s"),
             generated=did_generate,
         )
     )
@@ -967,7 +999,7 @@ def generate_minimal_figures(
     if did_generate:
         generated.append(fig07)
 
-    fig08 = out_dir / "fig08_fairness_vs_n.png"
+    fig08 = out_dir / _stable_figure_name("fig08_fairness_vs_n.png")
     fig08_filters = filters.merge(_resolve_profile_filter(article_profile, fig08.name))
     did_generate = _plot_xy_by_algo(
         _apply_filters(payloads["metric_by_factor"], fig08_filters),
@@ -981,6 +1013,7 @@ def generate_minimal_figures(
             source="metric_by_factor",
             metric="jain_fairness_mean",
             filters=_filters_to_serializable(fig08_filters),
+            num_points=_count_points(_apply_filters(payloads["metric_by_factor"], fig08_filters), "jain_fairness_mean"),
             generated=did_generate,
         )
     )
@@ -988,7 +1021,7 @@ def generate_minimal_figures(
     if did_generate:
         generated.append(fig08)
 
-    fig09 = out_dir / "fig09_sf_distribution_snir_on.png"
+    fig09 = out_dir / _stable_figure_name("fig09_sf_distribution_snir_on.png")
     fig09_filters = filters.merge(_resolve_profile_filter(article_profile, fig09.name))
     did_generate = _plot_sf_distribution(_apply_filters(payloads["distribution_sf"], fig09_filters), fig09)
     traces.append(
@@ -997,6 +1030,7 @@ def generate_minimal_figures(
             source="distribution_sf",
             metric="ratio",
             filters=_filters_to_serializable(fig09_filters),
+            num_points=_count_points(_apply_filters(payloads["distribution_sf"], fig09_filters), "ratio"),
             generated=did_generate,
         )
     )
@@ -1004,7 +1038,7 @@ def generate_minimal_figures(
     if did_generate:
         generated.append(fig09)
 
-    fig10 = out_dir / "fig10_sinr_cdf.png"
+    fig10 = out_dir / _stable_figure_name("fig10_sinr_cdf.png")
     fig10_filters = filters.merge(_resolve_profile_filter(article_profile, fig10.name))
     did_generate = _plot_sinr_cdf(_apply_filters(payloads["sinr_cdf"], fig10_filters), fig10)
     traces.append(
@@ -1013,6 +1047,7 @@ def generate_minimal_figures(
             source="sinr_cdf",
             metric="sinr_db",
             filters=_filters_to_serializable(fig10_filters),
+            num_points=_count_points(_apply_filters(payloads["sinr_cdf"], fig10_filters), "sinr_db"),
             generated=did_generate,
         )
     )
@@ -1024,7 +1059,7 @@ def generate_minimal_figures(
         for fig_name, source, metric, local_filter in BONUS_SPECS:
             effective_filters = filters.merge(local_filter).merge(_resolve_profile_filter(article_profile, fig_name))
             selected = _apply_filters(payloads[source], effective_filters)
-            out_path = out_dir / fig_name
+            out_path = out_dir / _stable_figure_name(fig_name)
             if fig_name == "fig13_ucb_tracking_lag_vs_speed.png":
                 did_generate = _plot_ucb_tracking_lag_vs_speed(selected, out_path)
             elif fig_name == "fig14_reliability_airtime_pareto.png":
@@ -1037,10 +1072,11 @@ def generate_minimal_figures(
                 did_generate = _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path)
             traces.append(
                 FigureTrace(
-                    figure=fig_name,
+                    figure=out_path.name,
                     source=source,
                     metric=metric,
                     filters=_filters_to_serializable(effective_filters),
+                    num_points=_count_points(selected, metric),
                     generated=did_generate,
                 )
             )
@@ -1050,7 +1086,7 @@ def generate_minimal_figures(
 
     manifest_path = out_dir / "plots_manifest.csv"
     with manifest_path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=["figure", "source_csv", "filters_appliques"])
+        writer = csv.DictWriter(handle, fieldnames=["figure", "source_csv", "filters_appliques", "nb_points", "date_utc", "seed_base"])
         writer.writeheader()
         for trace in traces:
             writer.writerow(
@@ -1058,6 +1094,9 @@ def generate_minimal_figures(
                     "figure": trace.figure,
                     "source_csv": REQUIRED_FILES.get(trace.source, trace.source),
                     "filters_appliques": json.dumps(trace.filters, ensure_ascii=False, sort_keys=True),
+                    "nb_points": trace.num_points,
+                    "date_utc": datetime.now(timezone.utc).isoformat(),
+                    "seed_base": trace.filters.get("seed_base", [""])[0] if trace.filters.get("seed_base") else "",
                 }
             )
 
@@ -1070,6 +1109,7 @@ def generate_minimal_figures(
                 "source": trace.source,
                 "metric": trace.metric,
                 "filters": trace.filters,
+                "num_points": trace.num_points,
                 "generated": trace.generated,
             }
             for trace in traces
@@ -1094,6 +1134,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Filtre clé=val1,val2 (répétable), ex: --scenario-filter mode=snir_on --scenario-filter algo=ucb,legacy",
     )
     parser.add_argument("--no-bonus", action="store_true", help="N'écrit pas les figures bonus fig11..fig16.")
+    parser.add_argument("--ieee-ready", action="store_true", help="Active le style IEEE (couleurs daltonisme-friendly, linewidths, export PDF+PNG).")
     parser.add_argument(
         "--article-profile",
         choices=sorted(ARTICLE_PROFILE_FILTERS),
@@ -1111,6 +1152,7 @@ def main(argv: list[str] | None = None) -> int:
         filters=ScenarioFilters.from_tokens(args.scenario_filter),
         article_profile=args.article_profile,
         include_bonus=not args.no_bonus,
+        ieee_ready=args.ieee_ready,
     )
     print(f"{len(generated)} figure(s) générée(s).")
     for path in generated:
