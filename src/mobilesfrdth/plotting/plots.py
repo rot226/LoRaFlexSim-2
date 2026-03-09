@@ -539,22 +539,50 @@ def _plot_sf_distribution(rows: list[dict[str, str]], out_path: Path) -> bool:
                 ordered = [value / total for value in ordered]
         data_percent[algo] = [value * 100.0 for value in ordered]
 
-    width = 0.8 / max(len(algos), 1)
     x_positions = list(range(len(sf_values)))
-    plt.figure(figsize=(10, 5))
-    for idx, algo in enumerate(algos):
-        offset = (idx - (len(algos) - 1) / 2) * width
-        xs = [x + offset for x in x_positions]
-        plt.bar(xs, data_percent[algo], width=width, label=algo)
-    plt.grid(axis="y", alpha=0.3)
-    plt.xlabel(normalized_axis_label("sf"))
-    plt.ylabel(normalized_axis_label("ratio"))
-    plt.xticks(x_positions, [str(sf) for sf in sf_values])
-    plt.ylim(0, 100)
-    plt.legend(title="Algo")
-    plt.tight_layout()
-    plt.savefig(out_path, dpi=PLOT_DPI)
-    plt.close()
+    y_ticks = list(range(0, 101, 10))
+
+    # En présence de nombreux algorithmes, on privilégie des sous-figures lisibles
+    # (une barre par SF et par algo) ; sinon on conserve un histogramme groupé.
+    if len(algos) > 3:
+        fig, axes = plt.subplots(len(algos), 1, figsize=(9, 2.8 * len(algos)), sharex=True, sharey=True)
+        if hasattr(axes, "ravel"):
+            axes_list = list(axes.ravel())
+        elif isinstance(axes, (list, tuple)):
+            axes_list = list(axes)
+        else:
+            axes_list = [axes]
+
+        for axis, algo in zip(axes_list, algos, strict=False):
+            axis.bar(x_positions, data_percent[algo], width=0.7, label=algo)
+            axis.grid(axis="y", alpha=0.3)
+            axis.set_ylim(0, 100)
+            axis.set_yticks(y_ticks)
+            axis.legend(loc="upper right", title="Algo")
+
+        axes_list[-1].set_xticks(x_positions, [str(sf) for sf in sf_values])
+        axes_list[-1].set_xlabel(normalized_axis_label("sf"))
+        fig.supylabel(normalized_axis_label("ratio"))
+        fig.tight_layout()
+        fig.savefig(out_path, dpi=PLOT_DPI)
+        plt.close(fig)
+    else:
+        width = 0.8 / max(len(algos), 1)
+        plt.figure(figsize=(10, 5))
+        for idx, algo in enumerate(algos):
+            offset = (idx - (len(algos) - 1) / 2) * width
+            xs = [x + offset for x in x_positions]
+            plt.bar(xs, data_percent[algo], width=width, label=algo)
+        plt.grid(axis="y", alpha=0.3)
+        plt.xlabel(normalized_axis_label("sf"))
+        plt.ylabel(normalized_axis_label("ratio"))
+        plt.xticks(x_positions, [str(sf) for sf in sf_values])
+        plt.ylim(0, 100)
+        plt.yticks(y_ticks)
+        plt.legend(title="Algo", ncols=2)
+        plt.tight_layout()
+        plt.savefig(out_path, dpi=PLOT_DPI)
+        plt.close()
     return True
 
 
