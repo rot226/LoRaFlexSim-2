@@ -341,6 +341,21 @@ def aggregate_runs(
     sinr_values: dict[tuple[str, ...], list[float]] = defaultdict(list)
 
     factor_columns = ["N", "speed", "mobility_model", "mode", "algo", "gateways", "sigma"]
+    factor_aliases: dict[str, tuple[str, ...]] = {
+        "N": ("N",),
+        "speed": ("speed",),
+        "mobility_model": ("mobility_model", "model"),
+        "mode": ("mode",),
+        "algo": ("algo",),
+        "gateways": ("gateways",),
+        "sigma": ("sigma", "sigma_shadowing"),
+    }
+
+    def _factor_value(row: Mapping[str, str], column: str) -> str:
+        for alias in factor_aliases[column]:
+            if alias in row and row.get(alias, "") != "":
+                return row.get(alias, "")
+        return ""
 
     convergence_path = out_dir / "convergence_tc.csv"
     fairness_path = out_dir / "fairness_airtime_switching.csv"
@@ -375,7 +390,7 @@ def aggregate_runs(
         processed += 1
 
         for row in _iter_csv(run_dir / "summary.csv"):
-            key = tuple(row.get(column, "") for column in factor_columns)
+            key = tuple(_factor_value(row, column) for column in factor_columns)
             bucket = metric_accumulators[key]
             bucket["num_runs"] += 1
             bucket["pdr_sum"] += float(row.get("pdr", 0.0) or 0.0)
@@ -410,7 +425,7 @@ def aggregate_runs(
         for row in _iter_csv(run_dir / "events.csv"):
             if row.get("event_type") != "uplink":
                 continue
-            key = tuple(row.get(column, "") for column in factor_columns)
+            key = tuple(_factor_value(row, column) for column in factor_columns)
             if not skip_sf_distribution:
                 sf_counter[key][row.get("sf", "")] += 1
             if not skip_sinr_cdf:
