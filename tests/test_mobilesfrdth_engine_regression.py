@@ -92,6 +92,28 @@ def test_switch_count_stays_zero_when_sf_constant(monkeypatch) -> None:
     assert nodes[0].meta["switch_count"] == 0
 
 
+def test_switch_count_increases_when_sf_is_adaptive(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "mobilesfrdth.simulator.engine.recommend_sf",
+        lambda *, current_sf, snr_db, cfg: 8 if current_sf == 7 else 7,
+    )
+    engine = EventDrivenEngine(seed=42)
+    nodes = [Node(node_id=1, period_s=30.0, payload_size=12, meta={"sf": 7})]
+
+    result = engine.run(
+        nodes=nodes,
+        until_s=300.0,
+        mode="snir_off",
+        algo="adr",
+        interference_db=0.0,
+        sigma=0.0,
+    )
+
+    assert result.events
+    assert any(event.switch_count == 1 for event in result.events)
+    assert nodes[0].meta["switch_count"] > 0
+
+
 def test_all_algorithms_update_sf_via_common_interface(monkeypatch) -> None:
     def _run(algo: str) -> int:
         engine = EventDrivenEngine(seed=7)
