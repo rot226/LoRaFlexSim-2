@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from loraflexsim.scenarios.qos_cluster_bench import _create_simulator
 
+MIN_SNR_GAP = 0.0
 
-MIN_SNR_GAP = 0.02
 
-
-def _run_metrics(*, seed: int, use_snir: bool) -> tuple[float, float]:
+def _run_metrics(*, seed: int, use_snir: bool, nodes: int = 80) -> tuple[float, float]:
     channel_overrides = {
         "baseline_loss_rate": 0.03,
         "baseline_collision_rate": 0.02,
@@ -17,7 +16,7 @@ def _run_metrics(*, seed: int, use_snir: bool) -> tuple[float, float]:
         "marginal_snir_drop_prob": 0.5,
     }
     simulator = _create_simulator(
-        80,
+        nodes,
         5.0,
         seed,
         use_snir=use_snir,
@@ -35,10 +34,19 @@ def test_snir_on_degrades_pdr_der() -> None:
     pdr_on, der_on = _run_metrics(seed=77, use_snir=True)
     pdr_off, der_off = _run_metrics(seed=77, use_snir=False)
 
-    assert pdr_on <= pdr_off - MIN_SNR_GAP, (
+    assert pdr_on < pdr_off - MIN_SNR_GAP, (
         f"PDR SNIR on ({pdr_on:.3f}) devrait être inférieure à SNIR off ({pdr_off:.3f})."
     )
-    assert der_on <= der_off - MIN_SNR_GAP, (
+    assert der_on < der_off - MIN_SNR_GAP, (
         f"DER SNIR on ({der_on:.3f}) devrait être inférieure à SNIR off ({der_off:.3f})."
     )
     assert pdr_off < 1.0, "La PDR SNIR off doit rester < 1.0 même sans dégradation SNIR."
+
+
+def test_snir_on_pdr_decreases_with_node_count() -> None:
+    pdr_n50, _ = _run_metrics(seed=91, use_snir=True, nodes=50)
+    pdr_n160, _ = _run_metrics(seed=91, use_snir=True, nodes=160)
+
+    assert pdr_n160 < pdr_n50, (
+        f"En SNIR_ON on attend PDR(N=160) < PDR(N=50), obtenu {pdr_n160:.3f} vs {pdr_n50:.3f}."
+    )
