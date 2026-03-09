@@ -121,14 +121,27 @@ figures reproductibles.
 
 Pour les nouvelles figures bonus :
 
-- `fig13_pdr_ci_vs_n_snir_on.png` : `mode=snir_on`.
-- `fig14_delta_pdr_snir_on_minus_off.png` : comparaison appariée
-  `ΔPDR = PDR(SNIR_ON) - PDR(SNIR_OFF)` par algorithme (donc nécessite les deux
-  modes SNIR pour chaque point).
-- `fig15_switching_vs_speed.png` : focus instabilité `switch_count/h` en
-  fonction de la vitesse, restreint à `algo ∈ {ucb, ucb_forget}`.
-- `fig16_airtime_reliability_pareto.png` : nuage de compromis airtime moyen vs
-  fiabilité (`PDR`) et front de Pareto par algorithme.
+- `fig13_ucb_tracking_lag_vs_speed.png` : délai de ré-adaptation (`Tc_s`) après
+  changement de conditions, comparant `UCB` et `UCB_FORGET` en fonction de la
+  vitesse. **Message scientifique attendu** : quantifier le gain de suivi de
+  non-stationnarité de `UCB_FORGET`. **Filtre fixe** : `algo ∈ {ucb,
+  ucb_forget}` (et, en profil `full`, `speed ∈ {1,3,5}`).
+- `fig14_reliability_airtime_pareto.png` : nuage `PDR` vs airtime moyen avec
+  front de Pareto par algorithme. **Message scientifique attendu** : visualiser
+  le compromis fiabilité/coût radio et les algorithmes dominants. **Filtres
+  fixes** : profil `core` restreint à `algo ∈ {adr, adr_mixra, ucb,
+  ucb_forget}` ; profil `full` sans restriction additionnelle.
+- `fig15_outage_tail_prob_vs_n.png` : probabilité d’outage en queue
+  `P[SINR<th]` (seuil par défaut `th=-10 dB`) en fonction de `N`. **Message
+  scientifique attendu** : caractériser la robustesse en conditions SINR
+  défavorables à forte charge. **Filtres fixes** : `mode=snir_on`, et en profil
+  `core` limitation aux algorithmes article `{adr, adr_mixra, ucb, ucb_forget}`
+  (profil `full` : `speed ∈ {1,3,5}`).
+- `fig16_fairness_reliability_tradeoff.png` : nuage Jain fairness vs `PDR` avec
+  moyenne et IC95 par algorithme. **Message scientifique attendu** : mettre en
+  évidence le compromis entre équité de service et fiabilité globale. **Filtres
+  fixes** : profil `core` restreint à `algo ∈ {adr, adr_mixra, ucb,
+  ucb_forget}` ; profil `full` sans restriction additionnelle.
 
 ### Reprise de campagne `mobilesfrdth run` (sans perte)
 
