@@ -8,9 +8,10 @@ import random
 
 
 THERMAL_NOISE_DENSITY_DBM_PER_HZ = -174.0
+IMPLEMENTATION_MARGIN_DB = 1.5
 
 
-def thermal_noise_floor_dbm(*, bandwidth_hz: float = 125_000.0, noise_figure_db: float = 6.0) -> float:
+def thermal_noise_floor_dbm(*, bandwidth_hz: float = 125_000.0, noise_figure_db: float = 7.0) -> float:
     """Retourne le plancher de bruit thermique ``N0`` (dBm) pour une bande donnée."""
 
     effective_bw_hz = max(bandwidth_hz, 1.0)
@@ -86,4 +87,4 @@ def received_power_dbm(
     pl_db = pathloss_log_distance_db(distance_m=distance_m, cfg=cfg)
     shadow_db = shadowing_lognormal_db(cfg=cfg, rng=rng)
     fading_db = rayleigh_fading_db(rng=rng) if cfg.rayleigh_fading else 0.0
-    return tx_power_dbm - pl_db + shadow_db + fading_db
+    return tx_power_dbm - pl_db + shadow_db + fading_db - IMPLEMENTATION_MARGIN_DB
