@@ -302,7 +302,7 @@ def _plot_xy_by_algo(rows: list[dict[str, str]], *, fig_name: str, y_col: str, o
         _warn_skip(fig_name, f"colonnes manquantes {missing}")
         return False
 
-    by_algo: dict[str, list[tuple[float, float]]] = defaultdict(list)
+    clean_rows: list[dict[str, str]] = []
     dropped = 0
     for row in rows:
         x = _to_float(row.get("N"))
@@ -310,17 +310,26 @@ def _plot_xy_by_algo(rows: list[dict[str, str]], *, fig_name: str, y_col: str, o
         if x is None or y is None:
             dropped += 1
             continue
-        by_algo[row.get("algo", "unknown")].append((x, y))
+        normalized = dict(row)
+        normalized["_x"] = str(x)
+        normalized["_y"] = str(y)
+        clean_rows.append(normalized)
 
     if dropped:
         warnings.warn(f"{fig_name}: {dropped} lignes ignorées (valeurs non numériques).", stacklevel=2)
-    if not by_algo:
+
+    algos = sorted({row.get("algo", "unknown") for row in clean_rows})
+    if not algos:
         _warn_skip(fig_name, "aucune donnée traçable après nettoyage")
         return False
 
     plt.figure(figsize=(8, 5))
-    for algo in sorted(by_algo):
-        points = sorted(by_algo[algo], key=lambda item: item[0])
+    for algo in algos:
+        algo_rows = [row for row in clean_rows if row.get("algo", "unknown") == algo]
+        points = sorted(
+            ((float(row["_x"]), float(row["_y"])) for row in algo_rows),
+            key=lambda item: item[0],
+        )
         xs = [point[0] for point in points]
         ys = [point[1] for point in points]
         plt.plot(xs, ys, marker="o", label=algo)

@@ -65,6 +65,91 @@ def test_metric_by_factor_is_aggregated_per_algo(tmp_path):
     assert by_algo["ucb"]["pdr_mean"] == "0.8"
 
 
+
+
+def test_metric_by_factor_uses_full_factor_key_with_model_and_sigma_shadowing_aliases(tmp_path):
+    run_dir_a = tmp_path / "results" / "run_adr"
+    run_dir_b = tmp_path / "results" / "run_ucb"
+
+    headers = [
+        "N",
+        "speed",
+        "model",
+        "mode",
+        "algo",
+        "gateways",
+        "sigma_shadowing",
+        "seed",
+        "rep",
+        "run_id",
+        "pdr",
+        "der",
+        "throughput_bps",
+        "Tc_s",
+        "jain_fairness",
+        "airtime_total_s",
+        "outage_ratio",
+        "switch_count",
+    ]
+
+    rows = [
+        {
+            "N": "50",
+            "speed": "1",
+            "model": "rwp",
+            "mode": "snir_on",
+            "algo": "adr",
+            "gateways": "1",
+            "sigma_shadowing": "2",
+            "seed": "1",
+            "rep": "0",
+            "run_id": "run_adr",
+            "pdr": "0.11",
+            "der": "0.11",
+            "throughput_bps": "10",
+            "Tc_s": "10",
+            "jain_fairness": "0.8",
+            "airtime_total_s": "1",
+            "outage_ratio": "0.2",
+            "switch_count": "1",
+        },
+        {
+            "N": "50",
+            "speed": "1",
+            "model": "rwp",
+            "mode": "snir_on",
+            "algo": "ucb",
+            "gateways": "1",
+            "sigma_shadowing": "2",
+            "seed": "1",
+            "rep": "0",
+            "run_id": "run_ucb",
+            "pdr": "0.77",
+            "der": "0.77",
+            "throughput_bps": "10",
+            "Tc_s": "10",
+            "jain_fairness": "0.8",
+            "airtime_total_s": "1",
+            "outage_ratio": "0.2",
+            "switch_count": "1",
+        },
+    ]
+
+    _write_csv(run_dir_a / "summary.csv", headers, [rows[0]])
+    _write_csv(run_dir_b / "summary.csv", headers, [rows[1]])
+
+    files = aggregate_runs(inputs=[tmp_path], output_root=tmp_path / "out", summary_only=True)
+
+    with files["metric_by_factor"].open("r", encoding="utf-8", newline="") as handle:
+        aggregated = list(csv.DictReader(handle))
+
+    assert len(aggregated) == 2
+    by_algo = {row["algo"]: row for row in aggregated}
+    assert by_algo["adr"]["mobility_model"] == "rwp"
+    assert by_algo["adr"]["sigma"] == "2"
+    assert by_algo["adr"]["pdr_mean"] == "0.11"
+    assert by_algo["ucb"]["pdr_mean"] == "0.77"
+
 def test_plot_xy_by_algo_uses_distinct_series_per_algo(monkeypatch, tmp_path):
     rows = [
         {"N": "50", "algo": "adr", "pdr_mean": "0.10"},
