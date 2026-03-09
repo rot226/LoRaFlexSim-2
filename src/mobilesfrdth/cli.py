@@ -254,6 +254,7 @@ def cmd_plots(args: argparse.Namespace) -> int:
         article_profile=args.article_profile,
         include_bonus=not args.no_bonus,
         verbose=args.verbose,
+        ieee_ready=args.ieee_ready,
     )
     report = {
         "article_profile": args.article_profile,
@@ -408,6 +409,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     plots_parser.add_argument("--no-bonus", action="store_true", help="Désactive les figures bonus fig11..fig16.")
     plots_parser.add_argument("--verbose", action="store_true", help="Affiche le statut de chaque figure générée/ignorée.")
+    plots_parser.add_argument(
+        "--ieee-ready",
+        action="store_true",
+        help="Active automatiquement le style IEEE-ready (polices/taille/couleurs), dpi=300 et export PDF+PNG.",
+    )
     plots_parser.set_defaults(func=cmd_plots)
 
     return parser
