@@ -59,10 +59,10 @@ FIGURE_SPECS = [
 BONUS_SPECS = [
     ("fig11_airtime_vs_n.png", "metric_by_factor", "airtime_total_s_mean", {}),
     ("fig12_switch_count_vs_n.png", "metric_by_factor", "switch_count_mean", {}),
-    ("fig13_pdr_ci_vs_n_snir_on.png", "metric_by_factor", "pdr_mean", {"mode": {"snir_on"}}),
-    ("fig14_delta_pdr_snir_on_minus_off.png", "metric_by_factor", "pdr_mean", {}),
-    ("fig15_switching_vs_speed.png", "metric_by_factor", "switch_count_mean", {"algo": {"ucb", "ucb_forget"}}),
-    ("fig16_airtime_reliability_pareto.png", "metric_by_factor", "pdr_mean", {}),
+    ("fig13_ucb_tracking_lag_vs_speed.png", "convergence_tc", "Tc_s", {"algo": {"ucb", "ucb_forget"}}),
+    ("fig14_reliability_airtime_pareto.png", "metric_by_factor", "pdr_mean", {}),
+    ("fig15_outage_tail_prob_vs_n.png", "sinr_cdf", "sinr_db", {}),
+    ("fig16_fairness_reliability_tradeoff.png", "metric_by_factor", "pdr_mean", {}),
 ]
 
 ARTICLE_PROFILE_FILTERS: dict[str, dict[str, dict[str, set[str]]]] = {
@@ -79,10 +79,10 @@ ARTICLE_PROFILE_FILTERS: dict[str, dict[str, dict[str, set[str]]]] = {
         "fig10_sinr_cdf.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
         "fig11_airtime_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
         "fig12_switch_count_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
-        "fig13_pdr_ci_vs_n_snir_on.png": {"mode": {"snir_on"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
-        "fig14_delta_pdr_snir_on_minus_off.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
-        "fig15_switching_vs_speed.png": {"algo": {"ucb", "ucb_forget"}},
-        "fig16_airtime_reliability_pareto.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig13_ucb_tracking_lag_vs_speed.png": {"algo": {"ucb", "ucb_forget"}},
+        "fig14_reliability_airtime_pareto.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig15_outage_tail_prob_vs_n.png": {"mode": {"snir_on"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig16_fairness_reliability_tradeoff.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
     },
     "full": {
         "fig01_pdr_vs_n_snir_off.png": {"mode": {"snir_off"}},
@@ -97,10 +97,10 @@ ARTICLE_PROFILE_FILTERS: dict[str, dict[str, dict[str, set[str]]]] = {
         "fig10_sinr_cdf.png": {"mode": {"snir_on"}},
         "fig11_airtime_vs_n.png": {"mode": {"snir_off", "snir_on"}},
         "fig12_switch_count_vs_n.png": {"mode": {"snir_off", "snir_on"}},
-        "fig13_pdr_ci_vs_n_snir_on.png": {"mode": {"snir_on"}},
-        "fig14_delta_pdr_snir_on_minus_off.png": {},
-        "fig15_switching_vs_speed.png": {"algo": {"ucb", "ucb_forget"}},
-        "fig16_airtime_reliability_pareto.png": {},
+        "fig13_ucb_tracking_lag_vs_speed.png": {"algo": {"ucb", "ucb_forget"}, "speed": {"1", "3", "5"}},
+        "fig14_reliability_airtime_pareto.png": {},
+        "fig15_outage_tail_prob_vs_n.png": {"mode": {"snir_on"}, "speed": {"1", "3", "5"}},
+        "fig16_fairness_reliability_tradeoff.png": {},
     },
 }
 
@@ -705,6 +705,165 @@ def _plot_switching_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool
     return True
 
 
+
+
+def _plot_ucb_tracking_lag_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool:
+    fig_name = out_path.name
+    if not rows:
+        _warn_skip(fig_name, "fichier convergence_tc.csv vide ou absent")
+        return False
+    needed = {"speed", "algo", "Tc_s"}
+    missing = [column for column in needed if column not in rows[0]]
+    if missing:
+        _warn_skip(fig_name, f"colonnes manquantes {missing}")
+        return False
+
+    grouped: dict[str, dict[float, list[float]]] = defaultdict(lambda: defaultdict(list))
+    for row in rows:
+        speed = _to_float(row.get("speed"))
+        tc_s = _to_float(row.get("Tc_s"))
+        if speed is None or tc_s is None:
+            continue
+        grouped[row.get("algo", "unknown")][speed].append(tc_s)
+
+    if not grouped:
+        _warn_skip(fig_name, "pas de couples speed/Tc_s exploitables")
+        return False
+
+    plt.figure(figsize=(8, 5))
+    for algo in sorted(grouped):
+        speeds = sorted(grouped[algo])
+        means: list[float] = []
+        errors: list[float] = []
+        for speed in speeds:
+            ci = ci95_from_samples(grouped[algo][speed])
+            if ci is None:
+                continue
+            means.append(ci.mean)
+            errors.append(ci.half_width)
+        plt.errorbar(speeds, means, yerr=errors, marker="o", capsize=3, label=algo)
+
+    plt.grid(alpha=0.3)
+    plt.xlabel(normalized_axis_label("speed"))
+    plt.ylabel("Délai de ré-adaptation Tc [s]")
+    plt.legend(title="Algo")
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=PLOT_DPI)
+    plt.close()
+    return True
+
+
+def _plot_outage_tail_prob_vs_n(rows: list[dict[str, str]], out_path: Path, *, threshold_db: float = -10.0) -> bool:
+    fig_name = out_path.name
+    if not rows:
+        _warn_skip(fig_name, "fichier sinr_cdf.csv vide ou absent")
+        return False
+    needed = {"algo", "N", "sinr_db", "quantile"}
+    missing = [column for column in needed if column not in rows[0]]
+    if missing:
+        _warn_skip(fig_name, f"colonnes manquantes {missing}")
+        return False
+
+    grouped: dict[str, dict[float, list[tuple[float, float]]]] = defaultdict(lambda: defaultdict(list))
+    for row in rows:
+        algo = row.get("algo", "unknown")
+        n_value = _to_float(row.get("N"))
+        sinr = _to_float(row.get("sinr_db"))
+        quantile = _to_float(row.get("quantile"))
+        if n_value is None or sinr is None or quantile is None:
+            continue
+        grouped[algo][n_value].append((sinr, quantile))
+
+    if not grouped:
+        _warn_skip(fig_name, "aucun point SINR/quantile exploitable")
+        return False
+
+    plt.figure(figsize=(8, 5))
+    plotted = 0
+    for algo in sorted(grouped):
+        xs: list[float] = []
+        ys: list[float] = []
+        for n_value in sorted(grouped[algo]):
+            points = sorted(grouped[algo][n_value], key=lambda pair: pair[0])
+            cands = [q for sinr, q in points if sinr <= threshold_db]
+            if not cands:
+                continue
+            xs.append(n_value)
+            ys.append(max(0.0, min(1.0, max(cands))))
+        if xs:
+            plt.plot(xs, ys, marker="o", label=algo)
+            plotted += 1
+
+    if plotted == 0:
+        plt.close()
+        _warn_skip(fig_name, f"aucune estimation P[SINR<{threshold_db:g} dB] traçable")
+        return False
+
+    plt.grid(alpha=0.3)
+    plt.xlabel(normalized_axis_label("N"))
+    plt.ylabel(f"P[SINR < {threshold_db:g} dB]")
+    plt.ylim(0, 1)
+    plt.legend(title="Algo")
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=PLOT_DPI)
+    plt.close()
+    return True
+
+
+def _plot_fairness_reliability_tradeoff(rows: list[dict[str, str]], out_path: Path) -> bool:
+    fig_name = out_path.name
+    if not rows:
+        _warn_skip(fig_name, "aucune ligne disponible")
+        return False
+    pdr_col = _resolve_metric_column(rows, expected="pdr_mean")
+    fairness_col = _resolve_metric_column(rows, expected="jain_fairness_mean")
+    needed = {"algo", pdr_col, fairness_col}
+    missing = [column for column in needed if column not in rows[0]]
+    if missing:
+        _warn_skip(fig_name, f"colonnes manquantes {missing}")
+        return False
+
+    grouped: dict[str, list[tuple[float, float]]] = defaultdict(list)
+    for row in rows:
+        pdr = _to_float(row.get(pdr_col))
+        fairness = _to_float(row.get(fairness_col))
+        if pdr is None or fairness is None:
+            continue
+        grouped[row.get("algo", "unknown")].append((fairness, pdr))
+
+    if not grouped:
+        _warn_skip(fig_name, "pas de couples fairness/PDR exploitables")
+        return False
+
+    plt.figure(figsize=(8, 5))
+    for algo in sorted(grouped):
+        xs = [pair[0] for pair in grouped[algo]]
+        ys = [pair[1] for pair in grouped[algo]]
+        plt.scatter(xs, ys, alpha=0.35, s=22, label=f"{algo} (samples)")
+        ci_x = ci95_from_samples(xs)
+        ci_y = ci95_from_samples(ys)
+        if ci_x is not None and ci_y is not None:
+            plt.errorbar(
+                [ci_x.mean],
+                [ci_y.mean],
+                xerr=[ci_x.half_width],
+                yerr=[ci_y.half_width],
+                fmt="o",
+                markersize=7,
+                capsize=4,
+                label=f"{algo} (moyenne±IC95)",
+            )
+
+    plt.grid(alpha=0.3)
+    plt.xlabel(normalized_axis_label("jain_fairness_mean"))
+    plt.ylabel(normalized_axis_label("pdr_mean"))
+    plt.xlim(0, 1.05)
+    plt.ylim(0, 1.05)
+    plt.legend(fontsize=8, ncols=2)
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=PLOT_DPI)
+    plt.close()
+    return True
 def _plot_airtime_reliability_pareto(rows: list[dict[str, str]], out_path: Path) -> bool:
     fig_name = out_path.name
     if not rows:
@@ -866,12 +1025,14 @@ def generate_minimal_figures(
             effective_filters = filters.merge(local_filter).merge(_resolve_profile_filter(article_profile, fig_name))
             selected = _apply_filters(payloads[source], effective_filters)
             out_path = out_dir / fig_name
-            if fig_name == "fig14_delta_pdr_snir_on_minus_off.png":
-                did_generate = _plot_delta_pdr_on_minus_off(selected, out_path)
-            elif fig_name == "fig15_switching_vs_speed.png":
-                did_generate = _plot_switching_vs_speed(selected, out_path)
-            elif fig_name == "fig16_airtime_reliability_pareto.png":
+            if fig_name == "fig13_ucb_tracking_lag_vs_speed.png":
+                did_generate = _plot_ucb_tracking_lag_vs_speed(selected, out_path)
+            elif fig_name == "fig14_reliability_airtime_pareto.png":
                 did_generate = _plot_airtime_reliability_pareto(selected, out_path)
+            elif fig_name == "fig15_outage_tail_prob_vs_n.png":
+                did_generate = _plot_outage_tail_prob_vs_n(selected, out_path)
+            elif fig_name == "fig16_fairness_reliability_tradeoff.png":
+                did_generate = _plot_fairness_reliability_tradeoff(selected, out_path)
             else:
                 did_generate = _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path)
             traces.append(
