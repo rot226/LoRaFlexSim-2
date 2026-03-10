@@ -327,6 +327,20 @@ def _missing_required_files(run_dir: Path, *, summary_only: bool) -> list[str]:
     return [name for name in required_files if not (run_dir / name).is_file()]
 
 
+def _validate_sinr_cdf_group(
+    *,
+    key: tuple[str, ...],
+    quantiles: list[float],
+    sinrs: list[float],
+    factor_columns: list[str],
+) -> None:
+    context = ", ".join(f"{column}={value}" for column, value in zip(factor_columns, key, strict=False))
+    if any(curr <= prev for prev, curr in zip(quantiles, quantiles[1:], strict=False)):
+        raise ValueError(f"sinr_cdf invalide: quantiles non strictement croissants ({context})")
+    if sinrs and all(value == sinrs[0] for value in sinrs[1:]):
+        raise ValueError(f"sinr_cdf invalide: sinr_db constant sur tout le groupe ({context})")
+
+
 def aggregate_runs(
     *,
     inputs: Iterable[Path],
@@ -534,11 +548,18 @@ def aggregate_runs(
             factors = dict(zip(factor_columns, key, strict=False))
             data = sorted(values)
             n = len(data)
-            for index, sinr in enumerate(data, start=1):
+            quantiles = [index / n for index in range(1, n + 1)]
+            _validate_sinr_cdf_group(
+                key=key,
+                quantiles=quantiles,
+                sinrs=data,
+                factor_columns=factor_columns,
+            )
+            for quantile, sinr in zip(quantiles, data, strict=False):
                 sinr_rows.append(
                     {
                         **factors,
-                        "quantile": index / n,
+                        "quantile": quantile,
                         "sinr_db": sinr,
                         "sample_count": n,
                     }

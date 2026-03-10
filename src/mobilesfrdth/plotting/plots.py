@@ -517,8 +517,7 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
         _warn_skip(fig_name, "pas de points quantile/sinr exploitables")
         return False
 
-    plt.figure(figsize=(8, 5))
-    plotted = 0
+    by_algo: dict[str, list[tuple[float, float]]] = defaultdict(list)
     for (algo, mode, n, speed), points in sorted(by_group.items()):
         points.sort(key=lambda item: (item[0], item[1]))
         quantiles = [item[0] for item in points]
@@ -540,8 +539,32 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
             plt.close()
             return False
 
-        label = f"{algo} | {mode} | N={n} | speed={speed}"
-        plt.plot(sinrs, quantiles, label=label)
+        by_algo[algo].extend(points)
+
+    if not by_algo:
+        _warn_skip(fig_name, "aucune courbe CDF traçable")
+        return False
+
+    plt.figure(figsize=(8, 5))
+    plotted = 0
+    for algo, points in sorted(by_algo.items()):
+        points.sort(key=lambda item: (item[0], item[1]))
+        by_quantile: dict[float, list[float]] = defaultdict(list)
+        for quantile, sinr in points:
+            by_quantile[quantile].append(sinr)
+        quantiles = sorted(by_quantile)
+        mean_sinrs = [sum(by_quantile[q]) / len(by_quantile[q]) for q in quantiles]
+
+        if any(curr <= prev for prev, curr in zip(quantiles, quantiles[1:], strict=False)):
+            _warn_skip(fig_name, f"quantile non monotone croissant pour algo={algo}")
+            plt.close()
+            return False
+        if mean_sinrs and all(value == mean_sinrs[0] for value in mean_sinrs[1:]):
+            _warn_skip(fig_name, f"sinr_db constant sur tout le groupe pour algo={algo}")
+            plt.close()
+            return False
+
+        plt.plot(mean_sinrs, quantiles, label=algo)
         plotted += 1
 
     if plotted == 0:
