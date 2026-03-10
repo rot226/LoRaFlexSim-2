@@ -75,6 +75,9 @@ ARTICLE_PROFILE_FILTERS: dict[str, dict[str, dict[str, set[str]]]] = {
         "fig07_tc_vs_speed.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
         "fig08_fairness_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
         "fig09_sf_distribution_snir_on.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig09b_sf_distribution_snir_on_small_multiples.png": {
+            "algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}
+        },
         "fig10_sinr_cdf.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
         "fig11_airtime_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
         "fig12_switch_count_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
@@ -93,6 +96,7 @@ ARTICLE_PROFILE_FILTERS: dict[str, dict[str, dict[str, set[str]]]] = {
         "fig07_tc_vs_speed.png": {"speed": {"1", "3", "5"}},
         "fig08_fairness_vs_n.png": {"mode": {"snir_off", "snir_on"}},
         "fig09_sf_distribution_snir_on.png": {"mode": {"snir_on"}},
+        "fig09b_sf_distribution_snir_on_small_multiples.png": {"mode": {"snir_on"}},
         "fig10_sinr_cdf.png": {"mode": {"snir_on"}},
         "fig11_airtime_vs_n.png": {"mode": {"snir_off", "snir_on"}},
         "fig12_switch_count_vs_n.png": {"mode": {"snir_off", "snir_on"}},
@@ -605,48 +609,90 @@ def _plot_sf_distribution(rows: list[dict[str, str]], out_path: Path) -> bool:
     x_positions = list(range(len(sf_values)))
     y_ticks = list(range(0, 101, 10))
 
-    # En présence de nombreux algorithmes, on privilégie des sous-figures lisibles
-    # (une barre par SF et par algo) ; sinon on conserve un histogramme groupé.
-    if len(algos) > 3:
-        fig, axes = plt.subplots(len(algos), 1, figsize=(9, 2.8 * len(algos)), sharex=True, sharey=True)
-        if hasattr(axes, "ravel"):
-            axes_list = list(axes.ravel())
-        elif isinstance(axes, (list, tuple)):
-            axes_list = list(axes)
-        else:
-            axes_list = [axes]
+    width = 0.8 / max(len(algos), 1)
+    plt.figure(figsize=(10, 5))
+    for idx, algo in enumerate(algos):
+        offset = (idx - (len(algos) - 1) / 2) * width
+        xs = [x + offset for x in x_positions]
+        plt.bar(xs, data_percent[algo], width=width, label=algo)
+    plt.grid(axis="y", alpha=0.3)
+    plt.xlabel(normalized_axis_label("sf"))
+    plt.ylabel(normalized_axis_label("ratio"))
+    plt.xticks(x_positions, [str(sf) for sf in sf_values])
+    plt.ylim(0, 100)
+    plt.yticks(y_ticks)
+    plt.legend(title="Algo", ncols=2)
+    plt.tight_layout()
+    _save_figure_variants(out_path)
+    plt.close()
+    return True
 
-        for axis, algo in zip(axes_list, algos, strict=False):
-            axis.bar(x_positions, data_percent[algo], width=0.7, label=algo)
-            axis.grid(axis="y", alpha=0.3)
-            axis.set_ylim(0, 100)
-            axis.set_yticks(y_ticks)
-            axis.legend(loc="upper right", title="Algo")
 
-        axes_list[-1].set_xticks(x_positions, [str(sf) for sf in sf_values])
-        axes_list[-1].set_xlabel(normalized_axis_label("sf"))
-        fig.supylabel(normalized_axis_label("ratio"))
-        fig.tight_layout()
-        fig.savefig(out_path.with_suffix(".png"), dpi=PLOT_DPI)
-        fig.savefig(out_path.with_suffix(".pdf"))
-        plt.close(fig)
+def _plot_sf_distribution_small_multiples(rows: list[dict[str, str]], out_path: Path) -> bool:
+    fig_name = out_path.name
+    if not rows:
+        _warn_skip(fig_name, "fichier distribution_sf.csv vide ou absent")
+        return False
+    needed = {"sf", "algo"}
+    missing = [column for column in needed if column not in rows[0]]
+    if missing:
+        _warn_skip(fig_name, f"colonnes manquantes {missing}")
+        return False
+    if "ratio" not in rows[0] and "count" not in rows[0]:
+        _warn_skip(fig_name, "colonnes manquantes ['ratio' ou 'count']")
+        return False
+
+    grouped: dict[str, dict[int, list[float]]] = defaultdict(lambda: defaultdict(list))
+    has_ratio = "ratio" in rows[0]
+    for row in rows:
+        sf = _to_float(row.get("sf"))
+        value = _to_float(row.get("ratio")) if has_ratio else _to_float(row.get("count"))
+        if sf is None or value is None:
+            continue
+        sf_int = int(sf)
+        if sf_int < 7 or sf_int > 12:
+            continue
+        grouped[row.get("algo", "unknown")][sf_int].append(value)
+
+    if not grouped:
+        _warn_skip(fig_name, "pas de points SF/ratio exploitables")
+        return False
+
+    sf_values = list(range(7, 13))
+    algos = sorted(grouped)
+    data_percent: dict[str, list[float]] = {}
+    for algo in algos:
+        means = {sf: sum(grouped[algo][sf]) / len(grouped[algo][sf]) for sf in grouped[algo]}
+        ordered = [max(0.0, means.get(sf, 0.0)) for sf in sf_values]
+        total = sum(ordered)
+        if total > 0:
+            ordered = [value / total for value in ordered]
+        data_percent[algo] = [value * 100.0 for value in ordered]
+
+    x_positions = list(range(len(sf_values)))
+    y_ticks = list(range(0, 101, 10))
+    fig, axes = plt.subplots(len(algos), 1, figsize=(9, 2.8 * len(algos)), sharex=True, sharey=True)
+    if hasattr(axes, "ravel"):
+        axes_list = list(axes.ravel())
+    elif isinstance(axes, (list, tuple)):
+        axes_list = list(axes)
     else:
-        width = 0.8 / max(len(algos), 1)
-        plt.figure(figsize=(10, 5))
-        for idx, algo in enumerate(algos):
-            offset = (idx - (len(algos) - 1) / 2) * width
-            xs = [x + offset for x in x_positions]
-            plt.bar(xs, data_percent[algo], width=width, label=algo)
-        plt.grid(axis="y", alpha=0.3)
-        plt.xlabel(normalized_axis_label("sf"))
-        plt.ylabel(normalized_axis_label("ratio"))
-        plt.xticks(x_positions, [str(sf) for sf in sf_values])
-        plt.ylim(0, 100)
-        plt.yticks(y_ticks)
-        plt.legend(title="Algo", ncols=2)
-        plt.tight_layout()
-        _save_figure_variants(out_path)
-        plt.close()
+        axes_list = [axes]
+
+    for axis, algo in zip(axes_list, algos, strict=False):
+        axis.bar(x_positions, data_percent[algo], width=0.7, label=algo)
+        axis.grid(axis="y", alpha=0.3)
+        axis.set_ylim(0, 100)
+        axis.set_yticks(y_ticks)
+        axis.legend(loc="upper right", title="Algo")
+
+    axes_list[-1].set_xticks(x_positions, [str(sf) for sf in sf_values])
+    axes_list[-1].set_xlabel(normalized_axis_label("sf"))
+    fig.supylabel(normalized_axis_label("ratio"))
+    fig.tight_layout()
+    fig.savefig(out_path.with_suffix(".png"), dpi=PLOT_DPI)
+    fig.savefig(out_path.with_suffix(".pdf"))
+    plt.close(fig)
     return True
 
 
@@ -1084,6 +1130,23 @@ def generate_minimal_figures(
     _log_figure_result(fig09, did_generate, verbose=verbose)
     if did_generate:
         generated.append(fig09)
+
+    fig09b = out_dir / _stable_figure_name("fig09b_sf_distribution_snir_on_small_multiples.png")
+    fig09b_filters = filters.merge(_resolve_profile_filter(article_profile, fig09b.name))
+    did_generate = _plot_sf_distribution_small_multiples(_apply_filters(payloads["distribution_sf"], fig09b_filters), fig09b)
+    traces.append(
+        FigureTrace(
+            figure=fig09b.name,
+            source="distribution_sf",
+            metric="ratio",
+            filters=_filters_to_serializable(fig09b_filters),
+            num_points=_count_points(_apply_filters(payloads["distribution_sf"], fig09b_filters), "ratio"),
+            generated=did_generate,
+        )
+    )
+    _log_figure_result(fig09b, did_generate, verbose=verbose)
+    if did_generate:
+        generated.append(fig09b)
 
     fig10 = out_dir / _stable_figure_name("fig10_sinr_cdf.png")
     fig10_filters = filters.merge(_resolve_profile_filter(article_profile, fig10.name))
