@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import sys
 from pathlib import Path
@@ -222,6 +223,17 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
         "missing_runs": missing_runs,
         "files": {name: str(path) for name, path in files.items()},
     }
+
+    metric_by_factor_path = files.get("metric_by_factor")
+    distinct_groups_by_algo: dict[str, int] = {}
+    if metric_by_factor_path is not None:
+        with metric_by_factor_path.open("r", encoding="utf-8", newline="") as handle:
+            reader = csv.DictReader(handle)
+            for row in reader:
+                algo = str(row.get("algo", ""))
+                distinct_groups_by_algo[algo] = distinct_groups_by_algo.get(algo, 0) + 1
+
+    manifest["distinct_groups_by_algo"] = distinct_groups_by_algo
     output_file = out_dir / "aggregate.json"
     _dump_json(output_file, manifest)
     print(f"Agrégation écrite dans {output_file}")
