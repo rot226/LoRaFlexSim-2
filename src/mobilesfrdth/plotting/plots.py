@@ -302,6 +302,22 @@ def _warn_skip(fig_name: str, reason: str) -> None:
     warnings.warn(f"{fig_name} ignorée: {reason}", stacklevel=2)
 
 
+def _algo_series(rows: list[dict[str, str]], *, fig_name: str) -> list[tuple[str, list[dict[str, str]]]]:
+    normalized_rows = [_normalize_row_for_filtering(row) for row in rows]
+    algos = sorted({row.get("algo", "").strip() for row in normalized_rows if row.get("algo", "").strip()})
+    series: list[tuple[str, list[dict[str, str]]]] = []
+    for algo in algos:
+        algo_rows = [row for row in normalized_rows if row.get("algo", "").strip() == algo]
+        if not algo_rows:
+            warnings.warn(
+                f"{fig_name}: série vide pour filtre exact algo={algo}. filtre=algo={algo}",
+                stacklevel=2,
+            )
+            continue
+        series.append((algo, algo_rows))
+    return series
+
+
 def _log_figure_result(path: Path, generated: bool, *, verbose: bool) -> None:
     if not verbose:
         return
@@ -319,40 +335,49 @@ def _plot_xy_by_algo(rows: list[dict[str, str]], *, fig_name: str, y_col: str, o
         _warn_skip(fig_name, f"colonnes manquantes {missing}")
         return False
 
-    allowed_algos = {row.get("algo", "").strip() for row in rows if row.get("algo", "").strip()}
-    normalized_rows = _apply_filters(rows, ScenarioFilters(by_column={"algo": allowed_algos})) if allowed_algos else []
-    if rows and not normalized_rows:
-        _warn_skip(fig_name, "aucune ligne après filtrage strict par algo")
+    series = _algo_series(rows, fig_name=fig_name)
+    if rows and not series:
+        _warn_skip(fig_name, "aucune série après filtrage strict par algo")
         return False
 
-    grouped: dict[str, dict[float, list[float]]] = defaultdict(lambda: defaultdict(list))
     dropped = 0
-    for row in normalized_rows:
-        x = _to_float(row.get("N"))
-        y = _to_float(row.get(resolved_metric))
-        if x is None or y is None:
-            dropped += 1
-            continue
-        grouped[row.get("algo", "unknown")][x].append(y)
-
-    if dropped:
-        warnings.warn(f"{fig_name}: {dropped} lignes ignorées (valeurs non numériques).", stacklevel=2)
-    if not grouped:
-        _warn_skip(fig_name, "aucune donnée traçable après nettoyage")
-        return False
-
     plt.figure(figsize=(8, 5))
-    for algo in sorted(grouped):
-        xs = sorted(grouped[algo])
+    plotted = 0
+    for algo, algo_rows in series:
+        per_x: dict[float, list[float]] = defaultdict(list)
+        for row in algo_rows:
+            x = _to_float(row.get("N"))
+            y = _to_float(row.get(resolved_metric))
+            if x is None or y is None:
+                dropped += 1
+                continue
+            per_x[x].append(y)
+        if not per_x:
+            warnings.warn(
+                f"{fig_name}: série algo vide après nettoyage numérique. filtre=algo={algo}",
+                stacklevel=2,
+            )
+            continue
+
+        xs = sorted(per_x)
         means: list[float] = []
         errors: list[float] = []
         for x in xs:
-            ci = ci95_from_samples(grouped[algo][x])
+            ci = ci95_from_samples(per_x[x])
             if ci is None:
                 continue
             means.append(ci.mean)
             errors.append(ci.half_width)
-        plt.errorbar(xs, means, yerr=errors, marker="o", capsize=3, label=algo)
+        if means:
+            plt.errorbar(xs, means, yerr=errors, marker="o", capsize=3, label=algo)
+            plotted += 1
+
+    if dropped:
+        warnings.warn(f"{fig_name}: {dropped} lignes ignorées (valeurs non numériques).", stacklevel=2)
+    if plotted == 0:
+        _warn_skip(fig_name, "aucune donnée traçable après nettoyage")
+        plt.close()
+        return False
 
     plt.grid(alpha=0.3)
     plt.xlabel(normalized_axis_label("N"))
@@ -416,30 +441,41 @@ def _plot_tc_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool:
         _warn_skip(fig_name, f"colonnes manquantes {missing}")
         return False
 
-    grouped: dict[str, dict[float, list[float]]] = defaultdict(lambda: defaultdict(list))
-    for row in rows:
-        speed = _to_float(row.get("speed"))
-        tc_s = _to_float(row.get("Tc_s"))
-        if speed is None or tc_s is None:
-            continue
-        grouped[row.get("algo", "unknown")][speed].append(tc_s)
-
-    if not grouped:
+    series = _algo_series(rows, fig_name=fig_name)
+    if not series:
         _warn_skip(fig_name, "pas de couples speed/Tc_s exploitables")
         return False
 
     plt.figure(figsize=(8, 5))
-    for algo in sorted(grouped):
-        speeds = sorted(grouped[algo])
+    plotted = 0
+    for algo, algo_rows in series:
+        grouped: dict[float, list[float]] = defaultdict(list)
+        for row in algo_rows:
+            speed = _to_float(row.get("speed"))
+            tc_s = _to_float(row.get("Tc_s"))
+            if speed is None or tc_s is None:
+                continue
+            grouped[speed].append(tc_s)
+        if not grouped:
+            warnings.warn(f"{fig_name}: série algo vide après filtre exact. filtre=algo={algo}", stacklevel=2)
+            continue
+
+        speeds = sorted(grouped)
         means: list[float] = []
         errors: list[float] = []
         for speed in speeds:
-            ci = ci95_from_samples(grouped[algo][speed])
+            ci = ci95_from_samples(grouped[speed])
             if ci is None:
                 continue
             means.append(ci.mean)
             errors.append(ci.half_width)
-        plt.errorbar(speeds, means, yerr=errors, marker="o", capsize=3, label=algo)
+        if means:
+            plt.errorbar(speeds, means, yerr=errors, marker="o", capsize=3, label=algo)
+            plotted += 1
+    if plotted == 0:
+        plt.close()
+        _warn_skip(fig_name, "pas de couples speed/Tc_s exploitables")
+        return False
     plt.grid(alpha=0.3)
     plt.xlabel(normalized_axis_label("speed"))
     plt.ylabel(normalized_axis_label("Tc_s"))
@@ -746,30 +782,41 @@ def _plot_ucb_tracking_lag_vs_speed(rows: list[dict[str, str]], out_path: Path) 
         _warn_skip(fig_name, f"colonnes manquantes {missing}")
         return False
 
-    grouped: dict[str, dict[float, list[float]]] = defaultdict(lambda: defaultdict(list))
-    for row in rows:
-        speed = _to_float(row.get("speed"))
-        tc_s = _to_float(row.get("Tc_s"))
-        if speed is None or tc_s is None:
-            continue
-        grouped[row.get("algo", "unknown")][speed].append(tc_s)
-
-    if not grouped:
+    series = _algo_series(rows, fig_name=fig_name)
+    if not series:
         _warn_skip(fig_name, "pas de couples speed/Tc_s exploitables")
         return False
 
     plt.figure(figsize=(8, 5))
-    for algo in sorted(grouped):
-        speeds = sorted(grouped[algo])
+    plotted = 0
+    for algo, algo_rows in series:
+        grouped: dict[float, list[float]] = defaultdict(list)
+        for row in algo_rows:
+            speed = _to_float(row.get("speed"))
+            tc_s = _to_float(row.get("Tc_s"))
+            if speed is None or tc_s is None:
+                continue
+            grouped[speed].append(tc_s)
+        if not grouped:
+            warnings.warn(f"{fig_name}: série algo vide après filtre exact. filtre=algo={algo}", stacklevel=2)
+            continue
+
+        speeds = sorted(grouped)
         means: list[float] = []
         errors: list[float] = []
         for speed in speeds:
-            ci = ci95_from_samples(grouped[algo][speed])
+            ci = ci95_from_samples(grouped[speed])
             if ci is None:
                 continue
             means.append(ci.mean)
             errors.append(ci.half_width)
-        plt.errorbar(speeds, means, yerr=errors, marker="o", capsize=3, label=algo)
+        if means:
+            plt.errorbar(speeds, means, yerr=errors, marker="o", capsize=3, label=algo)
+            plotted += 1
+    if plotted == 0:
+        plt.close()
+        _warn_skip(fig_name, "pas de couples speed/Tc_s exploitables")
+        return False
 
     plt.grid(alpha=0.3)
     plt.xlabel(normalized_axis_label("speed"))
