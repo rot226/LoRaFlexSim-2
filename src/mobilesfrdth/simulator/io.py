@@ -463,6 +463,8 @@ def aggregate_runs(
         print(f"Runs incomplets ignorés: {skipped}")
 
     metric_by_factor_rows = []
+    algo_index = factor_columns.index("algo")
+    distinct_groups_by_algo: dict[str, int] = {}
     for key, bucket in sorted(metric_accumulators.items()):
         num_runs = int(bucket["num_runs"])
         metric_by_factor_rows.append(
@@ -480,6 +482,17 @@ def aggregate_runs(
                 "switch_count_mean": bucket["switch_count_sum"] / max(num_runs, 1),
             }
         )
+
+    for key in metric_accumulators:
+        algo = key[algo_index]
+        distinct_groups_by_algo[algo] = distinct_groups_by_algo.get(algo, 0) + 1
+
+    if sum(distinct_groups_by_algo.values()) != len(metric_by_factor_rows):
+        raise ValueError(
+            "Agrégation incohérente: des groupes ont été perdus lors de la construction de metric_by_factor.csv "
+            "(dimension algo potentiellement écrasée)."
+        )
+
     metric_by_factor_path = out_dir / "metric_by_factor.csv"
     _write_csv(metric_by_factor_path, factor_columns + [
         "sigma",

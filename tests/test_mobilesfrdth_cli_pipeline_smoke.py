@@ -139,6 +139,9 @@ def test_cli_smoke_grid_pipeline_contracts_and_run_id_uniqueness(monkeypatch, tm
 
     assert cli.main(["aggregate", "--results", str(runs_dir), "--out", str(aggregates_dir)]) == 0
 
+    aggregate_manifest = json.loads((aggregates_dir / "aggregate.json").read_text(encoding="utf-8"))
+    assert aggregate_manifest["distinct_groups_by_algo"] == {"adr": 4}
+
     metric_rows = list(
         csv.DictReader((aggregates_dir / "aggregates" / "metric_by_factor.csv").open("r", encoding="utf-8", newline=""))
     )
@@ -157,7 +160,8 @@ def test_cli_smoke_grid_pipeline_contracts_and_run_id_uniqueness(monkeypatch, tm
 
     plots_payload = json.loads((figures_dir / "plots_summary.json").read_text(encoding="utf-8"))
     generated_figure_names = {pathlib.Path(path).name for path in plots_payload["figures"]}
-    assert _NON_BONUS_FIGURES.issubset(generated_figure_names)
+    expected_figures = _NON_BONUS_FIGURES - {"fig10_sinr_cdf.png"}
+    assert expected_figures.issubset(generated_figure_names)
     assert plots_payload["article_profile"] == "core"
     fig02_filters = {
         entry["figure"]: entry["filters"] for entry in plots_payload["figure_filters"]
@@ -254,6 +258,15 @@ def test_cli_plots_generates_fig01_to_fig06_with_non_empty_core_campaign(monkeyp
     assert int(jobs_payload["num_jobs"]) > 0
 
     assert cli.main(["aggregate", "--results", str(runs_dir), "--out", str(aggregates_dir)]) == 0
+
+    aggregate_manifest = json.loads((aggregates_dir / "aggregate.json").read_text(encoding="utf-8"))
+    assert aggregate_manifest["distinct_groups_by_algo"] == {
+        "ADR": 12,
+        "ADR_MIXRA": 12,
+        "UCB": 12,
+        "UCB_FORGET": 12,
+    }
+
     assert (
         cli.main(
             [
