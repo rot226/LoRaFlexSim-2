@@ -121,6 +121,47 @@ def test_aggregate_runs_sinr_cdf_has_strict_columns(tmp_path):
         assert rows[0]["sample_count"] == "1"
 
 
+def test_aggregate_runs_computes_ci95_and_effective_runs(tmp_path):
+    run_base = tmp_path / "results"
+    run_1 = run_base / "run_001"
+    run_2 = run_base / "run_002"
+    _write_csv(run_1 / "summary.csv", SUMMARY_COLUMNS, _summary_row("run_001"))
+    row2 = _summary_row("run_002")
+    row2["pdr"] = "0.7"
+    _write_csv(run_2 / "summary.csv", SUMMARY_COLUMNS, row2)
+
+    files = aggregate_runs(inputs=[tmp_path], output_root=tmp_path / "out", summary_only=True)
+
+    rows = list(csv.DictReader(files["metric_by_factor"].open("r", encoding="utf-8", newline="")))
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["n_runs_effective"] == "2"
+    assert row["num_runs"] == "2"
+    assert float(row["pdr_mean"]) == 0.8
+    assert float(row["pdr_ci95"]) > 0.0
+
+
+def test_aggregate_runs_reports_ignored_corrupted_runs(tmp_path):
+    valid_run = tmp_path / "results" / "run_ok"
+    bad_run = tmp_path / "results" / "run_bad"
+    _write_csv(valid_run / "summary.csv", SUMMARY_COLUMNS, _summary_row("run_ok"))
+    broken = _summary_row("run_bad")
+    broken["pdr"] = "not-a-number"
+    _write_csv(bad_run / "summary.csv", SUMMARY_COLUMNS, broken)
+
+    ignored_runs: list[dict[str, str]] = []
+    files = aggregate_runs(
+        inputs=[tmp_path],
+        output_root=tmp_path / "out",
+        summary_only=True,
+        ignored_runs_report=ignored_runs,
+    )
+
+    assert files["metric_by_factor"].is_file()
+    assert len(ignored_runs) == 1
+    assert ignored_runs[0]["reason"] == "corrupted_summary"
+
+
 
 def test_tc_is_computed_from_node_timeseries_and_varies_with_scenario(tmp_path):
     def _events(success_pattern: list[int], *, per_bin: int = 10) -> list[dict[str, object]]:

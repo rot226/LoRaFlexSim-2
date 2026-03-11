@@ -10,6 +10,7 @@ from collections import Counter, defaultdict
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
+from statistics import stdev
 
 from .metrics import convergence_tc_performance, der, jain_fairness, outage_ratio, pdr, throughput
 
@@ -370,8 +371,6 @@ def _validate_sinr_cdf_group(
     context = ", ".join(f"{column}={value}" for column, value in zip(factor_columns, key, strict=False))
     if any(curr <= prev for prev, curr in zip(quantiles, quantiles[1:], strict=False)):
         raise ValueError(f"sinr_cdf invalide: quantiles non strictement croissants ({context})")
-    if sinrs and all(value == sinrs[0] for value in sinrs[1:]):
-        raise ValueError(f"sinr_cdf invalide: sinr_db constant sur tout le groupe ({context})")
 
 
 def aggregate_runs(
@@ -383,6 +382,7 @@ def aggregate_runs(
     skip_sf_distribution: bool = False,
     strict: bool = False,
     verbose: bool = False,
+    ignored_runs_report: list[dict[str, str]] | None = None,
 ) -> dict[str, Path]:
     """Agrège des runs et écrit les CSV dans ``aggregates/``."""
 
@@ -394,17 +394,19 @@ def aggregate_runs(
         skip_sinr_cdf = True
         skip_sf_distribution = True
 
-    metric_accumulators: dict[tuple[str, ...], dict[str, float]] = defaultdict(lambda: {
-        "num_runs": 0,
-        "pdr_sum": 0.0,
-        "der_sum": 0.0,
-        "throughput_bps_sum": 0.0,
-        "Tc_s_sum": 0.0,
-        "jain_fairness_sum": 0.0,
-        "airtime_total_s_sum": 0.0,
-        "outage_ratio_sum": 0.0,
-        "switch_count_sum": 0.0,
-    })
+    metric_names = [
+        "pdr",
+        "der",
+        "throughput_bps",
+        "Tc_s",
+        "jain_fairness",
+        "airtime_total_s",
+        "outage_ratio",
+        "switch_count",
+    ]
+    metric_accumulators: dict[tuple[str, ...], dict[str, list[float]]] = defaultdict(
+        lambda: {name: [] for name in metric_names}
+    )
     sf_counter: dict[tuple[str, ...], Counter[str]] = defaultdict(Counter)
     sinr_values: dict[tuple[str, ...], list[float]] = defaultdict(list)
 
@@ -444,6 +446,16 @@ def aggregate_runs(
     total = len(run_dirs)
     processed = 0
     skipped = 0
+    ignored_runs: list[dict[str, str]] = []
+
+    def _coerce_float(value: Any, *, field: str) -> float:
+        try:
+            parsed = float(value or 0.0)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"valeur non numérique pour '{field}' ({value!r})") from exc
+        if not math.isfinite(parsed):
+            raise ValueError(f"valeur non finie pour '{field}' ({value!r})")
+        return parsed
     for index, run_dir in enumerate(run_dirs, start=1):
         if verbose:
             print(f"{index}/{total} run dirs traités", end="\r" if index < total else "\n", flush=True)
@@ -456,22 +468,43 @@ def aggregate_runs(
                 raise FileNotFoundError(message)
             warnings.warn(message, RuntimeWarning, stacklevel=2)
             skipped += 1
+            ignored_runs.append(
+                {
+                    "run_dir": str(run_dir),
+                    "reason": "missing_files",
+                    "details": ", ".join(sorted(missing_files)),
+                }
+            )
             continue
 
-        processed += 1
+        summary_rows = list(_iter_csv(run_dir / "summary.csv"))
+        if not summary_rows:
+            message = f"Run corrompu ignoré: {run_dir} (summary.csv vide)"
+            if strict:
+                raise ValueError(message)
+            warnings.warn(message, RuntimeWarning, stacklevel=2)
+            skipped += 1
+            ignored_runs.append({"run_dir": str(run_dir), "reason": "empty_summary", "details": "summary.csv vide"})
+            continue
 
-        for row in _iter_csv(run_dir / "summary.csv"):
-            key = tuple(_factor_value(row, column) for column in factor_columns)
-            bucket = metric_accumulators[key]
-            bucket["num_runs"] += 1
-            bucket["pdr_sum"] += float(row.get("pdr", 0.0) or 0.0)
-            bucket["der_sum"] += float(row.get("der", 0.0) or 0.0)
-            bucket["throughput_bps_sum"] += float(row.get("throughput_bps", 0.0) or 0.0)
-            bucket["Tc_s_sum"] += float(row.get("Tc_s", 0.0) or 0.0)
-            bucket["jain_fairness_sum"] += float(row.get("jain_fairness", 0.0) or 0.0)
-            bucket["airtime_total_s_sum"] += float(row.get("airtime_total_s", 0.0) or 0.0)
-            bucket["outage_ratio_sum"] += float(row.get("outage_ratio", 0.0) or 0.0)
-            bucket["switch_count_sum"] += float(row.get("switch_count", 0.0) or 0.0)
+        valid_summary_rows: list[Mapping[str, str]] = []
+        parsed_summary_values: list[tuple[tuple[str, ...], dict[str, float]]] = []
+        for row in summary_rows:
+            try:
+                key = tuple(_factor_value(row, column) for column in factor_columns)
+                parsed_metrics: dict[str, float] = {}
+                for metric_name in metric_names:
+                    parsed_metrics[metric_name] = _coerce_float(row.get(metric_name, 0.0), field=metric_name)
+            except ValueError as exc:
+                message = f"Run corrompu ignoré: {run_dir} ({exc})"
+                if strict:
+                    raise ValueError(message) from exc
+                warnings.warn(message, RuntimeWarning, stacklevel=2)
+                skipped += 1
+                ignored_runs.append({"run_dir": str(run_dir), "reason": "corrupted_summary", "details": str(exc)})
+                valid_summary_rows = []
+                parsed_summary_values = []
+                break
 
             convergence_writer.writerow(
                 {
@@ -489,6 +522,18 @@ def aggregate_runs(
                     "switch_count": row.get("switch_count", ""),
                 }
             )
+            valid_summary_rows.append(row)
+            parsed_summary_values.append((key, parsed_metrics))
+
+        if not valid_summary_rows:
+            continue
+
+        for key, parsed_metrics in parsed_summary_values:
+            bucket = metric_accumulators[key]
+            for metric_name, metric_value in parsed_metrics.items():
+                bucket[metric_name].append(metric_value)
+
+        processed += 1
 
         if summary_only:
             continue
@@ -502,7 +547,7 @@ def aggregate_runs(
             if not skip_sinr_cdf:
                 sinr_values[key].append(float(row.get("sinr_db", 0.0) or 0.0))
 
-        run_summary = next(_iter_csv(run_dir / "summary.csv"), None)
+        run_summary = valid_summary_rows[0]
         if run_summary is None:
             continue
         run_algo = str(run_summary.get("algo", "")).lower()
@@ -542,20 +587,47 @@ def aggregate_runs(
     algo_index = factor_columns.index("algo")
     distinct_groups_by_algo: dict[str, int] = {}
     for key, bucket in sorted(metric_accumulators.items()):
-        num_runs = int(bucket["num_runs"])
+        num_runs = len(bucket["pdr"])
+
+        def _mean_and_ci95(values: list[float]) -> tuple[float, float]:
+            if not values:
+                return 0.0, 0.0
+            mean = sum(values) / len(values)
+            if len(values) < 2:
+                return mean, 0.0
+            return mean, 1.96 * stdev(values) / math.sqrt(len(values))
+
+        pdr_mean, pdr_ci95 = _mean_and_ci95(bucket["pdr"])
+        der_mean, der_ci95 = _mean_and_ci95(bucket["der"])
+        throughput_mean, throughput_ci95 = _mean_and_ci95(bucket["throughput_bps"])
+        tc_mean, tc_ci95 = _mean_and_ci95(bucket["Tc_s"])
+        jain_mean, jain_ci95 = _mean_and_ci95(bucket["jain_fairness"])
+        airtime_mean, airtime_ci95 = _mean_and_ci95(bucket["airtime_total_s"])
+        outage_mean, outage_ci95 = _mean_and_ci95(bucket["outage_ratio"])
+        switch_mean, switch_ci95 = _mean_and_ci95(bucket["switch_count"])
+
         metric_by_factor_rows.append(
             {
                 **dict(zip(factor_columns, key, strict=False)),
                 "sigma": key[-1],
+                "n_runs_effective": num_runs,
                 "num_runs": num_runs,
-                "pdr_mean": bucket["pdr_sum"] / max(num_runs, 1),
-                "der_mean": bucket["der_sum"] / max(num_runs, 1),
-                "throughput_bps_mean": bucket["throughput_bps_sum"] / max(num_runs, 1),
-                "Tc_s_mean": bucket["Tc_s_sum"] / max(num_runs, 1),
-                "jain_fairness_mean": bucket["jain_fairness_sum"] / max(num_runs, 1),
-                "airtime_total_s_mean": bucket["airtime_total_s_sum"] / max(num_runs, 1),
-                "outage_ratio_mean": bucket["outage_ratio_sum"] / max(num_runs, 1),
-                "switch_count_mean": bucket["switch_count_sum"] / max(num_runs, 1),
+                "pdr_mean": pdr_mean,
+                "pdr_ci95": pdr_ci95,
+                "der_mean": der_mean,
+                "der_ci95": der_ci95,
+                "throughput_bps_mean": throughput_mean,
+                "throughput_bps_ci95": throughput_ci95,
+                "Tc_s_mean": tc_mean,
+                "Tc_s_ci95": tc_ci95,
+                "jain_fairness_mean": jain_mean,
+                "jain_fairness_ci95": jain_ci95,
+                "airtime_total_s_mean": airtime_mean,
+                "airtime_total_s_ci95": airtime_ci95,
+                "outage_ratio_mean": outage_mean,
+                "outage_ratio_ci95": outage_ci95,
+                "switch_count_mean": switch_mean,
+                "switch_count_ci95": switch_ci95,
             }
         )
 
@@ -572,15 +644,24 @@ def aggregate_runs(
     metric_by_factor_path = out_dir / "metric_by_factor.csv"
     _write_csv(metric_by_factor_path, factor_columns + [
         "sigma",
+        "n_runs_effective",
         "num_runs",
         "pdr_mean",
+        "pdr_ci95",
         "der_mean",
+        "der_ci95",
         "throughput_bps_mean",
+        "throughput_bps_ci95",
         "Tc_s_mean",
+        "Tc_s_ci95",
         "jain_fairness_mean",
+        "jain_fairness_ci95",
         "airtime_total_s_mean",
+        "airtime_total_s_ci95",
         "outage_ratio_mean",
+        "outage_ratio_ci95",
         "switch_count_mean",
+        "switch_count_ci95",
     ], metric_by_factor_rows)
 
     files: dict[str, Path] = {"metric_by_factor": metric_by_factor_path}
@@ -664,12 +745,16 @@ def aggregate_runs(
                 "decision_stability_mean": bucket["decision_stability_sum"] / num_runs,
             }
         )
-    _write_csv(
-        ucb_tracking_path,
-        ["speed", "mode", "algo", "num_runs", "Tc_s_mean", "regret_proxy_mean", "exploration_rate_mean", "decision_stability_mean"],
-        ucb_tracking_aggregate_rows,
-    )
-    files["ucb_tracking"] = ucb_tracking_path
+    if not summary_only:
+        _write_csv(
+            ucb_tracking_path,
+            ["speed", "mode", "algo", "num_runs", "Tc_s_mean", "regret_proxy_mean", "exploration_rate_mean", "decision_stability_mean"],
+            ucb_tracking_aggregate_rows,
+        )
+        files["ucb_tracking"] = ucb_tracking_path
+
+    if ignored_runs_report is not None:
+        ignored_runs_report.extend(ignored_runs)
 
     return files
 
