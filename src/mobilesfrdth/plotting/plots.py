@@ -959,6 +959,8 @@ def _plot_outage_tail_prob_vs_n(rows: list[dict[str, str]], out_path: Path, *, t
 
 
 def _plot_fairness_reliability_tradeoff(rows: list[dict[str, str]], out_path: Path) -> bool:
+    """Un seul message scientifique: comparaison des moyennes (±IC95) fairness vs PDR par algo."""
+
     fig_name = out_path.name
     if not rows:
         _warn_skip(fig_name, "aucune ligne disponible")
@@ -984,35 +986,44 @@ def _plot_fairness_reliability_tradeoff(rows: list[dict[str, str]], out_path: Pa
         return False
 
     plt.figure(figsize=(8, 5))
+    plotted = 0
     for algo in sorted(grouped):
         xs = [pair[0] for pair in grouped[algo]]
         ys = [pair[1] for pair in grouped[algo]]
-        plt.scatter(xs, ys, alpha=0.35, s=22, label=f"{algo} (samples)")
         ci_x = ci95_from_samples(xs)
         ci_y = ci95_from_samples(ys)
-        if ci_x is not None and ci_y is not None:
-            plt.errorbar(
-                [ci_x.mean],
-                [ci_y.mean],
-                xerr=[ci_x.half_width],
-                yerr=[ci_y.half_width],
-                fmt="o",
-                markersize=7,
-                capsize=4,
-                label=f"{algo} (moyenne±IC95)",
-            )
+        if ci_x is None or ci_y is None:
+            continue
+        plt.errorbar(
+            [ci_x.mean],
+            [ci_y.mean],
+            xerr=[ci_x.half_width],
+            yerr=[ci_y.half_width],
+            fmt="o",
+            markersize=7,
+            capsize=4,
+            label=algo,
+        )
+        plotted += 1
+
+    if plotted == 0:
+        plt.close()
+        _warn_skip(fig_name, "aucun point moyen±IC95 traçable")
+        return False
 
     plt.grid(alpha=0.3)
     plt.xlabel(normalized_axis_label("jain_fairness_mean"))
     plt.ylabel(normalized_axis_label("pdr_mean"))
     plt.xlim(0, 1.05)
     plt.ylim(0, 1.05)
-    plt.legend(fontsize=8, ncols=2)
+    plt.legend(title="Algo")
     plt.tight_layout()
     _save_figure_variants(out_path)
     plt.close()
     return True
 def _plot_airtime_reliability_pareto(rows: list[dict[str, str]], out_path: Path) -> bool:
+    """Un seul message scientifique: compromis moyen airtime vs PDR par algo."""
+
     fig_name = out_path.name
     if not rows:
         _warn_skip(fig_name, "aucune ligne disponible")
@@ -1038,25 +1049,35 @@ def _plot_airtime_reliability_pareto(rows: list[dict[str, str]], out_path: Path)
         return False
 
     plt.figure(figsize=(8, 5))
+    plotted = 0
     for algo in sorted(grouped):
         xs = [pair[0] for pair in grouped[algo]]
         ys = [pair[1] for pair in grouped[algo]]
-        plt.scatter(xs, ys, alpha=0.7, s=25, label=algo)
+        ci_x = ci95_from_samples(xs)
+        ci_y = ci95_from_samples(ys)
+        if ci_x is None or ci_y is None:
+            continue
+        plt.errorbar(
+            [ci_x.mean],
+            [ci_y.mean],
+            xerr=[ci_x.half_width],
+            yerr=[ci_y.half_width],
+            fmt="o",
+            markersize=7,
+            capsize=4,
+            label=algo,
+        )
+        plotted += 1
 
-        frontier = sorted(grouped[algo], key=lambda item: (item[0], -item[1]))
-        pareto: list[tuple[float, float]] = []
-        best_pdr = float("-inf")
-        for point in frontier:
-            if point[1] > best_pdr:
-                pareto.append(point)
-                best_pdr = point[1]
-        if len(pareto) >= 2:
-            plt.plot([p[0] for p in pareto], [p[1] for p in pareto], linewidth=1.2, alpha=0.9)
+    if plotted == 0:
+        plt.close()
+        _warn_skip(fig_name, "aucun point moyen±IC95 traçable")
+        return False
 
     plt.grid(alpha=0.3)
     plt.xlabel(normalized_axis_label("airtime_total_s_mean"))
     plt.ylabel(normalized_axis_label("pdr_mean"))
-    plt.legend()
+    plt.legend(title="Algo")
     plt.tight_layout()
     _save_figure_variants(out_path)
     plt.close()
@@ -1223,17 +1244,16 @@ def generate_minimal_figures(
 
     manifest_path = out_dir / "plots_manifest.csv"
     with manifest_path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=["figure", "source_csv", "filters_appliques", "nb_points", "date_utc", "seed_base"])
+        writer = csv.DictWriter(handle, fieldnames=["figure", "source", "filtre", "date", "nb_points"])
         writer.writeheader()
         for trace in traces:
             writer.writerow(
                 {
                     "figure": trace.figure,
-                    "source_csv": REQUIRED_FILES.get(trace.source, trace.source),
-                    "filters_appliques": json.dumps(trace.filters, ensure_ascii=False, sort_keys=True),
+                    "source": REQUIRED_FILES.get(trace.source, trace.source),
+                    "filtre": json.dumps(trace.filters, ensure_ascii=False, sort_keys=True),
                     "nb_points": trace.num_points,
-                    "date_utc": datetime.now(timezone.utc).isoformat(),
-                    "seed_base": trace.filters.get("seed_base", [""])[0] if trace.filters.get("seed_base") else "",
+                    "date": datetime.now(timezone.utc).isoformat(),
                 }
             )
 
