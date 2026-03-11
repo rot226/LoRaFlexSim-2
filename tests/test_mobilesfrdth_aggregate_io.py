@@ -53,7 +53,14 @@ def test_aggregate_runs_summary_only_reads_only_summary(tmp_path, capsys):
 
     captured = capsys.readouterr()
     assert "Dossiers traités: 1/1" in captured.out
-    assert set(files) == {"metric_by_factor", "convergence_tc", "fairness_airtime_switching"}
+    assert set(files) == {
+        "metric_by_factor",
+        "convergence_tc",
+        "fairness_airtime_switching",
+        "pareto_reliability_airtime",
+        "outage_probability",
+        "energy_efficiency_reliability",
+    }
     for path in files.values():
         assert path.is_file()
 
@@ -215,3 +222,26 @@ def test_tc_is_computed_from_node_timeseries_and_varies_with_scenario(tmp_path):
     assert tc_large > 0.0
     # Sensibilité SNIR_ON: charge/vitesse plus élevées -> convergence plus lente.
     assert tc_large > tc_small
+
+
+def test_aggregate_runs_writes_bonus_aggregate_files(tmp_path):
+    run_dir = tmp_path / "results" / "run_001"
+    _write_csv(run_dir / "summary.csv", SUMMARY_COLUMNS, _summary_row("run_001"))
+
+    files = aggregate_runs(inputs=[tmp_path], output_root=tmp_path / "out", summary_only=True)
+
+    with files["pareto_reliability_airtime"].open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert rows
+    assert {"pdr_mean", "pdr_ci95", "airtime_total_s_mean", "airtime_total_s_ci95"}.issubset(rows[0])
+
+    with files["outage_probability"].open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert rows
+    assert rows[0]["mode"] == "snir_on"
+    assert {"outage_prob_mean", "outage_prob_ci95"}.issubset(rows[0])
+
+    with files["energy_efficiency_reliability"].open("r", encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    assert rows
+    assert {"pdr_mean", "pdr_ci95", "energy_efficiency_mean", "energy_efficiency_ci95"}.issubset(rows[0])

@@ -430,6 +430,9 @@ def aggregate_runs(
     convergence_path = out_dir / "convergence_tc.csv"
     fairness_path = out_dir / "fairness_airtime_switching.csv"
     ucb_tracking_path = out_dir / "ucb_tracking.csv"
+    pareto_reliability_airtime_path = out_dir / "pareto_reliability_airtime.csv"
+    outage_probability_path = out_dir / "outage_probability.csv"
+    energy_efficiency_reliability_path = out_dir / "energy_efficiency_reliability.csv"
 
     convergence_handle = convergence_path.open("w", newline="", encoding="utf-8")
     fairness_handle = fairness_path.open("w", newline="", encoding="utf-8")
@@ -665,6 +668,131 @@ def aggregate_runs(
     ], metric_by_factor_rows)
 
     files: dict[str, Path] = {"metric_by_factor": metric_by_factor_path}
+
+    pareto_rows: list[dict[str, Any]] = []
+    outage_probability_rows: list[dict[str, Any]] = []
+    energy_efficiency_rows: list[dict[str, Any]] = []
+    for row in metric_by_factor_rows:
+        pdr_mean = float(row.get("pdr_mean", 0.0) or 0.0)
+        pdr_ci95 = float(row.get("pdr_ci95", 0.0) or 0.0)
+        airtime_mean = float(row.get("airtime_total_s_mean", 0.0) or 0.0)
+        airtime_ci95 = float(row.get("airtime_total_s_ci95", 0.0) or 0.0)
+        throughput_mean = float(row.get("throughput_bps_mean", 0.0) or 0.0)
+        throughput_ci95 = float(row.get("throughput_bps_ci95", 0.0) or 0.0)
+        outage_mean = float(row.get("outage_ratio_mean", 0.0) or 0.0)
+        outage_ci95 = float(row.get("outage_ratio_ci95", 0.0) or 0.0)
+        efficiency_mean = throughput_mean / airtime_mean if airtime_mean > 0 else 0.0
+        efficiency_ci95 = 0.0
+        if throughput_mean > 0 and airtime_mean > 0:
+            efficiency_ci95 = abs(efficiency_mean) * math.sqrt(
+                (throughput_ci95 / max(throughput_mean, 1e-12)) ** 2 + (airtime_ci95 / max(airtime_mean, 1e-12)) ** 2
+            )
+
+        pareto_rows.append(
+            {
+                "N": row.get("N", ""),
+                "speed": row.get("speed", ""),
+                "mobility_model": row.get("mobility_model", ""),
+                "mode": row.get("mode", ""),
+                "algo": row.get("algo", ""),
+                "gateways": row.get("gateways", ""),
+                "sigma_shadowing": row.get("sigma_shadowing", row.get("sigma", "")),
+                "num_runs": row.get("num_runs", 0),
+                "pdr_mean": pdr_mean,
+                "pdr_ci95": pdr_ci95,
+                "airtime_total_s_mean": airtime_mean,
+                "airtime_total_s_ci95": airtime_ci95,
+            }
+        )
+
+        energy_efficiency_rows.append(
+            {
+                "N": row.get("N", ""),
+                "speed": row.get("speed", ""),
+                "mobility_model": row.get("mobility_model", ""),
+                "mode": row.get("mode", ""),
+                "algo": row.get("algo", ""),
+                "gateways": row.get("gateways", ""),
+                "sigma_shadowing": row.get("sigma_shadowing", row.get("sigma", "")),
+                "num_runs": row.get("num_runs", 0),
+                "pdr_mean": pdr_mean,
+                "pdr_ci95": pdr_ci95,
+                "energy_efficiency_mean": efficiency_mean,
+                "energy_efficiency_ci95": efficiency_ci95,
+            }
+        )
+
+        if str(row.get("mode", "")).lower() == "snir_on":
+            outage_probability_rows.append(
+                {
+                    "N": row.get("N", ""),
+                    "speed": row.get("speed", ""),
+                    "mobility_model": row.get("mobility_model", ""),
+                    "mode": row.get("mode", ""),
+                    "algo": row.get("algo", ""),
+                    "gateways": row.get("gateways", ""),
+                    "sigma_shadowing": row.get("sigma_shadowing", row.get("sigma", "")),
+                    "num_runs": row.get("num_runs", 0),
+                    "outage_prob_mean": outage_mean,
+                    "outage_prob_ci95": outage_ci95,
+                }
+            )
+
+    _write_csv(
+        pareto_reliability_airtime_path,
+        [
+            "N",
+            "speed",
+            "mobility_model",
+            "mode",
+            "algo",
+            "gateways",
+            "sigma_shadowing",
+            "num_runs",
+            "pdr_mean",
+            "pdr_ci95",
+            "airtime_total_s_mean",
+            "airtime_total_s_ci95",
+        ],
+        pareto_rows,
+    )
+    _write_csv(
+        outage_probability_path,
+        [
+            "N",
+            "speed",
+            "mobility_model",
+            "mode",
+            "algo",
+            "gateways",
+            "sigma_shadowing",
+            "num_runs",
+            "outage_prob_mean",
+            "outage_prob_ci95",
+        ],
+        outage_probability_rows,
+    )
+    _write_csv(
+        energy_efficiency_reliability_path,
+        [
+            "N",
+            "speed",
+            "mobility_model",
+            "mode",
+            "algo",
+            "gateways",
+            "sigma_shadowing",
+            "num_runs",
+            "pdr_mean",
+            "pdr_ci95",
+            "energy_efficiency_mean",
+            "energy_efficiency_ci95",
+        ],
+        energy_efficiency_rows,
+    )
+    files["pareto_reliability_airtime"] = pareto_reliability_airtime_path
+    files["outage_probability"] = outage_probability_path
+    files["energy_efficiency_reliability"] = energy_efficiency_reliability_path
 
     if not skip_sf_distribution:
         distribution_rows = []

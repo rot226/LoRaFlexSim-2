@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import matplotlib
+from matplotlib.patches import Ellipse
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -27,6 +28,9 @@ REQUIRED_FILES = {
     "sinr_cdf": "sinr_cdf.csv",
     "fairness_airtime_switching": "fairness_airtime_switching.csv",
     "ucb_tracking": "ucb_tracking.csv",
+    "pareto_reliability_airtime": "pareto_reliability_airtime.csv",
+    "outage_probability": "outage_probability.csv",
+    "energy_efficiency_reliability": "energy_efficiency_reliability.csv",
 }
 
 REQUIRED_COLUMNS = {
@@ -46,6 +50,15 @@ REQUIRED_COLUMNS = {
     "sinr_cdf": {"algo", "mode", "N", "speed", "quantile", "sinr_db"},
     "fairness_airtime_switching": {"N", "algo", "jain_fairness", "airtime_total_s", "switch_count"},
     "ucb_tracking": {"speed", "mode", "algo", "Tc_s_mean"},
+    "pareto_reliability_airtime": {"algo", "pdr_mean", "pdr_ci95", "airtime_total_s_mean", "airtime_total_s_ci95"},
+    "outage_probability": {"N", "algo", "mode", "outage_prob_mean", "outage_prob_ci95"},
+    "energy_efficiency_reliability": {
+        "algo",
+        "pdr_mean",
+        "pdr_ci95",
+        "energy_efficiency_mean",
+        "energy_efficiency_ci95",
+    },
 }
 
 FIGURE_SPECS = [
@@ -61,9 +74,9 @@ BONUS_SPECS = [
     ("fig11_airtime_vs_n.png", "metric_by_factor", "airtime_total_s_mean", {}),
     ("fig12_switch_count_vs_n.png", "metric_by_factor", "switch_count_mean", {}),
     ("fig13_ucb_tracking_lag_vs_speed.png", "ucb_tracking", "Tc_s_mean", {"algo": {"ucb", "ucb_forget"}}),
-    ("fig14_reliability_airtime_pareto.png", "metric_by_factor", "pdr_mean", {}),
-    ("fig15_outage_tail_prob_vs_n.png", "sinr_cdf", "sinr_db", {}),
-    ("fig16_fairness_reliability_tradeoff.png", "metric_by_factor", "pdr_mean", {}),
+    ("fig14_pareto_reliability_airtime.png", "pareto_reliability_airtime", "pdr_mean", {}),
+    ("fig15_outage_probability_vs_n.png", "outage_probability", "outage_prob_mean", {}),
+    ("fig16_energy_efficiency_vs_reliability.png", "energy_efficiency_reliability", "pdr_mean", {}),
 ]
 
 ARTICLE_PROFILE_FILTERS: dict[str, dict[str, dict[str, set[str]]]] = {
@@ -84,9 +97,9 @@ ARTICLE_PROFILE_FILTERS: dict[str, dict[str, dict[str, set[str]]]] = {
         "fig11_airtime_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
         "fig12_switch_count_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
         "fig13_ucb_tracking_lag_vs_speed.png": {"algo": {"ucb", "ucb_forget"}},
-        "fig14_reliability_airtime_pareto.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
-        "fig15_outage_tail_prob_vs_n.png": {"mode": {"snir_on"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
-        "fig16_fairness_reliability_tradeoff.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig14_pareto_reliability_airtime.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig15_outage_probability_vs_n.png": {"mode": {"snir_on"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig16_energy_efficiency_vs_reliability.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
     },
     "full": {
         "fig01_pdr_vs_n_snir_off.png": {"mode": {"snir_off"}},
@@ -103,9 +116,9 @@ ARTICLE_PROFILE_FILTERS: dict[str, dict[str, dict[str, set[str]]]] = {
         "fig11_airtime_vs_n.png": {"mode": {"snir_off", "snir_on"}},
         "fig12_switch_count_vs_n.png": {"mode": {"snir_off", "snir_on"}},
         "fig13_ucb_tracking_lag_vs_speed.png": {"algo": {"ucb", "ucb_forget"}, "speed": {"1", "3", "5"}},
-        "fig14_reliability_airtime_pareto.png": {},
-        "fig15_outage_tail_prob_vs_n.png": {"mode": {"snir_on"}, "speed": {"1", "3", "5"}},
-        "fig16_fairness_reliability_tradeoff.png": {},
+        "fig14_pareto_reliability_airtime.png": {},
+        "fig15_outage_probability_vs_n.png": {"mode": {"snir_on"}, "speed": {"1", "3", "5"}},
+        "fig16_energy_efficiency_vs_reliability.png": {},
     },
 }
 
@@ -939,55 +952,50 @@ def _plot_ucb_tracking_lag_vs_speed(rows: list[dict[str, str]], out_path: Path) 
     return True
 
 
-def _plot_outage_tail_prob_vs_n(rows: list[dict[str, str]], out_path: Path, *, threshold_db: float = -10.0) -> bool:
+def _plot_outage_probability_vs_n(rows: list[dict[str, str]], out_path: Path) -> bool:
     fig_name = out_path.name
     if not rows:
-        _warn_skip(fig_name, "fichier sinr_cdf.csv vide ou absent")
+        _warn_skip(fig_name, "fichier outage_probability.csv vide ou absent")
         return False
-    needed = {"algo", "N", "sinr_db", "quantile"}
+    needed = {"algo", "N", "outage_prob_mean", "outage_prob_ci95"}
     missing = [column for column in needed if column not in rows[0]]
     if missing:
         _warn_skip(fig_name, f"colonnes manquantes {missing}")
         return False
 
-    grouped: dict[str, dict[float, list[tuple[float, float]]]] = defaultdict(lambda: defaultdict(list))
+    grouped: dict[str, list[tuple[float, float, float]]] = defaultdict(list)
     for row in rows:
-        algo = row.get("algo", "unknown")
         n_value = _to_float(row.get("N"))
-        sinr = _to_float(row.get("sinr_db"))
-        quantile = _to_float(row.get("quantile"))
-        if n_value is None or sinr is None or quantile is None:
+        outage = _to_float(row.get("outage_prob_mean"))
+        ci95 = _to_float(row.get("outage_prob_ci95"))
+        if n_value is None or outage is None:
             continue
-        grouped[algo][n_value].append((sinr, quantile))
+        grouped[row.get("algo", "unknown")].append((n_value, outage, ci95 or 0.0))
 
     if not grouped:
-        _warn_skip(fig_name, "aucun point SINR/quantile exploitable")
+        _warn_skip(fig_name, "aucun point outage/N exploitable")
         return False
 
     plt.figure(figsize=(8, 5))
     plotted = 0
     for algo in sorted(grouped):
-        xs: list[float] = []
-        ys: list[float] = []
-        for n_value in sorted(grouped[algo]):
-            points = sorted(grouped[algo][n_value], key=lambda pair: pair[0])
-            cands = [q for sinr, q in points if sinr <= threshold_db]
-            if not cands:
-                continue
-            xs.append(n_value)
-            ys.append(max(0.0, min(1.0, max(cands))))
-        if xs:
-            plt.plot(xs, ys, marker="o", label=algo)
-            plotted += 1
+        points = sorted(grouped[algo], key=lambda item: item[0])
+        xs = [item[0] for item in points]
+        ys = [item[1] for item in points]
+        errs = [item[2] for item in points]
+        if not xs:
+            continue
+        plt.errorbar(xs, ys, yerr=errs, marker="o", capsize=3, label=algo)
+        plotted += 1
 
     if plotted == 0:
         plt.close()
-        _warn_skip(fig_name, f"aucune estimation P[SINR<{threshold_db:g} dB] traçable")
+        _warn_skip(fig_name, "aucune série outage vs N traçable")
         return False
 
     plt.grid(alpha=0.3)
     plt.xlabel(normalized_axis_label("N"))
-    plt.ylabel(f"P[SINR < {threshold_db:g} dB]")
+    plt.ylabel("Probabilité d'outage (SNIR_ON)")
     plt.ylim(0, 1)
     plt.legend(title="Algo")
     plt.tight_layout()
@@ -996,52 +1004,41 @@ def _plot_outage_tail_prob_vs_n(rows: list[dict[str, str]], out_path: Path, *, t
     return True
 
 
-def _plot_fairness_reliability_tradeoff(rows: list[dict[str, str]], out_path: Path) -> bool:
-    """Un seul message scientifique: comparaison des moyennes (±IC95) fairness vs PDR par algo."""
-
+def _plot_energy_efficiency_vs_reliability(rows: list[dict[str, str]], out_path: Path) -> bool:
     fig_name = out_path.name
     if not rows:
-        _warn_skip(fig_name, "aucune ligne disponible")
+        _warn_skip(fig_name, "fichier energy_efficiency_reliability.csv vide ou absent")
         return False
-    pdr_col = _resolve_metric_column(rows, expected="pdr_mean")
-    fairness_col = _resolve_metric_column(rows, expected="jain_fairness_mean")
-    needed = {"algo", pdr_col, fairness_col}
+    needed = {"algo", "pdr_mean", "pdr_ci95", "energy_efficiency_mean", "energy_efficiency_ci95"}
     missing = [column for column in needed if column not in rows[0]]
     if missing:
         _warn_skip(fig_name, f"colonnes manquantes {missing}")
         return False
 
-    grouped: dict[str, list[tuple[float, float]]] = defaultdict(list)
+    grouped: dict[str, list[tuple[float, float, float, float]]] = defaultdict(list)
     for row in rows:
-        pdr = _to_float(row.get(pdr_col))
-        fairness = _to_float(row.get(fairness_col))
-        if pdr is None or fairness is None:
+        pdr_mean = _to_float(row.get("pdr_mean"))
+        pdr_ci95 = _to_float(row.get("pdr_ci95")) or 0.0
+        eff_mean = _to_float(row.get("energy_efficiency_mean"))
+        eff_ci95 = _to_float(row.get("energy_efficiency_ci95")) or 0.0
+        if pdr_mean is None or eff_mean is None:
             continue
-        grouped[row.get("algo", "unknown")].append((fairness, pdr))
+        grouped[row.get("algo", "unknown")].append((pdr_mean, pdr_ci95, eff_mean, eff_ci95))
 
     if not grouped:
-        _warn_skip(fig_name, "pas de couples fairness/PDR exploitables")
+        _warn_skip(fig_name, "pas de couples efficacité/PDR exploitables")
         return False
 
     plt.figure(figsize=(8, 5))
     plotted = 0
     for algo in sorted(grouped):
-        xs = [pair[0] for pair in grouped[algo]]
-        ys = [pair[1] for pair in grouped[algo]]
+        xs = [v[0] for v in grouped[algo]]
+        ys = [v[2] for v in grouped[algo]]
         ci_x = ci95_from_samples(xs)
         ci_y = ci95_from_samples(ys)
         if ci_x is None or ci_y is None:
             continue
-        plt.errorbar(
-            [ci_x.mean],
-            [ci_y.mean],
-            xerr=[ci_x.half_width],
-            yerr=[ci_y.half_width],
-            fmt="o",
-            markersize=7,
-            capsize=4,
-            label=algo,
-        )
+        plt.errorbar([ci_x.mean], [ci_y.mean], xerr=[ci_x.half_width], yerr=[ci_y.half_width], fmt="o", markersize=7, capsize=4, label=algo)
         plotted += 1
 
     if plotted == 0:
@@ -1050,61 +1047,53 @@ def _plot_fairness_reliability_tradeoff(rows: list[dict[str, str]], out_path: Pa
         return False
 
     plt.grid(alpha=0.3)
-    plt.xlabel(normalized_axis_label("jain_fairness_mean"))
-    plt.ylabel(normalized_axis_label("pdr_mean"))
+    plt.xlabel(normalized_axis_label("pdr_mean"))
+    plt.ylabel("Efficacité énergétique [throughput/airtime]")
     plt.xlim(0, 1.05)
-    plt.ylim(0, 1.05)
     plt.legend(title="Algo")
     plt.tight_layout()
     _save_figure_variants(out_path)
     plt.close()
     return True
 def _plot_airtime_reliability_pareto(rows: list[dict[str, str]], out_path: Path) -> bool:
-    """Un seul message scientifique: compromis moyen airtime vs PDR par algo."""
+    """Compromis PDR vs airtime avec point moyen et ellipse IC95 par algorithme."""
 
     fig_name = out_path.name
     if not rows:
-        _warn_skip(fig_name, "aucune ligne disponible")
+        _warn_skip(fig_name, "fichier pareto_reliability_airtime.csv vide ou absent")
         return False
-    pdr_col = _resolve_metric_column(rows, expected="pdr_mean")
-    airtime_col = _resolve_metric_column(rows, expected="airtime_total_s_mean")
-    needed = {"algo", pdr_col, airtime_col}
+    needed = {"algo", "pdr_mean", "pdr_ci95", "airtime_total_s_mean", "airtime_total_s_ci95"}
     missing = [column for column in needed if column not in rows[0]]
     if missing:
         _warn_skip(fig_name, f"colonnes manquantes {missing}")
         return False
 
-    grouped: dict[str, list[tuple[float, float]]] = defaultdict(list)
+    grouped: dict[str, list[tuple[float, float, float, float]]] = defaultdict(list)
     for row in rows:
-        pdr = _to_float(row.get(pdr_col))
-        airtime = _to_float(row.get(airtime_col))
-        if pdr is None or airtime is None:
+        pdr_mean = _to_float(row.get("pdr_mean"))
+        pdr_ci95 = _to_float(row.get("pdr_ci95")) or 0.0
+        airtime_mean = _to_float(row.get("airtime_total_s_mean"))
+        airtime_ci95 = _to_float(row.get("airtime_total_s_ci95")) or 0.0
+        if pdr_mean is None or airtime_mean is None:
             continue
-        grouped[row.get("algo", "unknown")].append((airtime, pdr))
+        grouped[row.get("algo", "unknown")].append((airtime_mean, airtime_ci95, pdr_mean, pdr_ci95))
 
     if not grouped:
         _warn_skip(fig_name, "pas de couples airtime/PDR exploitables")
         return False
 
     plt.figure(figsize=(8, 5))
+    ax = plt.gca()
     plotted = 0
     for algo in sorted(grouped):
-        xs = [pair[0] for pair in grouped[algo]]
-        ys = [pair[1] for pair in grouped[algo]]
+        xs = [v[0] for v in grouped[algo]]
+        ys = [v[2] for v in grouped[algo]]
         ci_x = ci95_from_samples(xs)
         ci_y = ci95_from_samples(ys)
         if ci_x is None or ci_y is None:
             continue
-        plt.errorbar(
-            [ci_x.mean],
-            [ci_y.mean],
-            xerr=[ci_x.half_width],
-            yerr=[ci_y.half_width],
-            fmt="o",
-            markersize=7,
-            capsize=4,
-            label=algo,
-        )
+        ax.scatter([ci_x.mean], [ci_y.mean], s=45, label=algo)
+        ax.add_patch(Ellipse((ci_x.mean, ci_y.mean), width=max(2.0 * ci_x.half_width, 1e-12), height=max(2.0 * ci_y.half_width, 1e-12), fill=False, alpha=0.65))
         plotted += 1
 
     if plotted == 0:
@@ -1115,6 +1104,7 @@ def _plot_airtime_reliability_pareto(rows: list[dict[str, str]], out_path: Path)
     plt.grid(alpha=0.3)
     plt.xlabel(normalized_axis_label("airtime_total_s_mean"))
     plt.ylabel(normalized_axis_label("pdr_mean"))
+    plt.ylim(0, 1.05)
     plt.legend(title="Algo")
     plt.tight_layout()
     _save_figure_variants(out_path)
@@ -1260,12 +1250,12 @@ def generate_minimal_figures(
             out_path = out_dir / _stable_figure_name(fig_name)
             if fig_name == "fig13_ucb_tracking_lag_vs_speed.png":
                 did_generate = _plot_ucb_tracking_lag_vs_speed(selected, out_path)
-            elif fig_name == "fig14_reliability_airtime_pareto.png":
+            elif fig_name == "fig14_pareto_reliability_airtime.png":
                 did_generate = _plot_airtime_reliability_pareto(selected, out_path)
-            elif fig_name == "fig15_outage_tail_prob_vs_n.png":
-                did_generate = _plot_outage_tail_prob_vs_n(selected, out_path)
-            elif fig_name == "fig16_fairness_reliability_tradeoff.png":
-                did_generate = _plot_fairness_reliability_tradeoff(selected, out_path)
+            elif fig_name == "fig15_outage_probability_vs_n.png":
+                did_generate = _plot_outage_probability_vs_n(selected, out_path)
+            elif fig_name == "fig16_energy_efficiency_vs_reliability.png":
+                did_generate = _plot_energy_efficiency_vs_reliability(selected, out_path)
             else:
                 did_generate = _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path, y_scale=y_scale)
             traces.append(

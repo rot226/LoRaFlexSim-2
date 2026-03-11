@@ -283,3 +283,42 @@ def test_plot_sinr_cdf_rejects_constant_sinr_group(tmp_path):
     generated = plots._plot_sinr_cdf(rows, out_path)
 
     assert generated is False
+
+
+def test_plot_fig14_pareto_reliability_airtime_uses_dedicated_aggregate(monkeypatch, tmp_path):
+    rows = [
+        {"algo": "ucb", "pdr_mean": "0.8", "pdr_ci95": "0.02", "airtime_total_s_mean": "11", "airtime_total_s_ci95": "1.1"},
+        {"algo": "ucb", "pdr_mean": "0.82", "pdr_ci95": "0.03", "airtime_total_s_mean": "10", "airtime_total_s_ci95": "1.0"},
+        {"algo": "adr", "pdr_mean": "0.7", "pdr_ci95": "0.04", "airtime_total_s_mean": "9", "airtime_total_s_ci95": "0.7"},
+        {"algo": "adr", "pdr_mean": "0.72", "pdr_ci95": "0.05", "airtime_total_s_mean": "8", "airtime_total_s_ci95": "0.6"},
+    ]
+
+    monkeypatch.setattr(plots.plt, "legend", lambda *args, **kwargs: None)
+    out_path = tmp_path / "fig14_pareto_reliability_airtime.png"
+    assert plots._plot_airtime_reliability_pareto(rows, out_path) is True
+
+
+def test_plot_fig15_outage_probability_vs_n_uses_dedicated_aggregate(monkeypatch, tmp_path):
+    rows = [
+        {"algo": "adr", "N": "50", "outage_prob_mean": "0.15", "outage_prob_ci95": "0.02"},
+        {"algo": "adr", "N": "100", "outage_prob_mean": "0.2", "outage_prob_ci95": "0.03"},
+        {"algo": "ucb", "N": "50", "outage_prob_mean": "0.1", "outage_prob_ci95": "0.01"},
+        {"algo": "ucb", "N": "100", "outage_prob_mean": "0.13", "outage_prob_ci95": "0.02"},
+    ]
+
+    monkeypatch.setattr(plots.plt, "legend", lambda *args, **kwargs: None)
+    out_path = tmp_path / "fig15_outage_probability_vs_n.png"
+    assert plots._plot_outage_probability_vs_n(rows, out_path) is True
+
+
+def test_plot_fig16_energy_efficiency_vs_reliability_uses_dedicated_aggregate(monkeypatch, tmp_path):
+    rows = [
+        {"algo": "adr", "pdr_mean": "0.70", "pdr_ci95": "0.03", "energy_efficiency_mean": "2.2", "energy_efficiency_ci95": "0.2"},
+        {"algo": "adr", "pdr_mean": "0.72", "pdr_ci95": "0.02", "energy_efficiency_mean": "2.1", "energy_efficiency_ci95": "0.1"},
+        {"algo": "ucb", "pdr_mean": "0.80", "pdr_ci95": "0.02", "energy_efficiency_mean": "2.4", "energy_efficiency_ci95": "0.2"},
+        {"algo": "ucb", "pdr_mean": "0.81", "pdr_ci95": "0.02", "energy_efficiency_mean": "2.5", "energy_efficiency_ci95": "0.2"},
+    ]
+
+    monkeypatch.setattr(plots.plt, "legend", lambda *args, **kwargs: None)
+    out_path = tmp_path / "fig16_energy_efficiency_vs_reliability.png"
+    assert plots._plot_energy_efficiency_vs_reliability(rows, out_path) is True
