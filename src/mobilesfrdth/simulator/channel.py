@@ -8,10 +8,10 @@ import random
 
 
 THERMAL_NOISE_DENSITY_DBM_PER_HZ = -174.0
-IMPLEMENTATION_MARGIN_DB = 2.0
+IMPLEMENTATION_MARGIN_DB = 2.5
 
 
-def thermal_noise_floor_dbm(*, bandwidth_hz: float = 125_000.0, noise_figure_db: float = 7.0) -> float:
+def thermal_noise_floor_dbm(*, bandwidth_hz: float = 125_000.0, noise_figure_db: float = 7.5) -> float:
     """Retourne le plancher de bruit thermique ``N0`` (dBm) pour une bande donnée."""
 
     effective_bw_hz = max(bandwidth_hz, 1.0)
