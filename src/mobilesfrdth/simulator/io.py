@@ -31,6 +31,9 @@ EVENT_COLUMNS = [
     "airtime_s",
     "outage",
     "switch_count",
+    "regret_proxy",
+    "exploration_rate",
+    "decision_stability",
     "decision_reason",
     "target_sf",
 ]
@@ -49,6 +52,9 @@ NODE_TIMESERIES_COLUMNS = [
     "airtime_s",
     "outage_count",
     "switch_count",
+    "regret_proxy_mean",
+    "exploration_rate_mean",
+    "decision_stability_mean",
 ]
 SUMMARY_COLUMNS = [
     *SCENARIO_ID_COLUMNS,
@@ -148,6 +154,9 @@ def write_run_outputs(
         airtime_s = float(event.get("airtime_s", 0.0) or 0.0)
         outage = int(bool(event.get("outage", not success)))
         switch_count = int(event.get("switch_count", 0) or 0)
+        regret_proxy = max(0.0, (1.0 if success else 1.25) + 0.08 * airtime_s - (1.0 - 0.08 * 0.03))
+        exploration_rate = float(switch_count > 0)
+        decision_stability = 1.0 - exploration_rate
         decision_reason = str(event.get("decision_reason", "") or "")
         target_sf = int(event.get("target_sf", sf) or sf)
 
@@ -168,6 +177,9 @@ def write_run_outputs(
             "airtime_s": airtime_s,
             "outage": outage,
             "switch_count": switch_count,
+            "regret_proxy": regret_proxy,
+            "exploration_rate": exploration_rate,
+            "decision_stability": decision_stability,
             "decision_reason": decision_reason,
             "target_sf": target_sf,
         }
@@ -199,6 +211,9 @@ def write_run_outputs(
                     "airtime_s": 0.0,
                     "outage_count": 0,
                     "switch_count": 0,
+                    "regret_proxy_sum": 0.0,
+                    "exploration_sum": 0.0,
+                    "decision_stability_sum": 0.0,
                     "delivered_bytes": 0,
                 }
             slot = bins[key]
@@ -209,6 +224,9 @@ def write_run_outputs(
             slot["airtime_s"] += airtime_s
             slot["outage_count"] += outage
             slot["switch_count"] += switch_count
+            slot["regret_proxy_sum"] += regret_proxy
+            slot["exploration_sum"] += exploration_rate
+            slot["decision_stability_sum"] += decision_stability
             slot["delivered_bytes"] += payload_bytes if delivered else 0
 
     _write_csv(run_dir / "events.csv", EVENT_COLUMNS, event_rows)
@@ -234,6 +252,9 @@ def write_run_outputs(
                 "airtime_s": slot["airtime_s"],
                 "outage_count": slot["outage_count"],
                 "switch_count": slot["switch_count"],
+                "regret_proxy_mean": slot["regret_proxy_sum"] / max(tx, 1),
+                "exploration_rate_mean": slot["exploration_sum"] / max(tx, 1),
+                "decision_stability_mean": slot["decision_stability_sum"] / max(tx, 1),
             }
         )
     _write_csv(run_dir / "node_timeseries.csv", NODE_TIMESERIES_COLUMNS, node_timeseries_rows)
@@ -406,6 +427,7 @@ def aggregate_runs(
 
     convergence_path = out_dir / "convergence_tc.csv"
     fairness_path = out_dir / "fairness_airtime_switching.csv"
+    ucb_tracking_path = out_dir / "ucb_tracking.csv"
 
     convergence_handle = convergence_path.open("w", newline="", encoding="utf-8")
     fairness_handle = fairness_path.open("w", newline="", encoding="utf-8")
@@ -416,6 +438,8 @@ def aggregate_runs(
     )
     convergence_writer.writeheader()
     fairness_writer.writeheader()
+
+    ucb_tracking_rows: list[dict[str, Any]] = []
 
     total = len(run_dirs)
     processed = 0
@@ -477,6 +501,32 @@ def aggregate_runs(
                 sf_counter[key][row.get("sf", "")] += 1
             if not skip_sinr_cdf:
                 sinr_values[key].append(float(row.get("sinr_db", 0.0) or 0.0))
+
+        run_summary = next(_iter_csv(run_dir / "summary.csv"), None)
+        if run_summary is None:
+            continue
+        run_algo = str(run_summary.get("algo", "")).lower()
+        if run_algo not in {"ucb", "ucb_forget"}:
+            continue
+        uplinks = [
+            row
+            for row in _iter_csv(run_dir / "events.csv")
+            if row.get("event_type") == "uplink"
+        ]
+        if not uplinks:
+            continue
+        ucb_tracking_rows.append(
+            {
+                "speed": run_summary.get("speed", ""),
+                "mode": run_summary.get("mode", ""),
+                "algo": run_algo,
+                "run_id": run_summary.get("run_id", ""),
+                "Tc_s": run_summary.get("Tc_s", ""),
+                "regret_proxy_mean": sum(float(row.get("regret_proxy", 0.0) or 0.0) for row in uplinks) / len(uplinks),
+                "exploration_rate_mean": sum(float(row.get("exploration_rate", 0.0) or 0.0) for row in uplinks) / len(uplinks),
+                "decision_stability_mean": sum(float(row.get("decision_stability", 0.0) or 0.0) for row in uplinks) / len(uplinks),
+            }
+        )
 
     convergence_handle.close()
     fairness_handle.close()
@@ -582,6 +632,44 @@ def aggregate_runs(
 
     files["convergence_tc"] = convergence_path
     files["fairness_airtime_switching"] = fairness_path
+
+    grouped_tracking: dict[tuple[str, str, str], dict[str, float]] = defaultdict(lambda: {
+        "num_runs": 0.0,
+        "Tc_s_sum": 0.0,
+        "regret_proxy_sum": 0.0,
+        "exploration_rate_sum": 0.0,
+        "decision_stability_sum": 0.0,
+    })
+    for row in ucb_tracking_rows:
+        key = (str(row["speed"]), str(row["mode"]), str(row["algo"]))
+        bucket = grouped_tracking[key]
+        bucket["num_runs"] += 1.0
+        bucket["Tc_s_sum"] += float(row.get("Tc_s", 0.0) or 0.0)
+        bucket["regret_proxy_sum"] += float(row.get("regret_proxy_mean", 0.0) or 0.0)
+        bucket["exploration_rate_sum"] += float(row.get("exploration_rate_mean", 0.0) or 0.0)
+        bucket["decision_stability_sum"] += float(row.get("decision_stability_mean", 0.0) or 0.0)
+
+    ucb_tracking_aggregate_rows = []
+    for (speed, mode, algo), bucket in sorted(grouped_tracking.items()):
+        num_runs = max(int(bucket["num_runs"]), 1)
+        ucb_tracking_aggregate_rows.append(
+            {
+                "speed": speed,
+                "mode": mode,
+                "algo": algo,
+                "num_runs": num_runs,
+                "Tc_s_mean": bucket["Tc_s_sum"] / num_runs,
+                "regret_proxy_mean": bucket["regret_proxy_sum"] / num_runs,
+                "exploration_rate_mean": bucket["exploration_rate_sum"] / num_runs,
+                "decision_stability_mean": bucket["decision_stability_sum"] / num_runs,
+            }
+        )
+    _write_csv(
+        ucb_tracking_path,
+        ["speed", "mode", "algo", "num_runs", "Tc_s_mean", "regret_proxy_mean", "exploration_rate_mean", "decision_stability_mean"],
+        ucb_tracking_aggregate_rows,
+    )
+    files["ucb_tracking"] = ucb_tracking_path
 
     return files
 
