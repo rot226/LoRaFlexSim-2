@@ -203,6 +203,46 @@ def test_plot_xy_by_algo_uses_distinct_series_per_algo(monkeypatch, tmp_path):
     assert len(set(curves.values())) == 4
 
 
+def test_plot_xy_by_algo_auto_adds_annex_for_reliability_close_to_one(monkeypatch, tmp_path):
+    rows = [
+        {"N": "50", "algo": "adr", "pdr_mean": "0.97"},
+        {"N": "100", "algo": "adr", "pdr_mean": "0.98"},
+    ]
+
+    saved: list[pathlib.Path] = []
+
+    def fake_save(path: pathlib.Path) -> None:
+        saved.append(path)
+
+    monkeypatch.setattr(plots, "_save_figure_variants", fake_save)
+    monkeypatch.setattr(plots.plt, "legend", lambda *args, **kwargs: None)
+
+    out_path = tmp_path / "fig01_pdr_vs_n_snir_on.png"
+    generated = plots._plot_xy_by_algo(rows, fig_name=out_path.name, y_col="pdr_mean", out_path=out_path, y_scale="auto")
+
+    assert generated is True
+    assert out_path in saved
+    assert out_path.with_name("fig01_pdr_vs_n_snir_on_annex_full_scale.png") in saved
+
+
+def test_plot_xy_by_algo_full_scale_no_annex(monkeypatch, tmp_path):
+    rows = [
+        {"N": "50", "algo": "adr", "der_mean": "0.96"},
+        {"N": "100", "algo": "adr", "der_mean": "0.99"},
+    ]
+
+    saved: list[pathlib.Path] = []
+
+    monkeypatch.setattr(plots, "_save_figure_variants", lambda path: saved.append(path))
+    monkeypatch.setattr(plots.plt, "legend", lambda *args, **kwargs: None)
+
+    out_path = tmp_path / "fig03_der_vs_n_snir_off.png"
+    generated = plots._plot_xy_by_algo(rows, fig_name=out_path.name, y_col="der_mean", out_path=out_path, y_scale="full")
+
+    assert generated is True
+    assert saved == [out_path]
+
+
 def test_plot_sinr_cdf_single_curve_per_algo_sorted_quantiles(monkeypatch, tmp_path):
     rows = [
         {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "0.666667", "sinr_db": "4.0"},
@@ -243,4 +283,3 @@ def test_plot_sinr_cdf_rejects_constant_sinr_group(tmp_path):
     generated = plots._plot_sinr_cdf(rows, out_path)
 
     assert generated is False
-

@@ -51,6 +51,24 @@ def test_build_parser_accepts_aggregate_acceleration_flags(tmp_path):
     assert args.skip_sf_distribution is True
 
 
+def test_build_parser_accepts_plots_y_scale_option(tmp_path):
+    parser = cli.build_parser()
+
+    args = parser.parse_args(
+        [
+            "plots",
+            "--aggregates-dir",
+            str(tmp_path),
+            "--out",
+            str(tmp_path / "figures"),
+            "--y-scale",
+            "full",
+        ]
+    )
+
+    assert args.y_scale == "full"
+
+
 def test_build_parser_accepts_run_profile_without_grid(tmp_path):
     parser = cli.build_parser()
     config_path = tmp_path / "cfg.yaml"

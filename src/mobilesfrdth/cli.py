@@ -271,6 +271,7 @@ def cmd_plots(args: argparse.Namespace) -> int:
         include_bonus=not args.no_bonus,
         verbose=args.verbose,
         ieee_ready=args.ieee_ready,
+        y_scale=args.y_scale,
     )
     report = {
         "article_profile": args.article_profile,
@@ -429,6 +430,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--ieee-ready",
         action="store_true",
         help="Active automatiquement le style IEEE-ready (polices/taille/couleurs), dpi=300 et export PDF+PNG.",
+    )
+    plots_parser.add_argument(
+        "--y-scale",
+        choices=["auto", "full", "zoom"],
+        default="auto",
+        help="Politique d'échelle Y pour PDR/DER: auto (zoom si proche de 1 + annexe full), full ([0,1]), zoom.",
     )
     plots_parser.set_defaults(func=cmd_plots)
 
