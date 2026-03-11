@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
+import math
 import warnings
 from collections import Counter, defaultdict
 from collections.abc import Iterable, Mapping
@@ -250,10 +251,12 @@ def write_run_outputs(
         cumulative_generated += int(bucket["tx"])
         der_series.append(der(cumulative_success, cumulative_generated))
 
+    stationary_tail_bins = max(1, math.ceil(len(pdr_series) * 0.2))
     tc_from_timeseries = convergence_tc_performance(
         pdr_samples=pdr_series,
         der_samples=der_series,
         dt_s=time_bin_s,
+        stationary_tail_bins=stationary_tail_bins,
         target_ratio=0.9,
     )
 
