@@ -26,6 +26,7 @@ REQUIRED_FILES = {
     "convergence_tc": "convergence_tc.csv",
     "sinr_cdf": "sinr_cdf.csv",
     "fairness_airtime_switching": "fairness_airtime_switching.csv",
+    "ucb_tracking": "ucb_tracking.csv",
 }
 
 REQUIRED_COLUMNS = {
@@ -44,6 +45,7 @@ REQUIRED_COLUMNS = {
     "convergence_tc": {"algo", "speed", "Tc_s"},
     "sinr_cdf": {"algo", "mode", "N", "speed", "quantile", "sinr_db"},
     "fairness_airtime_switching": {"N", "algo", "jain_fairness", "airtime_total_s", "switch_count"},
+    "ucb_tracking": {"speed", "mode", "algo", "Tc_s_mean"},
 }
 
 FIGURE_SPECS = [
@@ -58,7 +60,7 @@ FIGURE_SPECS = [
 BONUS_SPECS = [
     ("fig11_airtime_vs_n.png", "metric_by_factor", "airtime_total_s_mean", {}),
     ("fig12_switch_count_vs_n.png", "metric_by_factor", "switch_count_mean", {}),
-    ("fig13_ucb_tracking_lag_vs_speed.png", "convergence_tc", "Tc_s", {"algo": {"ucb", "ucb_forget"}}),
+    ("fig13_ucb_tracking_lag_vs_speed.png", "ucb_tracking", "Tc_s_mean", {"algo": {"ucb", "ucb_forget"}}),
     ("fig14_reliability_airtime_pareto.png", "metric_by_factor", "pdr_mean", {}),
     ("fig15_outage_tail_prob_vs_n.png", "sinr_cdf", "sinr_db", {}),
     ("fig16_fairness_reliability_tradeoff.png", "metric_by_factor", "pdr_mean", {}),
@@ -439,7 +441,8 @@ def _plot_tc_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool:
     if not rows:
         _warn_skip(fig_name, "fichier convergence_tc.csv vide ou absent")
         return False
-    needed = {"speed", "algo", "Tc_s"}
+    tc_column = "Tc_s_mean" if rows and "Tc_s_mean" in rows[0] else "Tc_s"
+    needed = {"speed", "algo", tc_column}
     missing = [column for column in needed if column not in rows[0]]
     if missing:
         _warn_skip(fig_name, f"colonnes manquantes {missing}")
@@ -456,7 +459,7 @@ def _plot_tc_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool:
         grouped: dict[float, list[float]] = defaultdict(list)
         for row in algo_rows:
             speed = _to_float(row.get("speed"))
-            tc_s = _to_float(row.get("Tc_s"))
+            tc_s = _to_float(row.get(tc_column))
             if speed is None or tc_s is None:
                 continue
             grouped[speed].append(tc_s)
@@ -843,9 +846,10 @@ def _plot_switching_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool
 def _plot_ucb_tracking_lag_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool:
     fig_name = out_path.name
     if not rows:
-        _warn_skip(fig_name, "fichier convergence_tc.csv vide ou absent")
+        _warn_skip(fig_name, "fichier ucb_tracking.csv vide ou absent")
         return False
-    needed = {"speed", "algo", "Tc_s"}
+    tc_column = "Tc_s_mean" if rows and "Tc_s_mean" in rows[0] else "Tc_s"
+    needed = {"speed", "algo", tc_column}
     missing = [column for column in needed if column not in rows[0]]
     if missing:
         _warn_skip(fig_name, f"colonnes manquantes {missing}")
@@ -862,7 +866,7 @@ def _plot_ucb_tracking_lag_vs_speed(rows: list[dict[str, str]], out_path: Path) 
         grouped: dict[float, list[float]] = defaultdict(list)
         for row in algo_rows:
             speed = _to_float(row.get("speed"))
-            tc_s = _to_float(row.get("Tc_s"))
+            tc_s = _to_float(row.get(tc_column))
             if speed is None or tc_s is None:
                 continue
             grouped[speed].append(tc_s)
