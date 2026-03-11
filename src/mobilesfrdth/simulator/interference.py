@@ -9,25 +9,25 @@ from typing import Mapping
 from .channel import DEFAULT_LORA_NOISE_FLOOR_DBM
 
 SNR_THRESHOLDS_DB: dict[int, float] = {
-    # Seuils de décodage calibrés (BW125kHz) pour obtenir un comportement plus
-    # contrasté entre faibles et fortes charges réseau.
-    7: -6.8,
-    8: -9.4,
-    9: -11.7,
-    10: -14.3,
-    11: -16.9,
-    12: -19.4,
+    # Seuils de décodage LoRa (BW125kHz) légèrement resserrés pour renforcer la
+    # décroissance PDR/DER sous charge en mode SNIR_ON.
+    7: -6.5,
+    8: -9.0,
+    9: -12.0,
+    10: -15.0,
+    11: -17.5,
+    12: -20.0,
 }
 
 INTER_SF_ALPHA_MATRIX: dict[int, dict[int, float]] = {
     # Matrice alpha(SF_i, SF_s): co-SF dominant, inter-SF partiellement
-    # orthogonaux mais avec fuite croissante pour SF élevés.
-    7: {7: 1.0, 8: 0.34, 9: 0.24, 10: 0.17, 11: 0.12, 12: 0.09},
-    8: {7: 0.37, 8: 1.0, 9: 0.29, 10: 0.21, 11: 0.15, 12: 0.12},
-    9: {7: 0.43, 8: 0.34, 9: 1.0, 10: 0.27, 11: 0.20, 12: 0.16},
-    10: {7: 0.48, 8: 0.39, 9: 0.33, 10: 1.0, 11: 0.24, 12: 0.20},
-    11: {7: 0.54, 8: 0.45, 9: 0.37, 10: 0.30, 11: 1.0, 12: 0.24},
-    12: {7: 0.60, 8: 0.52, 9: 0.44, 10: 0.35, 11: 0.30, 12: 1.0},
+    # orthogonaux mais non nuls avec asymétrie plus marquée à fort SF.
+    7: {7: 1.0, 8: 0.24, 9: 0.18, 10: 0.14, 11: 0.10, 12: 0.08},
+    8: {7: 0.28, 8: 1.0, 9: 0.22, 10: 0.17, 11: 0.13, 12: 0.10},
+    9: {7: 0.33, 8: 0.27, 9: 1.0, 10: 0.22, 11: 0.17, 12: 0.14},
+    10: {7: 0.39, 8: 0.32, 9: 0.27, 10: 1.0, 11: 0.22, 12: 0.18},
+    11: {7: 0.46, 8: 0.38, 9: 0.32, 10: 0.27, 11: 1.0, 12: 0.22},
+    12: {7: 0.53, 8: 0.46, 9: 0.39, 10: 0.33, 11: 0.27, 12: 1.0},
 }
 
 
@@ -39,10 +39,10 @@ class InterferenceConfig:
     inter_sf_enabled: bool = True
     noise_floor_dbm: float = DEFAULT_LORA_NOISE_FLOOR_DBM
     density_impact_enabled: bool = True
-    density_penalty_db_per_log: float = 1.05
-    co_sf_penalty_db_per_log: float = 1.35
-    inter_sf_penalty_db_per_log: float = 0.45
-    max_density_penalty_db: float = 8.5
+    density_penalty_db_per_log: float = 1.20
+    co_sf_penalty_db_per_log: float = 1.80
+    inter_sf_penalty_db_per_log: float = 0.60
+    max_density_penalty_db: float = 11.0
     snr_thresholds_db: Mapping[int, float] = field(default_factory=lambda: dict(SNR_THRESHOLDS_DB))
     alpha_matrix: Mapping[int, Mapping[int, float]] = field(default_factory=lambda: {sf_i: dict(values) for sf_i, values in INTER_SF_ALPHA_MATRIX.items()})
 

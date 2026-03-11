@@ -1,27 +1,30 @@
 from __future__ import annotations
 
 import pathlib
+import random
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
 from mobilesfrdth.simulator.channel import ChannelConfig, received_power_dbm
 from mobilesfrdth.simulator.interference import InterferenceConfig, transmission_success
+from mobilesfrdth.simulator.metrics import der, pdr
 
 
-def _scenario_pdr(node_count: int) -> float:
+def _scenario_metrics(node_count: int, *, sigma_shadowing: float) -> tuple[float, float]:
+    rng = random.Random(12345)
     channel_cfg = ChannelConfig(
         pathloss_exponent=2.9,
-        sigma_shadowing=0.0,
+        sigma_shadowing=sigma_shadowing,
         rayleigh_fading=False,
     )
     interference_cfg = InterferenceConfig(snir_enabled=True)
 
-    # Scénario fixe et déterministe : N plus grand => charge co-SF/inter-SF plus forte.
+    # Scénario fixe : N plus grand => charge co-SF/inter-SF plus forte.
     distances_m = [180.0 + (idx % 24) * 45.0 + (idx // 24) * 20.0 for idx in range(node_count)]
     spreading_factors = [7 + (idx % 6) for idx in range(node_count)]
     rx_powers_dbm = [
-        received_power_dbm(tx_power_dbm=14.0, distance_m=dist, cfg=channel_cfg)
+        received_power_dbm(tx_power_dbm=14.0, distance_m=dist, cfg=channel_cfg, rng=rng)
         for dist in distances_m
     ]
 
@@ -40,11 +43,36 @@ def _scenario_pdr(node_count: int) -> float:
         )
         delivered += int(success)
 
-    return delivered / node_count
+    transmitted = node_count
+    generated = int(node_count * 1.25)
+    return pdr(delivered, transmitted), der(delivered, generated)
 
 
-def test_pdr_trend_decreases_when_network_load_increases_snir_on() -> None:
-    pdr_n50 = _scenario_pdr(node_count=50)
-    pdr_n160 = _scenario_pdr(node_count=160)
+def test_snir_on_pdr_der_decrease_when_network_load_increases() -> None:
+    pdr_n50, der_n50 = _scenario_metrics(node_count=50, sigma_shadowing=0.0)
+    pdr_n160, der_n160 = _scenario_metrics(node_count=160, sigma_shadowing=0.0)
 
     assert pdr_n160 < pdr_n50
+    assert der_n160 < der_n50
+
+
+def test_shadowing_calibration_sigma_0_vs_6_affects_snir_on_sensitivity() -> None:
+    pdr_n50_s0, der_n50_s0 = _scenario_metrics(node_count=50, sigma_shadowing=0.0)
+    pdr_n160_s0, der_n160_s0 = _scenario_metrics(node_count=160, sigma_shadowing=0.0)
+
+    pdr_n50_s6, der_n50_s6 = _scenario_metrics(node_count=50, sigma_shadowing=6.0)
+    pdr_n160_s6, der_n160_s6 = _scenario_metrics(node_count=160, sigma_shadowing=6.0)
+
+    gap_pdr_s0 = pdr_n50_s0 - pdr_n160_s0
+    gap_der_s0 = der_n50_s0 - der_n160_s0
+    gap_pdr_s6 = pdr_n50_s6 - pdr_n160_s6
+    gap_der_s6 = der_n50_s6 - der_n160_s6
+
+    assert gap_pdr_s0 > 0.0
+    assert gap_der_s0 > 0.0
+    assert gap_pdr_s6 > 0.0
+    assert gap_der_s6 > 0.0
+
+    # Le shadowing fort (sigma=6) modifie la sensibilité de la courbe charge->performance.
+    assert abs(gap_pdr_s6 - gap_pdr_s0) > 1e-3
+    assert abs(gap_der_s6 - gap_der_s0) > 1e-3
