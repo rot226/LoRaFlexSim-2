@@ -314,3 +314,136 @@ def test_cli_plots_generates_fig01_to_fig06_with_non_empty_core_campaign(monkeyp
         entry["figure"]: entry["filters"] for entry in plots_payload["figure_filters"]
     }["fig07_tc_vs_speed.png"]
     assert fig07_filters["speed"] == ["1", "3", "5"]
+
+
+def test_cli_e2e_small_grid_run_aggregate_plots_assertions(monkeypatch, tmp_path: pathlib.Path) -> None:
+    config_path = pathlib.Path(__file__).resolve().parents[1] / "experiments" / "default.yaml"
+    runs_dir = tmp_path / "runs_e2e"
+    aggregates_dir = tmp_path / "aggregates_e2e"
+    figures_dir = tmp_path / "figures_e2e"
+
+    class _FakeOrchestrator:
+        def __init__(self, *, output_root: pathlib.Path):
+            self.output_root = pathlib.Path(output_root)
+
+        def execute_jobs(self, jobs, **kwargs):
+            reports = []
+            for job in jobs:
+                params = job["params"]
+                run_id = str(params["run_id"])
+                algo = str(params["algo"]).upper()
+                run_dir = self.output_root / "results" / run_id
+
+                if algo == "ADR":
+                    pdr_value, der_value, throughput_value = 0.73, 0.70, 1160.0
+                    sf_values = [7, 7, 8, 8, 8]
+                else:
+                    pdr_value, der_value, throughput_value = 0.91, 0.89, 1450.0
+                    sf_values = [9, 9, 10, 10, 10]
+
+                summary_row = {
+                    "N": params["N"],
+                    "speed": params["speed"],
+                    "mobility_model": str(params.get("model", "RWP")).lower(),
+                    "mode": str(params["mode"]).lower(),
+                    "algo": str(params["algo"]).lower(),
+                    "gateways": 1,
+                    "sigma": 0.0,
+                    "seed": params["seed"],
+                    "rep": params["rep"],
+                    "run_id": run_id,
+                    "duration_s": 12.0,
+                    "node_count": params["N"],
+                    "tx_count": 100,
+                    "success_count": int(round(pdr_value * 100)),
+                    "generated_packets": 100,
+                    "delivered_bytes": int(throughput_value),
+                    "pdr": pdr_value,
+                    "der": der_value,
+                    "throughput_bps": throughput_value,
+                    "Tc_s": 40.0,
+                    "jain_fairness": 0.96,
+                    "airtime_total_s": 10.5,
+                    "airtime_mean_per_node_s": 0.21,
+                    "outage_ratio": 0.02,
+                    "switch_count": 1,
+                }
+                _write_csv(run_dir / "summary.csv", list(summary_row.keys()), summary_row)
+
+                event_rows = []
+                for idx, sf_value in enumerate(sf_values, start=1):
+                    event_rows.append(
+                        {
+                            "N": params["N"],
+                            "speed": params["speed"],
+                            "mobility_model": str(params.get("model", "RWP")).lower(),
+                            "mode": str(params["mode"]).lower(),
+                            "algo": str(params["algo"]).lower(),
+                            "gateways": 1,
+                            "sigma": 0.0,
+                            "seed": params["seed"],
+                            "rep": params["rep"],
+                            "run_id": run_id,
+                            "event_idx": idx,
+                            "time_s": float(idx),
+                            "event_type": "uplink",
+                            "node_id": 0,
+                            "sf": sf_value,
+                            "sinr_db": 4.0 + idx,
+                            "success": 1,
+                            "delivered": 1,
+                            "payload_bytes": 20,
+                            "airtime_s": 0.12,
+                            "outage": 0,
+                            "switch_count": 0,
+                        }
+                    )
+                _write_csv(run_dir / "events.csv", list(event_rows[0].keys()), event_rows[0])
+                with (run_dir / "events.csv").open("a", encoding="utf-8", newline="") as handle:
+                    writer = csv.DictWriter(handle, fieldnames=list(event_rows[0].keys()))
+                    for row in event_rows[1:]:
+                        writer.writerow(row)
+
+                reports.append(SimpleNamespace(run_id=run_id, success=True, run_dir=run_dir, error=None))
+
+            total = len(jobs)
+            return SimpleNamespace(
+                reports=reports,
+                total_jobs=total,
+                skipped_runs=0,
+                scheduled_runs=total,
+                failed_reports=[],
+                interrupted=False,
+            )
+
+    monkeypatch.setattr("mobilesfrdth.simulator.engine.GridRunOrchestrator", _FakeOrchestrator)
+
+    grid = "N=30;speed=1;mode=SNIR_ON;algo=ADR,UCB;reps=1;seed_base=55"
+    assert cli.main(["run", "--config", str(config_path), "--out", str(runs_dir), "--grid", grid]) == 0
+    assert cli.main(["aggregate", "--results", str(runs_dir), "--out", str(aggregates_dir)]) == 0
+    assert (
+        cli.main(["plots", "--aggregates-dir", str(aggregates_dir / "aggregates"), "--out", str(figures_dir)])
+        == 0
+    )
+
+    plots_payload = json.loads((figures_dir / "plots_summary.json").read_text(encoding="utf-8"))
+    figure_paths = [pathlib.Path(path) for path in plots_payload["figures"]]
+    non_empty_figures = [path for path in figure_paths if path.is_file() and path.stat().st_size > 0]
+    assert len(non_empty_figures) >= 4
+
+    generated_figure_names = {path.name for path in figure_paths}
+    assert "fig09_sf_distribution_snir_on.png" in generated_figure_names
+    assert (figures_dir / "fig09_sf_distribution_snir_on.png").stat().st_size > 0
+
+    metric_rows = list(
+        csv.DictReader((aggregates_dir / "aggregates" / "metric_by_factor.csv").open("r", encoding="utf-8", newline=""))
+    )
+    pdr_by_algo = {str(row["algo"]).lower(): float(row["pdr_mean"]) for row in metric_rows}
+    assert "adr" in pdr_by_algo and "ucb" in pdr_by_algo
+    assert pdr_by_algo["adr"] != pdr_by_algo["ucb"]
+
+    distribution_rows = list(
+        csv.DictReader((aggregates_dir / "aggregates" / "distribution_sf.csv").open("r", encoding="utf-8", newline=""))
+    )
+    assert distribution_rows
+    assert any(float(row.get("count", 0) or 0) > 0 for row in distribution_rows)
