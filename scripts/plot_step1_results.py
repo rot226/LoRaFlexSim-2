@@ -60,14 +60,15 @@ __all__ = [
 
 STATE_LABELS = {True: "snir_on", False: "snir_off", None: "snir_unknown"}
 SNIR_LABELS = {
-    "snir_on": "SNIR enabled",
-    "snir_off": "SNIR disabled",
-    "snir_unknown": "SNIR unknown",
+    "snir_on": "SNIR activé",
+    "snir_off": "SNIR désactivé",
+    "snir_unknown": "SNIR inconnu",
 }
 MARKER_CYCLE = ["o", "s", "^", "D", "v", "P", "X"]
 MIXRA_OPT_ALIASES = {"mixra_opt", "mixraopt", "mixra-opt", "mixra opt", "opt"}
 MIXRA_H_ALIASES = {"mixra_h", "mixrah", "mixra-h", "mixra h"}
 EXTENDED_ALGORITHM = "mixra_opt"
+PROFILE_IEEE_CORE = "ieee_core"
 
 
 def _normalize_algorithm_name(value: Any) -> str | None:
@@ -130,6 +131,51 @@ def _parse_bool(value: Any) -> bool | None:
     if text in {"0", "false", "no", "n", "off"}:
         return False
     return None
+
+
+def _parse_profile_value(value: Any) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return value
+    text = str(value).strip()
+    if text == "":
+        return None
+    int_value = _maybe_int(text)
+    if int_value is not None:
+        return int_value
+    parsed_bool = _parse_bool(text)
+    if parsed_bool is not None:
+        return parsed_bool
+    if int_value is not None:
+        return int_value
+    float_value = _maybe_float(text)
+    if float_value is not None:
+        return float_value
+    return text
+
+
+def _resolve_record_value(record: Mapping[str, Any], keys: Sequence[str]) -> Any:
+    for key in keys:
+        value = record.get(key)
+        if value is not None and str(value).strip() != "":
+            return value
+    return None
+
+
+def _value_matches_filter(actual: Any, expected: Any) -> bool:
+    if actual is None:
+        return False
+    if isinstance(expected, str):
+        return str(actual).strip().lower() == expected.strip().lower()
+    if isinstance(expected, (int, float)):
+        actual_num = _maybe_float(actual)
+        return actual_num is not None and abs(float(actual_num) - float(expected)) < 1e-9
+    return actual == expected
 
 
 def _detect_snir_state(row: Mapping[str, Any]) -> Tuple[str | None, bool]:
@@ -212,6 +258,9 @@ def _load_step1_records(results_dir: Path, strict: bool = False) -> List[Dict[st
                     "num_nodes": int(float(row.get("num_nodes", "0") or 0)),
                     "packet_interval_s": float(row.get("packet_interval_s", "0") or 0),
                     "random_seed": _maybe_int(row.get("random_seed") or row.get("seed")),
+                    "model": row.get("model") or row.get("mobility_model"),
+                    "gateways": _maybe_int(row.get("gateways") or row.get("num_gateways")),
+                    "sigma": _maybe_float(row.get("sigma") or row.get("shadowing_sigma_db")),
                     "PDR": _parse_float(row.get("PDR")),
                     "DER": _parse_float(row.get("DER")),
                     "snir_mean": _maybe_float(snir_candidate),
@@ -347,8 +396,14 @@ def _format_axes(ax: Any, integer_x: bool = False) -> None:
         line.set_markeredgewidth(THEME_MARKER_EDGE_WIDTH)
 
 
+def _safe_subplots_adjust(**kwargs: Any) -> None:
+    if plt is None or not hasattr(plt, "subplots_adjust"):
+        return
+    plt.subplots_adjust(**kwargs)
+
+
 def _apply_network_ticks(ax: Any, network_sizes: Sequence[int]) -> None:
-    if not network_sizes:
+    if not network_sizes or not hasattr(ax, "set_xticks"):
         return
     network_sizes = [int(value) for value in network_sizes]
     if not all(isinstance(value, int) for value in network_sizes):
@@ -432,13 +487,13 @@ def _load_summary_records(summary_path: Path, forced_state: str | None = None) -
         for row in reader:
             record: Dict[str, Any] = {"summary_path": summary_path}
             for key, value in row.items():
-                if key in {"algorithm", "snir_state"}:
+                if key in {"algorithm", "snir_state", "model", "mobility_model"}:
                     record[key] = value
                 elif key in {"random_seed"}:
                     record[key] = _maybe_int(value)
-                elif key in {"num_nodes"}:
+                elif key in {"num_nodes", "gateways", "num_gateways"}:
                     record[key] = int(float(value or 0))
-                elif key in {"packet_interval_s"}:
+                elif key in {"packet_interval_s", "sigma", "shadowing_sigma_db"}:
                     record[key] = float(value or 0)
                 else:
                     record[key] = _parse_float(value)
@@ -497,12 +552,102 @@ def _load_raw_samples(raw_path: Path, fallback_dir: Path, strict: bool) -> List[
                     "snir_state": row.get("snir_state", "snir_unknown"),
                     "packet_interval_s": _parse_float(row.get("packet_interval_s")),
                     "num_nodes": _maybe_int(row.get("num_nodes")),
+                    "model": row.get("model") or row.get("mobility_model"),
+                    "gateways": _maybe_int(row.get("gateways") or row.get("num_gateways")),
+                    "sigma": _maybe_float(row.get("sigma") or row.get("shadowing_sigma_db")),
                     "DER": _parse_float(row.get("DER")),
                 }
                 records.append(record)
     else:
         records = _load_step1_records(fallback_dir, strict=strict)
     return records
+
+
+def _ieee_profile_filters(profile: str | None) -> Dict[str, Any]:
+    normalized = (profile or "").strip().lower()
+    if normalized != PROFILE_IEEE_CORE:
+        return {}
+    return {
+        "snir_state": "snir_on",
+        "model": "SMOOTH",
+        "gateways": 1,
+        "sigma": 6,
+    }
+
+
+def _apply_profile_filters(
+    records: List[Dict[str, Any]],
+    profile: str | None,
+) -> tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    filters = _ieee_profile_filters(profile)
+    if not filters:
+        return records, {}
+
+    filtered = list(records)
+    for key, expected in filters.items():
+        candidate_keys: Sequence[str]
+        if key == "model":
+            candidate_keys = ("model", "mobility_model")
+        elif key == "gateways":
+            candidate_keys = ("gateways", "num_gateways")
+        elif key == "sigma":
+            candidate_keys = ("sigma", "shadowing_sigma_db")
+        else:
+            candidate_keys = (key,)
+        filtered = [
+            record
+            for record in filtered
+            if _value_matches_filter(_parse_profile_value(_resolve_record_value(record, candidate_keys)), expected)
+        ]
+    return filtered, filters
+
+
+def _ensure_non_empty_filter_result(
+    records: Sequence[Mapping[str, Any]],
+    *,
+    stage: str,
+    active_filters: Mapping[str, Any] | None = None,
+) -> None:
+    if records:
+        return
+    details = ""
+    if active_filters:
+        parts = [f"{key}={value}" for key, value in active_filters.items()]
+        details = " ; filtres=" + ", ".join(parts)
+    raise ValueError(
+        f"Refus du tracé ({stage}) : le filtrage a produit un jeu vide ou incohérent{details}."
+    )
+
+
+def _write_plots_summary(
+    figures_dir: Path,
+    *,
+    profile: str | None,
+    ieee: bool,
+    network_sizes: Sequence[int] | None,
+    use_summary: bool,
+    plot_cdf: bool,
+    plot_trajectories: bool,
+    compare_snir: bool,
+    strict: bool,
+    filters_applied: Mapping[str, Any],
+) -> None:
+    payload = {
+        "profile": profile,
+        "ieee_enabled": bool(ieee),
+        "network_sizes": [int(size) for size in network_sizes] if network_sizes else [],
+        "use_summary": bool(use_summary),
+        "plot_cdf": bool(plot_cdf),
+        "plot_trajectories": bool(plot_trajectories),
+        "compare_snir": bool(compare_snir),
+        "strict": bool(strict),
+        "filters_applied": dict(filters_applied),
+    }
+    figures_dir.mkdir(parents=True, exist_ok=True)
+    (figures_dir / "plots_summary.json").write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
 
 
 def _apply_ieee_filters(records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -652,7 +797,7 @@ def _plot_global_metric(
                 size_tag,
             )
             output = figures_dir / filename
-            plt.subplots_adjust(top=0.80)
+            _safe_subplots_adjust(top=0.80)
             fig.savefig(output, dpi=150)
             plt.close(fig)
 
@@ -789,7 +934,7 @@ def _plot_summary_bars(
                 size_tag,
             )
             output = figures_dir / filename
-            plt.subplots_adjust(top=0.80)
+            _safe_subplots_adjust(top=0.80)
             fig.savefig(output, dpi=150)
             plt.close(fig)
 
@@ -844,7 +989,7 @@ def _plot_cdf(
         figures_dir.mkdir(parents=True, exist_ok=True)
         filename = _plot_filename(f"cdf_der_{algorithm}.png", size_tag)
         output = figures_dir / filename
-        plt.subplots_adjust(top=0.80)
+        _safe_subplots_adjust(top=0.80)
         fig.savefig(output, dpi=150)
         plt.close(fig)
 
@@ -938,7 +1083,7 @@ def _plot_cluster_pdr(
                 size_tag,
             )
             output = figures_dir / filename
-            plt.subplots_adjust(top=0.80)
+            _safe_subplots_adjust(top=0.80)
             fig.savefig(output, dpi=150)
             plt.close(fig)
 
@@ -1031,7 +1176,7 @@ def _plot_cluster_der(
             size_tag,
         )
         output = figures_dir / filename
-        plt.subplots_adjust(top=0.80)
+        _safe_subplots_adjust(top=0.80)
         fig.savefig(output, dpi=150)
         plt.close(fig)
 
@@ -1145,7 +1290,7 @@ def _plot_trajectories(
                 size_tag,
             )
             output = figures_dir / filename
-            plt.subplots_adjust(top=0.80)
+            _safe_subplots_adjust(top=0.80)
             fig.savefig(output, dpi=180)
             plt.close(fig)
 
@@ -1258,7 +1403,7 @@ def plot_histogram_by_algo_and_snir(
     figures_dir.mkdir(parents=True, exist_ok=True)
     filename = _plot_filename("step1_histogram_by_algo_snir.png", size_tag)
     output = figures_dir / filename
-    plt.subplots_adjust(top=0.80)
+    _safe_subplots_adjust(top=0.80)
     fig.savefig(output, dpi=200)
     plt.close(fig)
 
@@ -1392,7 +1537,7 @@ def _plot_snir_comparison(
                         size_tag,
                     )
                     output = figures_dir / filename
-                    plt.subplots_adjust(top=0.80)
+                    _safe_subplots_adjust(top=0.80)
                     fig.savefig(output, dpi=200)
                     plt.close(fig)
 
@@ -1468,7 +1613,7 @@ def plot_distribution_by_state(
         figures_dir.mkdir(parents=True, exist_ok=True)
         filename = _plot_filename(f"step1_distribution_{metric}.png", size_tag)
         output = figures_dir / filename
-        plt.subplots_adjust(top=0.80)
+        _safe_subplots_adjust(top=0.80)
         fig.savefig(output, dpi=200)
         plt.close(fig)
 
@@ -1479,6 +1624,7 @@ def _available_network_sizes(
     strict: bool,
     ieee: bool,
     network_sizes: Sequence[int] | None,
+    profile: str | None,
 ) -> List[int]:
     if use_summary:
         summary_records = _load_summary_records(results_dir / "summary.csv")
@@ -1489,6 +1635,7 @@ def _available_network_sizes(
         return []
     if ieee:
         records = _apply_ieee_filters(records)
+    records, _used = _apply_profile_filters(records, profile)
     records = _filter_network_sizes(records, network_sizes)
     return _ensure_network_sizes(
         r.get("num_nodes") for r in records if r.get("num_nodes") is not None
@@ -1508,6 +1655,7 @@ def generate_step1_figures(
     ieee: bool = False,
     network_sizes: Sequence[int] | None = None,
     size_tag: int | None = None,
+    profile: str | None = None,
 ) -> None:
     if plt is None:
         print("matplotlib n'est pas disponible ; aucune figure générée.")
@@ -1527,6 +1675,15 @@ def generate_step1_figures(
         output_dir = extended_dir
         extended_dir = output_dir
     comparison_records: List[Dict[str, Any]] = []
+    filters_applied: Dict[str, Any] = {}
+    profile_filters = _ieee_profile_filters(profile)
+    if profile_filters:
+        filters_applied.update(profile_filters)
+    if ieee:
+        filters_applied["ieee_coherent_pairs"] = True
+    if network_sizes:
+        filters_applied["network_sizes"] = [int(size) for size in network_sizes]
+    active_filtering = bool(filters_applied)
 
     if use_summary:
         summary_path = results_dir / "summary.csv"
@@ -1542,21 +1699,37 @@ def generate_step1_figures(
                 )
             print(f"Aucun summary.csv trouvé dans {summary_path}; aucune barre générée.")
         else:
+            source_summary_records = list(summary_records)
             if ieee:
                 summary_records = _apply_ieee_filters(summary_records)
+            summary_records, _used = _apply_profile_filters(summary_records, profile)
             summary_records = _filter_network_sizes(summary_records, network_sizes)
-            _plot_summary_bars(
-                summary_records,
-                extended_dir,
-                forced_algorithm=EXTENDED_ALGORITHM,
-                size_tag=size_tag,
-            )
+            if active_filtering and source_summary_records:
+                _ensure_non_empty_filter_result(
+                    summary_records,
+                    stage="summary",
+                    active_filters=filters_applied,
+                )
+            if size_tag is None:
+                _plot_summary_bars(
+                    summary_records,
+                    extended_dir,
+                    forced_algorithm=EXTENDED_ALGORITHM,
+                )
+            else:
+                _plot_summary_bars(
+                    summary_records,
+                    extended_dir,
+                    forced_algorithm=EXTENDED_ALGORITHM,
+                    size_tag=size_tag,
+                )
             if plot_trajectories:
                 trajectory_records = _load_step1_records(results_dir, strict=strict)
                 if not trajectory_records:
                     trajectory_records = summary_records
                 if ieee:
                     trajectory_records = _apply_ieee_filters(trajectory_records)
+                trajectory_records, _used = _apply_profile_filters(trajectory_records, profile)
                 trajectory_records = _filter_network_sizes(
                     trajectory_records,
                     network_sizes,
@@ -1567,10 +1740,16 @@ def generate_step1_figures(
         records = _load_step1_records(results_dir, strict=strict)
         if not records:
             print(f"Aucun CSV trouvé dans {results_dir} ; rien à tracer.")
-            return
         if ieee:
             records = _apply_ieee_filters(records)
+        records, _used = _apply_profile_filters(records, profile)
         records = _filter_network_sizes(records, network_sizes)
+        if active_filtering and records:
+            _ensure_non_empty_filter_result(
+                records,
+                stage="standard",
+                active_filters=filters_applied,
+            )
         _plot_cluster_der(records, output_dir, size_tag=size_tag)
         _plot_cluster_pdr(records, output_dir, size_tag=size_tag)
         _plot_global_metric(
@@ -1647,28 +1826,53 @@ def generate_step1_figures(
         comparison_records = _load_comparison_records(results_dir, use_summary, strict)
         if ieee:
             comparison_records = _apply_ieee_filters(comparison_records)
+        comparison_records, _used = _apply_profile_filters(comparison_records, profile)
         comparison_records = _filter_network_sizes(
             comparison_records,
             network_sizes,
         )
         if not comparison_records:
+            if active_filtering:
+                source_comparison = _load_comparison_records(results_dir, use_summary, strict)
+                if source_comparison:
+                    _ensure_non_empty_filter_result(
+                        comparison_records,
+                        stage="compare_snir",
+                        active_filters=filters_applied,
+                    )
             print("Aucune donnée disponible pour comparer SNIR on/off.")
         else:
-            _plot_snir_comparison(comparison_records, comparison_dir, size_tag=size_tag)
+            if size_tag is None:
+                _plot_snir_comparison(comparison_records, comparison_dir)
+            else:
+                _plot_snir_comparison(comparison_records, comparison_dir, size_tag=size_tag)
             forced_algorithm = (
                 EXTENDED_ALGORITHM if comparison_dir == extended_dir else None
             )
-            plot_distribution_by_state(
-                comparison_records,
-                comparison_dir,
-                forced_algorithm=forced_algorithm,
-                size_tag=size_tag,
-            )
-            plot_histogram_by_algo_and_snir(
-                comparison_records,
-                comparison_dir,
-                size_tag=size_tag,
-            )
+            if size_tag is None:
+                plot_distribution_by_state(
+                    comparison_records,
+                    comparison_dir,
+                    forced_algorithm=forced_algorithm,
+                )
+            else:
+                plot_distribution_by_state(
+                    comparison_records,
+                    comparison_dir,
+                    forced_algorithm=forced_algorithm,
+                    size_tag=size_tag,
+                )
+            if size_tag is None:
+                plot_histogram_by_algo_and_snir(
+                    comparison_records,
+                    comparison_dir,
+                )
+            else:
+                plot_histogram_by_algo_and_snir(
+                    comparison_records,
+                    comparison_dir,
+                    size_tag=size_tag,
+                )
 
     if plot_cdf:
         raw_path = results_dir / "raw_index.csv"
@@ -1686,13 +1890,40 @@ def generate_step1_figures(
         else:
             if ieee:
                 raw_records = _apply_ieee_filters(raw_records)
+            raw_records, _used = _apply_profile_filters(raw_records, profile)
             raw_records = _filter_network_sizes(raw_records, network_sizes)
-            _plot_cdf(
-                raw_records,
-                extended_dir,
-                forced_algorithm=EXTENDED_ALGORITHM,
-                size_tag=size_tag,
-            )
+            if active_filtering and raw_records:
+                _ensure_non_empty_filter_result(
+                    raw_records,
+                    stage="cdf",
+                    active_filters=filters_applied,
+                )
+            if size_tag is None:
+                _plot_cdf(
+                    raw_records,
+                    extended_dir,
+                    forced_algorithm=EXTENDED_ALGORITHM,
+                )
+            else:
+                _plot_cdf(
+                    raw_records,
+                    extended_dir,
+                    forced_algorithm=EXTENDED_ALGORITHM,
+                    size_tag=size_tag,
+                )
+
+    _write_plots_summary(
+        comparison_dir,
+        profile=profile,
+        ieee=ieee,
+        network_sizes=network_sizes,
+        use_summary=use_summary,
+        plot_cdf=plot_cdf,
+        plot_trajectories=plot_trajectories,
+        compare_snir=compare_snir,
+        strict=strict,
+        filters_applied=filters_applied,
+    )
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -1747,6 +1978,15 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--profile",
+        type=str,
+        choices=[PROFILE_IEEE_CORE],
+        help=(
+            "Profil de filtrage stable. 'ieee_core' applique: snir_state=snir_on, "
+            "model=SMOOTH, gateways=1, sigma=6."
+        ),
+    )
+    parser.add_argument(
         "--compare-snir",
         action="store_true",
         default=True,
@@ -1788,13 +2028,15 @@ def main(argv: List[str] | None = None) -> None:
     args = parser.parse_args(argv)
     if args.official and (not args.use_summary or not args.plot_cdf):
         parser.error("--official requiert --use-summary et --plot-cdf.")
+    ieee_enabled = bool(args.ieee or args.profile == PROFILE_IEEE_CORE)
     if args.per_size:
         sizes = _available_network_sizes(
             args.results_dir,
             args.use_summary,
             args.strict,
-            args.ieee,
+            ieee_enabled,
             args.network_sizes,
+            args.profile,
         )
         if not sizes:
             print("Aucune taille de réseau détectée pour --per-size.")
@@ -1810,9 +2052,10 @@ def main(argv: List[str] | None = None) -> None:
                 args.strict,
                 args.official,
                 args.official_only,
-                args.ieee,
+                ieee_enabled,
                 [size],
                 size_tag=size,
+                profile=args.profile,
             )
         return
     generate_step1_figures(
@@ -1825,8 +2068,9 @@ def main(argv: List[str] | None = None) -> None:
         args.strict,
         args.official,
         args.official_only,
-        args.ieee,
+        ieee_enabled,
         args.network_sizes,
+        profile=args.profile,
     )
 
 
