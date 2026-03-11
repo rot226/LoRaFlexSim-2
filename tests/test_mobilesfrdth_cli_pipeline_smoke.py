@@ -141,6 +141,8 @@ def test_cli_smoke_grid_pipeline_contracts_and_run_id_uniqueness(monkeypatch, tm
 
     aggregate_manifest = json.loads((aggregates_dir / "aggregate.json").read_text(encoding="utf-8"))
     assert aggregate_manifest["distinct_groups_by_algo"] == {"adr": 4}
+    assert aggregate_manifest["ignored_runs"] == []
+    assert aggregate_manifest["n_runs_effective"] == num_jobs
 
     metric_rows = list(
         csv.DictReader((aggregates_dir / "aggregates" / "metric_by_factor.csv").open("r", encoding="utf-8", newline=""))

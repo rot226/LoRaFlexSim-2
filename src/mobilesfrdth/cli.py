@@ -202,6 +202,7 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
             )
             return 2
 
+        ignored_runs: list[dict[str, str]] = []
         files = aggregate_runs(
             inputs=args.results,
             output_root=out_dir,
@@ -210,6 +211,7 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
             skip_sf_distribution=args.skip_sf_distribution,
             strict=args.strict,
             verbose=args.verbose,
+            ignored_runs_report=ignored_runs,
         )
     except (ValueError, json.JSONDecodeError, FileNotFoundError) as exc:
         print(f"Erreur pendant l'agrégation: {exc}")
@@ -221,6 +223,8 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
         "expected_runs": expected_runs,
         "found_runs": found_runs,
         "missing_runs": missing_runs,
+        "n_runs_effective": max(found_runs - len(ignored_runs), 0),
+        "ignored_runs": ignored_runs,
         "files": {name: str(path) for name, path in files.items()},
     }
 
