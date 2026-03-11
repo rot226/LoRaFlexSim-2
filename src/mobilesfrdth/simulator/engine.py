@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 import heapq
 import json
 import logging
-import math
 from pathlib import Path
 import random
 from time import monotonic
@@ -17,6 +16,7 @@ from .adr.adr_legacy import AdrLegacyConfig, recommend_sf
 from .adr.adr_mixra import AdrMixRaConfig, adapt_link
 from .mab.ucb import UCB1
 from .mab.ucb_forget import UCBForget
+from .interference import InterferenceConfig, dbm_to_mw, mw_to_db, snr_db as compute_snr_db, transmission_success
 
 
 @dataclass
@@ -36,6 +36,7 @@ class Event:
     sf: int = 7
     snr_db: float = 0.0
     sinr_db: float = 0.0
+    threshold_db: float = 0.0
     success: bool = False
     delivered: bool = False
     payload_bytes: int = 0
@@ -73,22 +74,34 @@ class EventDrivenEngine:
         interference_db: float,
         sigma: float,
     ) -> tuple[float, float]:
+        del mode, interference_db, sigma
         snr_base = 13.0 - 0.06 * node_count
         snr_db = snr_base + self.rng.uniform(-1.5, 1.5)
-        if mode == "snir_on":
-            dyn_interference = interference_db + (0.012 * node_count) + abs(self.rng.gauss(0.0, sigma))
-            sinr_db = snr_db - dyn_interference
-        else:
-            sinr_db = snr_db
-        return snr_db, sinr_db
+        return snr_db, snr_db
 
-    @staticmethod
-    def _success_probability(*, sf: int, snr_db: float, sinr_db: float, mode: str) -> float:
-        thresholds_db = {7: -7.5, 8: -10.0, 9: -12.5, 10: -15.0, 11: -17.5, 12: -20.0}
-        metric_db = sinr_db if mode == "snir_on" else snr_db
-        margin_db = metric_db - thresholds_db.get(sf, -7.5)
-        p_success = 1.0 / (1.0 + math.exp(-(margin_db - 0.5)))
-        return max(0.01, min(0.999, p_success))
+    def _derive_interferers(
+        self,
+        *,
+        node_count: int,
+        interference_db: float,
+        sigma: float,
+        signal_dbm: float,
+        sf: int,
+        cfg: InterferenceConfig,
+    ) -> list[tuple[float, int]]:
+        if not cfg.snir_enabled:
+            return []
+
+        dynamic_interference_db = max(0.0, interference_db + (0.03 * node_count) + 2.0 + abs(self.rng.gauss(0.0, sigma)))
+        signal_mw = dbm_to_mw(signal_dbm)
+        noise_mw = dbm_to_mw(cfg.noise_floor_dbm)
+        snr_db = compute_snr_db(signal_dbm, cfg.noise_floor_dbm)
+        target_sinr_db = snr_db - dynamic_interference_db
+        target_denom_mw = signal_mw / (10.0 ** (target_sinr_db / 10.0))
+        interf_mw = max(target_denom_mw - noise_mw, 0.0)
+        if interf_mw <= 0.0:
+            return []
+        return [(mw_to_db(interf_mw), sf)]
 
     def _schedule_initial_events(self, nodes: list[Node]) -> list[Event]:
         queue: list[Event] = []
@@ -156,6 +169,7 @@ class EventDrivenEngine:
         mode_name = mode.lower()
         adr_cfg = AdrLegacyConfig()
         adr_mixra_cfg = AdrMixRaConfig()
+        interference_cfg = InterferenceConfig(snir_enabled=mode_name == "snir_on")
 
         mab_agents: dict[int, UCB1 | UCBForget] = {}
         sf_arms = [7, 8, 9, 10, 11, 12]
@@ -192,8 +206,24 @@ class EventDrivenEngine:
                     sigma=sigma,
                 )
                 airtime_s = self._airtime_s(sf=current_sf, payload_size=node.payload_size)
-                p_success = self._success_probability(sf=current_sf, snr_db=snr_db, sinr_db=sinr_db, mode=mode_name)
-                success = self.rng.random() < p_success
+                signal_dbm = interference_cfg.noise_floor_dbm + snr_db
+                interferers = self._derive_interferers(
+                    node_count=node_count,
+                    interference_db=interference_db,
+                    sigma=sigma,
+                    signal_dbm=signal_dbm,
+                    sf=current_sf,
+                    cfg=interference_cfg,
+                )
+                success, metric_db = transmission_success(
+                    signal_dbm,
+                    signal_sf=current_sf,
+                    interferers=interferers,
+                    cfg=interference_cfg,
+                )
+                snr_db = compute_snr_db(signal_dbm, interference_cfg.noise_floor_dbm)
+                sinr_db = metric_db if interference_cfg.snir_enabled else snr_db
+                threshold_db = float(interference_cfg.snr_thresholds_db.get(current_sf, -20.0))
 
                 new_sf = self._select_next_sf(
                     algo_name=algo_name,
@@ -223,6 +253,7 @@ class EventDrivenEngine:
                         sf=current_sf,
                         snr_db=snr_db,
                         sinr_db=sinr_db,
+                        threshold_db=threshold_db,
                         success=success,
                         delivered=success,
                         payload_bytes=node.payload_size,
@@ -312,6 +343,53 @@ class GridRunOrchestrator:
         logger.addHandler(file_handler)
         logger.addHandler(console_handler)
         return logger, [file_handler, console_handler], run_dir
+
+
+    def _log_sinr_success_diagnostic(
+        self,
+        *,
+        logger: logging.Logger,
+        run_id: str,
+        events: list[Event],
+        mode: str,
+    ) -> None:
+        if mode != "snir_on":
+            logger.info("Diagnostic SINR->success ignoré: mode=%s", mode)
+            return
+
+        uplinks = [event for event in events if event.kind == "uplink"]
+        if not uplinks:
+            logger.info("Diagnostic SINR->success: aucun uplink")
+            return
+
+        bin_size_db = 2.0
+        bins: dict[int, dict[str, int]] = {}
+        for event in uplinks:
+            bin_id = int(event.sinr_db // bin_size_db)
+            slot = bins.setdefault(bin_id, {"total": 0, "success": 0})
+            slot["total"] += 1
+            slot["success"] += int(event.success)
+
+        ordered = sorted(bins.items(), key=lambda item: item[0])
+        rates = [(bin_id, values["success"] / max(values["total"], 1), values["total"]) for bin_id, values in ordered]
+        inversions = 0
+        for idx in range(1, len(rates)):
+            if rates[idx][1] + 1e-9 < rates[idx - 1][1]:
+                inversions += 1
+
+        global_success = sum(int(event.success) for event in uplinks) / max(len(uplinks), 1)
+        logger.info(
+            "Diagnostic SINR->success run_id=%s: uplinks=%s, bins=%s, success_global=%.3f, inversions=%s",
+            run_id,
+            len(uplinks),
+            len(rates),
+            global_success,
+            inversions,
+        )
+        for bin_id, rate, count in rates:
+            lower = bin_id * bin_size_db
+            upper = lower + bin_size_db
+            logger.info("Diagnostic SINR bin [%.1f, %.1f) dB: p_success=%.3f (n=%s)", lower, upper, rate, count)
 
     def _is_run_completed(self, run_id: str) -> bool:
         run_dir = self.output_root / "results" / run_id
@@ -453,6 +531,12 @@ class GridRunOrchestrator:
                     events=result.events,
                     duration_s=duration_s,
                     time_bin_s=float(params.get("time_bin_s", 10.0)),
+                )
+                self._log_sinr_success_diagnostic(
+                    logger=logger,
+                    run_id=run_id,
+                    events=result.events,
+                    mode=str(params.get("mode", "snir_off")).lower(),
                 )
                 logger.info("Run terminé: uplinks=%s", result.uplink_count)
                 reports.append(RunExecutionReport(run_id=run_id, success=True, run_dir=run_dir))

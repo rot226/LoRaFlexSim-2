@@ -146,3 +146,97 @@ def test_all_algorithms_update_sf_via_common_interface(monkeypatch) -> None:
     assert isinstance(sf_adr_mixra, int)
     assert isinstance(sf_ucb, int)
     assert isinstance(sf_ucb_forget, int)
+
+
+def test_success_decision_delegated_to_interference_module(monkeypatch) -> None:
+    calls = {"count": 0}
+
+    def fake_transmission_success(*args, **kwargs):
+        calls["count"] += 1
+        return (calls["count"] % 2 == 0), -3.0
+
+    monkeypatch.setattr("mobilesfrdth.simulator.engine.transmission_success", fake_transmission_success)
+
+    engine = EventDrivenEngine(seed=42)
+    nodes = [Node(node_id=1, period_s=30.0, payload_size=12)]
+    result = engine.run(
+        nodes=nodes,
+        until_s=120.0,
+        mode="snir_on",
+        algo="adr",
+        interference_db=4.0,
+        sigma=1.0,
+    )
+
+    assert calls["count"] == len(result.events)
+    assert [event.success for event in result.events] == [False, True, False, True]
+    assert all(event.threshold_db != 0.0 for event in result.events)
+
+
+def test_events_csv_includes_radio_decision_fields(tmp_path: pathlib.Path) -> None:
+    engine = EventDrivenEngine(seed=10)
+    nodes = [Node(node_id=1, period_s=30.0, payload_size=12)]
+    result = engine.run(
+        nodes=nodes,
+        until_s=60.0,
+        mode="snir_on",
+        algo="adr",
+        interference_db=4.0,
+        sigma=0.5,
+    )
+
+    write_run_outputs(
+        output_root=tmp_path,
+        run_id="radio_fields",
+        run_config={
+            "N": 1,
+            "speed": 1.0,
+            "mobility_model": "rwp",
+            "mode": "snir_on",
+            "algo": "adr",
+            "gateways": 1,
+            "sigma": 0.5,
+            "seed": 10,
+            "rep": 1,
+        },
+        events=result.events,
+        duration_s=60.0,
+        time_bin_s=30.0,
+    )
+
+    events_path = tmp_path / "results" / "radio_fields" / "events.csv"
+    with events_path.open("r", encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        assert reader.fieldnames is not None
+        assert "sinr_db" in reader.fieldnames
+        assert "snr_db" in reader.fieldnames
+        assert "threshold_db" in reader.fieldnames
+        assert "success" in reader.fieldnames
+
+
+def test_run_log_contains_sinr_success_diagnostic(tmp_path: pathlib.Path) -> None:
+    from mobilesfrdth.simulator.engine import GridRunOrchestrator
+
+    orchestrator = GridRunOrchestrator(output_root=tmp_path)
+    report = orchestrator.execute_jobs(
+        [
+            {
+                "job_id": "diag",
+                "params": {
+                    "run_id": "diag",
+                    "N": 5,
+                    "period_s": 30.0,
+                    "duration_s": 120.0,
+                    "mode": "snir_on",
+                    "algo": "adr",
+                    "sigma": 1.0,
+                    "seed": 5,
+                },
+            }
+        ]
+    )
+
+    assert report.reports and report.reports[0].success
+    run_log = (tmp_path / "results" / "diag" / "run.log").read_text(encoding="utf-8")
+    assert "Diagnostic SINR->success run_id=diag" in run_log
+    assert "Diagnostic SINR bin" in run_log
