@@ -31,6 +31,8 @@ EVENT_COLUMNS = [
     "airtime_s",
     "outage",
     "switch_count",
+    "decision_reason",
+    "target_sf",
 ]
 NODE_TIMESERIES_COLUMNS = [
     *SCENARIO_ID_COLUMNS,
@@ -81,7 +83,7 @@ def _coerce_event(event: Any) -> dict[str, Any]:
         "event_type": getattr(event, "kind", "uplink"),
         "node_id": getattr(event, "node_id", -1),
     }
-    for field in ("sf", "snr_db", "sinr_db", "threshold_db", "success", "delivered", "payload_bytes", "airtime_s", "outage", "switch_count"):
+    for field in ("sf", "snr_db", "sinr_db", "threshold_db", "success", "delivered", "payload_bytes", "airtime_s", "outage", "switch_count", "decision_reason", "target_sf"):
         if hasattr(event, field):
             payload[field] = getattr(event, field)
     return payload
@@ -146,6 +148,8 @@ def write_run_outputs(
         airtime_s = float(event.get("airtime_s", 0.0) or 0.0)
         outage = int(bool(event.get("outage", not success)))
         switch_count = int(event.get("switch_count", 0) or 0)
+        decision_reason = str(event.get("decision_reason", "") or "")
+        target_sf = int(event.get("target_sf", sf) or sf)
 
         row = {
             **scenario,
@@ -164,6 +168,8 @@ def write_run_outputs(
             "airtime_s": airtime_s,
             "outage": outage,
             "switch_count": switch_count,
+            "decision_reason": decision_reason,
+            "target_sf": target_sf,
         }
         event_rows.append(row)
 

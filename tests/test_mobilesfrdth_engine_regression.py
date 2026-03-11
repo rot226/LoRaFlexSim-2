@@ -72,8 +72,8 @@ def test_non_regression_metrics_vary_with_network_size_and_mode(tmp_path: pathli
 
 def test_switch_count_stays_zero_when_sf_constant(monkeypatch) -> None:
     monkeypatch.setattr(
-        "mobilesfrdth.simulator.engine.recommend_sf",
-        lambda *, current_sf, snr_db, cfg: current_sf,
+        "mobilesfrdth.simulator.engine.recommend_sf_with_reason",
+        lambda *, current_sf, snr_db, cfg: (current_sf, "test_margin"),
     )
     engine = EventDrivenEngine(seed=42)
     nodes = [Node(node_id=1, period_s=30.0, payload_size=12)]
@@ -94,8 +94,8 @@ def test_switch_count_stays_zero_when_sf_constant(monkeypatch) -> None:
 
 def test_switch_count_increases_when_sf_is_adaptive(monkeypatch) -> None:
     monkeypatch.setattr(
-        "mobilesfrdth.simulator.engine.recommend_sf",
-        lambda *, current_sf, snr_db, cfg: 8 if current_sf == 7 else 7,
+        "mobilesfrdth.simulator.engine.recommend_sf_with_reason",
+        lambda *, current_sf, snr_db, cfg: ((8 if current_sf == 7 else 7), "test_margin"),
     )
     engine = EventDrivenEngine(seed=42)
     nodes = [Node(node_id=1, period_s=30.0, payload_size=12, meta={"sf": 7})]
@@ -121,7 +121,7 @@ def test_all_algorithms_update_sf_via_common_interface(monkeypatch) -> None:
 
         def fake_select(**kwargs):
             calls.append(kwargs["algo_name"])
-            return kwargs["current_sf"]
+            return kwargs["current_sf"], "test_common"
 
         monkeypatch.setattr(engine, "_select_next_sf", fake_select)
         nodes = [Node(node_id=1, period_s=30.0, payload_size=12)]
@@ -212,6 +212,12 @@ def test_events_csv_includes_radio_decision_fields(tmp_path: pathlib.Path) -> No
         assert "snr_db" in reader.fieldnames
         assert "threshold_db" in reader.fieldnames
         assert "success" in reader.fieldnames
+        assert "decision_reason" in reader.fieldnames
+        assert "target_sf" in reader.fieldnames
+
+        rows = list(reader)
+        assert rows
+        assert all(row["decision_reason"] != "" for row in rows)
 
 
 def test_run_log_contains_sinr_success_diagnostic(tmp_path: pathlib.Path) -> None:
@@ -240,3 +246,26 @@ def test_run_log_contains_sinr_success_diagnostic(tmp_path: pathlib.Path) -> Non
     run_log = (tmp_path / "results" / "diag" / "run.log").read_text(encoding="utf-8")
     assert "Diagnostic SINR->success run_id=diag" in run_log
     assert "Diagnostic SINR bin" in run_log
+
+
+def test_sf_distributions_differ_between_adr_and_adr_mixra() -> None:
+    def _distribution(algo: str) -> dict[int, int]:
+        engine = EventDrivenEngine(seed=77)
+        nodes = [Node(node_id=i + 1, period_s=20.0, payload_size=24) for i in range(35)]
+        result = engine.run(
+            nodes=nodes,
+            until_s=900.0,
+            mode="snir_on",
+            algo=algo,
+            interference_db=6.0,
+            sigma=1.2,
+        )
+        dist: dict[int, int] = {}
+        for event in result.events:
+            dist[event.sf] = dist.get(event.sf, 0) + 1
+        return dist
+
+    adr_dist = _distribution("adr")
+    mixra_dist = _distribution("adr_mixra")
+
+    assert adr_dist != mixra_dist

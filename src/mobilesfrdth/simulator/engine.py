@@ -12,7 +12,7 @@ from time import monotonic
 from typing import Any, Callable
 
 from .io import write_run_outputs
-from .adr.adr_legacy import AdrLegacyConfig, recommend_sf
+from .adr.adr_legacy import AdrLegacyConfig, recommend_sf_with_reason
 from .adr.adr_mixra import AdrMixRaConfig, adapt_link
 from .mab.ucb import UCB1
 from .mab.ucb_forget import UCBForget
@@ -43,6 +43,8 @@ class Event:
     airtime_s: float = 0.0
     outage: bool = True
     switch_count: int = 0
+    decision_reason: str = ""
+    target_sf: int = 7
 
 
 @dataclass
@@ -125,13 +127,13 @@ class EventDrivenEngine:
         mab_agents: dict[int, UCB1 | UCBForget],
         sf_arms: list[int],
         node_tx_power_dbm: float,
-    ) -> int:
-        """Calcule le SF cible via une interface commune, quel que soit l'algo."""
+     ) -> tuple[int, str]:
+        """Calcule le SF cible et la raison via une interface commune."""
 
         if algo_name == "adr":
-            return recommend_sf(current_sf=current_sf, snr_db=snr_db, cfg=adr_cfg)
+            return recommend_sf_with_reason(current_sf=current_sf, snr_db=snr_db, cfg=adr_cfg)
         if algo_name == "adr_mixra":
-            sf, _ = adapt_link(
+            sf, _, reason = adapt_link(
                 current_sf=current_sf,
                 current_tx_power_dbm=node_tx_power_dbm,
                 snr_db=snr_db,
@@ -139,15 +141,16 @@ class EventDrivenEngine:
                 latency_estimate_s=airtime_s,
                 cfg=adr_mixra_cfg,
             )
-            return sf
+            return sf, reason
         if algo_name in {"ucb", "ucb_forget"}:
             agent = mab_agents[node_id]
             arm = agent.select_arm()
             new_sf = sf_arms[arm]
             reward = (1.0 if success else -0.25) - 0.08 * airtime_s
             agent.update(arm, reward)
-            return new_sf
-        return current_sf
+            reason = f"mab_reward={(1.0 if success else -0.25) - 0.08 * airtime_s:.3f}|airtime_cost={airtime_s:.3f}s|qos={'ok' if success else 'degraded'}"
+            return new_sf, reason
+        return current_sf, "no_adaptation"
 
     def run(
         self,
@@ -225,7 +228,7 @@ class EventDrivenEngine:
                 sinr_db = metric_db if interference_cfg.snir_enabled else snr_db
                 threshold_db = float(interference_cfg.snr_thresholds_db.get(current_sf, -20.0))
 
-                new_sf = self._select_next_sf(
+                new_sf, decision_reason = self._select_next_sf(
                     algo_name=algo_name,
                     current_sf=current_sf,
                     snr_db=snr_db,
@@ -260,6 +263,8 @@ class EventDrivenEngine:
                         airtime_s=airtime_s,
                         outage=not success,
                         switch_count=switched,
+                        decision_reason=decision_reason,
+                        target_sf=new_sf,
                     )
                 )
 
