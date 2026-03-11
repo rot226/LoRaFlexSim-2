@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import json
 import warnings
 from pathlib import Path
 
@@ -1234,3 +1235,70 @@ def test_global_metric_deduplicates_algorithm_labels(
     assert captures, "Aucune figure n'a été générée."
     for _path, labels in captures:
         assert len(labels) == len(set(labels)), "Les algorithmes doivent être uniques par figure."
+
+
+def test_apply_profile_ieee_core_filters_expected_values() -> None:
+    records = [
+        {
+            "algorithm": "adr",
+            "snir_state": "snir_on",
+            "model": "smooth",
+            "gateways": 1,
+            "sigma": 6,
+        },
+        {
+            "algorithm": "adr",
+            "snir_state": "snir_off",
+            "model": "smooth",
+            "gateways": 1,
+            "sigma": 6,
+        },
+    ]
+
+    filtered, filters = plot_step1_results._apply_profile_filters(records, "ieee_core")
+
+    assert filters == {
+        "snir_state": "snir_on",
+        "model": "SMOOTH",
+        "gateways": 1,
+        "sigma": 6,
+    }
+    assert len(filtered) == 1
+    assert filtered[0]["snir_state"] == "snir_on"
+
+
+def test_ensure_non_empty_filter_result_raises_on_empty() -> None:
+    with pytest.raises(ValueError, match="Refus du tracé"):
+        plot_step1_results._ensure_non_empty_filter_result(
+            [],
+            stage="summary",
+            active_filters={"snir_state": "snir_on"},
+        )
+
+
+def test_generate_step1_figures_writes_plots_summary(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    class _FakePlt:
+        rcParams = {}
+
+        def close(self, *_args: object, **_kwargs: object) -> None:
+            return None
+
+    monkeypatch.setattr(plot_step1_results, "plt", _FakePlt())
+    monkeypatch.setattr(plot_step1_results, "_apply_ieee_style", lambda: None)
+    monkeypatch.setattr(plot_step1_results, "_load_step1_records", lambda *_args, **_kwargs: [])
+    monkeypatch.setattr(plot_step1_results, "_load_comparison_records", lambda *_args, **_kwargs: [])
+
+    figures_dir = tmp_path / "figures"
+    plot_step1_results.generate_step1_figures(
+        results_dir=tmp_path / "results",
+        figures_dir=figures_dir,
+        compare_snir=False,
+        profile="ieee_core",
+        ieee=True,
+    )
+
+    summary_path = figures_dir / "step1" / "plots_summary.json"
+    payload = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert payload["profile"] == "ieee_core"
+    assert payload["filters_applied"]["model"] == "SMOOTH"
+    assert payload["filters_applied"]["sigma"] == 6
