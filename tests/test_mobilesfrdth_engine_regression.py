@@ -138,9 +138,11 @@ def test_all_algorithms_update_sf_via_common_interface(monkeypatch) -> None:
         return nodes[0].meta["sf"]
 
     sf_adr = _run("adr")
+    sf_adr_mixra = _run("adr_mixra")
     sf_ucb = _run("ucb")
     sf_ucb_forget = _run("ucb_forget")
 
     assert isinstance(sf_adr, int)
+    assert isinstance(sf_adr_mixra, int)
     assert isinstance(sf_ucb, int)
     assert isinstance(sf_ucb_forget, int)

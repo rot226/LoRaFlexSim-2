@@ -14,6 +14,7 @@ from typing import Any, Callable
 
 from .io import write_run_outputs
 from .adr.adr_legacy import AdrLegacyConfig, recommend_sf
+from .adr.adr_mixra import AdrMixRaConfig, adapt_link
 from .mab.ucb import UCB1
 from .mab.ucb_forget import UCBForget
 
@@ -107,13 +108,25 @@ class EventDrivenEngine:
         airtime_s: float,
         node_id: int,
         adr_cfg: AdrLegacyConfig,
+        adr_mixra_cfg: AdrMixRaConfig,
         mab_agents: dict[int, UCB1 | UCBForget],
         sf_arms: list[int],
+        node_tx_power_dbm: float,
     ) -> int:
         """Calcule le SF cible via une interface commune, quel que soit l'algo."""
 
         if algo_name == "adr":
             return recommend_sf(current_sf=current_sf, snr_db=snr_db, cfg=adr_cfg)
+        if algo_name == "adr_mixra":
+            sf, _ = adapt_link(
+                current_sf=current_sf,
+                current_tx_power_dbm=node_tx_power_dbm,
+                snr_db=snr_db,
+                pdr_estimate=1.0 if success else 0.0,
+                latency_estimate_s=airtime_s,
+                cfg=adr_mixra_cfg,
+            )
+            return sf
         if algo_name in {"ucb", "ucb_forget"}:
             agent = mab_agents[node_id]
             arm = agent.select_arm()
@@ -142,6 +155,7 @@ class EventDrivenEngine:
         algo_name = algo.lower()
         mode_name = mode.lower()
         adr_cfg = AdrLegacyConfig()
+        adr_mixra_cfg = AdrMixRaConfig()
 
         mab_agents: dict[int, UCB1 | UCBForget] = {}
         sf_arms = [7, 8, 9, 10, 11, 12]
@@ -189,8 +203,10 @@ class EventDrivenEngine:
                     airtime_s=airtime_s,
                     node_id=node.node_id,
                     adr_cfg=adr_cfg,
+                    adr_mixra_cfg=adr_mixra_cfg,
                     mab_agents=mab_agents,
                     sf_arms=sf_arms,
+                    node_tx_power_dbm=float(node.meta.get("tx_power_dbm", 14.0)),
                 )
 
                 switched = int(new_sf != sf_previous)
