@@ -10,22 +10,11 @@ import matplotlib.pyplot as plt
 
 PLOT_DPI = 300
 
-PLOT_STYLE = {
-    "font.size": 10,
-    "axes.labelsize": 11,
-    "axes.titlesize": 12,
-    "legend.fontsize": 9,
-    "xtick.labelsize": 9,
-    "ytick.labelsize": 9,
-    "lines.linewidth": 1.5,
-    "lines.markersize": 4,
-}
-
-IEEE_PLOT_STYLE = {
+UNIFIED_PLOT_STYLE = {
     "font.family": "DejaVu Sans",
-    "font.size": 9,
-    "axes.labelsize": 9,
-    "axes.titlesize": 10,
+    "font.size": 10,
+    "axes.labelsize": 10,
+    "axes.titlesize": 11,
     "legend.fontsize": 8,
     "xtick.labelsize": 8,
     "ytick.labelsize": 8,
@@ -47,8 +36,9 @@ IEEE_PLOT_STYLE = {
     "grid.linestyle": "--",
     "grid.linewidth": 0.5,
     "grid.alpha": 0.55,
-    "lines.linewidth": 1.9,
-    "lines.markersize": 5,
+    "lines.linewidth": 1.8,
+    "lines.markersize": 4.5,
+    "patch.linewidth": 0.8,
     "figure.dpi": PLOT_DPI,
     "savefig.dpi": PLOT_DPI,
 }
@@ -84,9 +74,8 @@ AXIS_LABELS = {
 
 
 def setup_plot_style(*, ieee_ready: bool = False) -> None:
-    plt.rcParams.update(PLOT_STYLE)
-    if ieee_ready:
-        plt.rcParams.update(IEEE_PLOT_STYLE)
+    _ = ieee_ready
+    plt.rcParams.update(UNIFIED_PLOT_STYLE)
 
 
 def normalized_axis_label(name: str) -> str:
