@@ -330,7 +330,13 @@ def _log_figure_result(path: Path, generated: bool, *, verbose: bool) -> None:
     status = "générée" if generated else "ignorée"
     print(f"Figure {status}: {path}")
 
-def _plot_xy_by_algo(rows: list[dict[str, str]], *, fig_name: str, y_col: str, out_path: Path) -> bool:
+def _is_reliability_metric(y_col: str) -> bool:
+    return y_col in {"pdr_mean", "der_mean"}
+
+
+def _plot_xy_by_algo(
+    rows: list[dict[str, str]], *, fig_name: str, y_col: str, out_path: Path, y_scale: str = "auto"
+) -> bool:
     resolved_metric = _resolve_metric_column(rows, expected=y_col)
     needed = {"N", "algo", resolved_metric}
     if not rows:
@@ -347,6 +353,7 @@ def _plot_xy_by_algo(rows: list[dict[str, str]], *, fig_name: str, y_col: str, o
         return False
 
     dropped = 0
+    y_values: list[float] = []
     plt.figure(figsize=(8, 5))
     plotted = 0
     for algo, algo_rows in series:
@@ -374,6 +381,7 @@ def _plot_xy_by_algo(rows: list[dict[str, str]], *, fig_name: str, y_col: str, o
                 continue
             means.append(ci.mean)
             errors.append(ci.half_width)
+            y_values.append(ci.mean)
         if means:
             plt.errorbar(xs, means, yerr=errors, marker="o", capsize=3, label=algo)
             plotted += 1
@@ -385,12 +393,42 @@ def _plot_xy_by_algo(rows: list[dict[str, str]], *, fig_name: str, y_col: str, o
         plt.close()
         return False
 
+    scale_policy = "standard"
+    if _is_reliability_metric(y_col):
+        y_min = min(y_values)
+        y_max = max(y_values)
+        if y_scale == "full":
+            plt.ylim(0.0, 1.0)
+            scale_policy = "full [0,1]"
+        elif y_scale == "zoom":
+            lower = max(0.0, y_min - 0.02)
+            upper = min(1.0, max(y_max + 0.01, lower + 0.01))
+            plt.ylim(lower, upper)
+            scale_policy = f"zoom [{lower:.3f},{upper:.3f}]"
+        elif y_scale == "auto":
+            if y_min >= 0.9:
+                lower = max(0.0, y_min - 0.02)
+                upper = min(1.0, max(y_max + 0.01, lower + 0.01))
+                plt.ylim(lower, upper)
+                scale_policy = f"auto→zoom [{lower:.3f},{upper:.3f}] + annexe [0,1]"
+            else:
+                plt.ylim(0.0, 1.0)
+                scale_policy = "auto→full [0,1]"
+
     plt.grid(alpha=0.3)
     plt.xlabel(normalized_axis_label("N"))
     plt.ylabel(normalized_axis_label(y_col))
-    plt.legend()
+    plt.legend(title=f"Algo | y-scale: {scale_policy}")
     plt.tight_layout()
     _save_figure_variants(out_path)
+
+    if _is_reliability_metric(y_col) and y_scale == "auto" and y_values and min(y_values) >= 0.9:
+        plt.ylim(0.0, 1.0)
+        plt.legend(title="Algo | y-scale: annexe full [0,1]")
+        plt.tight_layout()
+        annex_path = out_path.with_name(f"{out_path.stem}_annex_full_scale{out_path.suffix}")
+        _save_figure_variants(annex_path)
+
     plt.close()
     return True
 
@@ -1093,6 +1131,7 @@ def generate_minimal_figures(
     include_bonus: bool = True,
     verbose: bool = False,
     ieee_ready: bool = False,
+    y_scale: str = "auto",
 ) -> tuple[list[Path], list[FigureTrace]]:
     if article_profile not in ARTICLE_PROFILE_FILTERS:
         raise ValueError(f"Profil article inconnu: {article_profile}")
@@ -1108,7 +1147,7 @@ def generate_minimal_figures(
         effective_filters = filters.merge(local_filter).merge(_resolve_profile_filter(article_profile, fig_name))
         selected = _apply_filters(payloads[source], effective_filters)
         out_path = out_dir / _stable_figure_name(fig_name)
-        did_generate = _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path)
+        did_generate = _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path, y_scale=y_scale)
         traces.append(
             FigureTrace(
                 figure=out_path.name,
@@ -1147,6 +1186,7 @@ def generate_minimal_figures(
         fig_name=fig08.name,
         y_col="jain_fairness_mean",
         out_path=fig08,
+        y_scale=y_scale,
     )
     traces.append(
         FigureTrace(
@@ -1227,7 +1267,7 @@ def generate_minimal_figures(
             elif fig_name == "fig16_fairness_reliability_tradeoff.png":
                 did_generate = _plot_fairness_reliability_tradeoff(selected, out_path)
             else:
-                did_generate = _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path)
+                did_generate = _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path, y_scale=y_scale)
             traces.append(
                 FigureTrace(
                     figure=out_path.name,
@@ -1298,6 +1338,12 @@ def build_parser() -> argparse.ArgumentParser:
         default="core",
         help="Profil d'article figé pour imposer les filtres documentés par figure (core ou full).",
     )
+    parser.add_argument(
+        "--y-scale",
+        choices=["auto", "full", "zoom"],
+        default="auto",
+        help="Politique d'échelle Y pour PDR/DER: auto (zoom si proche de 1 + annexe full), full ([0,1]), zoom.",
+    )
     return parser
 
 
@@ -1310,6 +1356,7 @@ def main(argv: list[str] | None = None) -> int:
         article_profile=args.article_profile,
         include_bonus=not args.no_bonus,
         ieee_ready=args.ieee_ready,
+        y_scale=args.y_scale,
     )
     print(f"{len(generated)} figure(s) générée(s).")
     for path in generated:
