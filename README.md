@@ -143,6 +143,81 @@ Pour les nouvelles figures bonus :
   fixes** : profil `core` restreint à `algo ∈ {adr, adr_mixra, ucb,
   ucb_forget}` ; profil `full` sans restriction additionnelle.
 
+### Protocoles IEEE-ready
+
+Cette section sert de checklist « paper-ready » pour documenter **exactement**
+ce qui est tracé et interprété.
+
+#### 1) Définitions métriques (normalisées pour l'article)
+
+- **PDR (`pdr_mean`)** : ratio `paquets reçus / paquets émis`.
+- **DER (`der_mean`)** : ratio `paquets décodés valides / paquets émis`
+  (plus strict que le PDR).
+- **Throughput (`throughput_bps_mean`)** : débit utile moyen en bit/s.
+- **Jain fairness (`jain_fairness_mean`)** : indice d'équité inter-nœuds,
+  borné dans `[0,1]`.
+- **Airtime (`airtime_total_s_mean`)** : occupation radio cumulée moyenne.
+- **Switch count (`switch_count_mean`)** : nombre moyen de changements de SF/état
+  ADR (proxy de stabilité).
+- **`Tc_s` / tracking lag (`Tc_s_mean`)** : temps de convergence ou de
+  ré-adaptation après changement de conditions.
+- **Outage probability (`outage_prob_mean`)** : probabilité de queue
+  `P[SINR<th]` (seuil de travail configurable côté pipeline).
+- **Energy efficiency (`energy_efficiency_mean`)** : efficacité énergétique
+  normalisée (fiabilité par coût énergétique).
+
+#### 2) Filtres IEEE-ready par figure
+
+- Les filtres imposés par le pipeline sont définis dans
+  `src/mobilesfrdth/plotting/plots.py` via `ARTICLE_PROFILE_FILTERS`.
+- **Profil `core`** : limite les algorithmes aux méthodes article
+  `{adr, adr_mixra, ucb, ucb_forget}` et force `mode=snir_on` pour les figures
+  SINR/outage.
+- **Profil `full`** : conserve les modes SNIR requis et ajoute des restrictions
+  de vitesses `speed ∈ {1,3,5}` sur les figures dynamiques (fig07, fig13,
+  fig15).
+
+#### 3) Paramètres exacts des campagnes recommandées
+
+Commande Windows 11 (profil article cœur, reproductible) :
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/run_campaign_profiles.ps1 -Profile core_article -Out runs\article_core
+```
+
+Le profil `core_article` applique exactement :
+
+- `N=50,100,160`
+- `speed=1,3`
+- `mode=SNIR_OFF,SNIR_ON`
+- `algo=ADR,MIXRA_H,MIXRA_OPT,UCB`
+- `reps=3`
+- `duration_s=1800`
+- `seed_base=1234`
+- `--resume --max-walltime 21600`
+
+#### 4) Interprétation attendue par figure
+
+| Figure | Question scientifique | CSV source |
+|---|---|---|
+| `fig01_pdr_vs_n_snir_off.png` | Quelle robustesse PDR quand SNIR est désactivé et la charge (`N`) augmente ? | `metric_by_factor.csv` |
+| `fig02_pdr_vs_n_snir_on.png` | Quel gain/perte de PDR avec SNIR activé selon la densité ? | `metric_by_factor.csv` |
+| `fig03_der_vs_n_snir_off.png` | Quelle part de paquets réellement décodés hors mode SNIR ? | `metric_by_factor.csv` |
+| `fig04_der_vs_n_snir_on.png` | L'activation SNIR améliore-t-elle la décodabilité à forte charge ? | `metric_by_factor.csv` |
+| `fig05_throughput_vs_n_snir_off.png` | Comment évolue le débit utile sans contrôle SNIR ? | `metric_by_factor.csv` |
+| `fig06_throughput_vs_n_snir_on.png` | Quel compromis débit/robustesse avec SNIR activé ? | `metric_by_factor.csv` |
+| `fig07_tc_vs_speed.png` | Quelle sensibilité du temps de convergence à la mobilité ? | `convergence_tc.csv` |
+| `fig08_fairness_vs_n.png` | La montée en charge dégrade-t-elle l'équité inter-nœuds ? | `metric_by_factor.csv` |
+| `fig09_sf_distribution_snir_on.png` | Quelle politique SF globale est apprise en mode SNIR ON ? | `distribution_sf.csv` |
+| `fig09b_sf_distribution_snir_on_small_multiples.png` | Comment se compare la distribution SF entre algorithmes ? | `distribution_sf.csv` |
+| `fig10_sinr_cdf.png` | Quelle distribution SINR (et queue défavorable) selon l'algorithme ? | `sinr_cdf.csv` |
+| `fig11_airtime_vs_n.png` | Quel coût d'occupation radio quand `N` augmente ? | `metric_by_factor.csv` |
+| `fig12_switch_count_vs_n.png` | Quelle stabilité des décisions ADR face à la charge ? | `metric_by_factor.csv` |
+| `fig13_ucb_tracking_lag_vs_speed.png` | `UCB_FORGET` suit-il mieux la non-stationnarité que `UCB` ? | `ucb_tracking.csv` |
+| `fig14_pareto_reliability_airtime.png` | Quel front de Pareto fiabilité ↔ airtime est obtenu ? | `pareto_reliability_airtime.csv` |
+| `fig15_outage_probability_vs_n.png` | Comment évolue le risque d'outage de queue avec la densité ? | `outage_probability.csv` |
+| `fig16_energy_efficiency_vs_reliability.png` | Quel compromis efficacité énergétique ↔ fiabilité par méthode ? | `energy_efficiency_reliability.csv` |
+
 ### Reprise de campagne `mobilesfrdth run` (sans perte)
 
 La sous-commande `run` expose maintenant des options de reprise et de limitation
