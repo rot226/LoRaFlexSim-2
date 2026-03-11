@@ -170,6 +170,20 @@ def test_cli_smoke_grid_pipeline_contracts_and_run_id_uniqueness(monkeypatch, tm
     }["fig02_pdr_vs_n_snir_on.png"]
     assert fig02_filters["mode"] == ["snir_on"]
 
+    fig02_trace = {
+        entry["figure"]: entry for entry in plots_payload["figure_filters"]
+    }["fig02_pdr_vs_n_snir_on.png"]
+    assert "points_by_curve" in fig02_trace
+
+    campaign_log = tmp_path / "campaign_log.jsonl"
+    assert campaign_log.is_file()
+    campaign_entries = [
+        json.loads(line)
+        for line in campaign_log.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert [entry["step"] for entry in campaign_entries] == ["run", "aggregate", "plots"]
+
 
 def test_cli_plots_generates_fig01_to_fig06_with_non_empty_core_campaign(monkeypatch, tmp_path: pathlib.Path) -> None:
     config_path = pathlib.Path(__file__).resolve().parents[1] / "experiments" / "default.yaml"

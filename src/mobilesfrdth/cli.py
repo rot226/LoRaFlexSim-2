@@ -94,6 +94,19 @@ def _format_eta(seconds: float | None) -> str:
     return f"{hours:02d}:{minutes:02d}:{sec:02d}"
 
 
+def _campaign_log_path(out_dir: Path, explicit: Path | None) -> Path:
+    if explicit is not None:
+        return explicit
+    return out_dir.parent / "campaign_log.jsonl"
+
+
+def _append_campaign_log(path: Path, *, step: str, payload: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    entry = {"step": step, **payload}
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     out_dir: Path = args.out
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -143,12 +156,15 @@ def cmd_run(args: argparse.Namespace) -> int:
             f"ETA={_format_eta(eta_s)} | succès={success_count} échec={failure_count}"
         )
 
+    campaign_log_file = _campaign_log_path(out_dir, args.campaign_log)
+    print(f"Run: progression des runs ({len(jobs)} au total).")
+
     report = orchestrator.execute_jobs(
         jobs,
         resume=args.resume,
         max_runs=args.max_runs,
         max_walltime_s=args.max_walltime,
-        on_run_complete=_on_run_complete if args.verbose else None,
+        on_run_complete=_on_run_complete,
     )
     failures = [
         {"run_id": item.run_id, "error": item.error, "run_dir": str(item.run_dir)}
@@ -180,6 +196,21 @@ def cmd_run(args: argparse.Namespace) -> int:
     if execution_summary["interrupted"]:
         print("Exécution interrompue (Ctrl+C): bilan partiel écrit.")
     print(f"Résumé batch écrit dans {summary_file}")
+    _append_campaign_log(
+        campaign_log_file,
+        step="run",
+        payload={
+            "out_dir": str(out_dir),
+            "jobs_file": str(output_file),
+            "summary_file": str(summary_file),
+            "num_jobs": len(jobs),
+            "num_success": successful_runs,
+            "num_failures": len(failures),
+            "num_skipped": report.skipped_runs,
+            "interrupted": report.interrupted,
+        },
+    )
+    print(f"Log campagne mis à jour: {campaign_log_file}")
     return 130 if execution_summary["interrupted"] else (1 if failures else 0)
 
 
@@ -240,7 +271,29 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
     manifest["distinct_groups_by_algo"] = distinct_groups_by_algo
     output_file = out_dir / "aggregate.json"
     _dump_json(output_file, manifest)
+
+    total_groups = sum(distinct_groups_by_algo.values())
+    print(
+        "Aggregate: "
+        f"groupes détectés={total_groups}, scénarios/run détectés={found_runs}, manquants={missing_runs}"
+    )
     print(f"Agrégation écrite dans {output_file}")
+
+    campaign_log_file = _campaign_log_path(out_dir, args.campaign_log)
+    _append_campaign_log(
+        campaign_log_file,
+        step="aggregate",
+        payload={
+            "out_dir": str(out_dir),
+            "aggregate_file": str(output_file),
+            "num_inputs": len(args.results),
+            "found_runs": found_runs,
+            "missing_runs": missing_runs,
+            "groups_by_algo": distinct_groups_by_algo,
+            "total_groups": total_groups,
+        },
+    )
+    print(f"Log campagne mis à jour: {campaign_log_file}")
     return 0
 
 
@@ -285,6 +338,8 @@ def cmd_plots(args: argparse.Namespace) -> int:
                 "source": trace.source,
                 "metric": trace.metric,
                 "filters": trace.filters,
+                "num_points": trace.num_points,
+                "points_by_curve": trace.points_by_curve,
                 "generated": trace.generated,
             }
             for trace in traces
@@ -292,8 +347,38 @@ def cmd_plots(args: argparse.Namespace) -> int:
     }
     output_file = out_dir / "plots_summary.json"
     _dump_json(output_file, report)
+    print(f"Plots: dataset utilisé={aggregates_dir}")
+    for trace in traces:
+        print(
+            f"- {trace.figure} | source={trace.source} | filtres={trace.filters} "
+            f"| points={trace.num_points} | points/courbe={trace.points_by_curve}"
+        )
     print(f"{len(generated)} figure(s) écrite(s) dans {out_dir}")
     print(f"Résumé de plots écrit dans {output_file}")
+
+    campaign_log_file = _campaign_log_path(out_dir, args.campaign_log)
+    _append_campaign_log(
+        campaign_log_file,
+        step="plots",
+        payload={
+            "aggregates_dir": str(aggregates_dir),
+            "out_dir": str(out_dir),
+            "plots_summary": str(output_file),
+            "num_figures": len(generated),
+            "figures": [
+                {
+                    "figure": trace.figure,
+                    "source": trace.source,
+                    "filters": trace.filters,
+                    "num_points": trace.num_points,
+                    "points_by_curve": trace.points_by_curve,
+                    "generated": trace.generated,
+                }
+                for trace in traces
+            ],
+        },
+    )
+    print(f"Log campagne mis à jour: {campaign_log_file}")
     return 0
 
 
@@ -357,6 +442,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Durée murale max en secondes pour la commande run (arrêt propre au-delà).",
     )
     run_parser.add_argument("--verbose", action="store_true", help="Affiche des détails de progression supplémentaires.")
+    run_parser.add_argument(
+        "--campaign-log",
+        type=Path,
+        default=None,
+        help="Chemin du log campagne JSONL (par défaut: ../campaign_log.jsonl depuis --out).",
+    )
     run_parser.set_defaults(func=cmd_run)
 
     aggregate_parser = subparsers.add_parser(
@@ -396,6 +487,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Échoue si num_jobs (jobs.json) ne correspond pas au nombre de run dirs trouvés.",
     )
     aggregate_parser.add_argument("--verbose", action="store_true", help="Affiche le détail des dossiers traités.")
+    aggregate_parser.add_argument(
+        "--campaign-log",
+        type=Path,
+        default=None,
+        help="Chemin du log campagne JSONL (par défaut: ../campaign_log.jsonl depuis --out).",
+    )
     aggregate_parser.set_defaults(func=cmd_aggregate)
 
     plots_parser = subparsers.add_parser(
@@ -436,6 +533,12 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["auto", "full", "zoom"],
         default="auto",
         help="Politique d'échelle Y pour PDR/DER: auto (zoom si proche de 1 + annexe full), full ([0,1]), zoom.",
+    )
+    plots_parser.add_argument(
+        "--campaign-log",
+        type=Path,
+        default=None,
+        help="Chemin du log campagne JSONL (par défaut: ../campaign_log.jsonl depuis --out).",
     )
     plots_parser.set_defaults(func=cmd_plots)
 

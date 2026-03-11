@@ -194,6 +194,7 @@ class FigureTrace:
     metric: str
     filters: dict[str, list[str]]
     num_points: int
+    points_by_curve: dict[str, int]
     generated: bool
 
 
@@ -471,6 +472,28 @@ def _count_points(rows: list[dict[str, str]], metric: str) -> int:
     if metric == "Tc_s":
         return sum(1 for row in rows if _to_float(row.get("speed")) is not None and _to_float(row.get("Tc_s")) is not None)
     return sum(1 for row in rows if _to_float(row.get("N")) is not None and _to_float(row.get(resolved)) is not None)
+
+
+def _count_points_by_curve(rows: list[dict[str, str]], metric: str) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    resolved = _resolve_metric_column(rows, expected=metric)
+
+    for row in rows:
+        if metric == "sinr_db":
+            valid = _to_float(row.get("sinr_db")) is not None and _to_float(row.get("quantile")) is not None
+        elif metric == "ratio":
+            valid = _to_float(row.get("sf")) is not None and _to_float(row.get("ratio")) is not None
+        elif metric == "Tc_s":
+            valid = _to_float(row.get("speed")) is not None and _to_float(row.get("Tc_s")) is not None
+        else:
+            valid = _to_float(row.get("N")) is not None and _to_float(row.get(resolved)) is not None
+
+        if not valid:
+            continue
+
+        curve = str(row.get("algo", "all")) if "algo" in row else "all"
+        counts[curve] = counts.get(curve, 0) + 1
+    return counts
 
 
 def _resolve_metric_column(rows: list[dict[str, str]], *, expected: str) -> str:
@@ -1145,6 +1168,7 @@ def generate_minimal_figures(
                 metric=metric,
                 filters=_filters_to_serializable(effective_filters),
                 num_points=_count_points(selected, metric),
+                points_by_curve=_count_points_by_curve(selected, metric),
                 generated=did_generate,
             )
         )
@@ -1162,6 +1186,7 @@ def generate_minimal_figures(
             metric="Tc_s",
             filters=_filters_to_serializable(fig07_filters),
             num_points=_count_points(_apply_filters(payloads["convergence_tc"], fig07_filters), "Tc_s"),
+            points_by_curve=_count_points_by_curve(_apply_filters(payloads["convergence_tc"], fig07_filters), "Tc_s"),
             generated=did_generate,
         )
     )
@@ -1185,6 +1210,7 @@ def generate_minimal_figures(
             metric="jain_fairness_mean",
             filters=_filters_to_serializable(fig08_filters),
             num_points=_count_points(_apply_filters(payloads["metric_by_factor"], fig08_filters), "jain_fairness_mean"),
+            points_by_curve=_count_points_by_curve(_apply_filters(payloads["metric_by_factor"], fig08_filters), "jain_fairness_mean"),
             generated=did_generate,
         )
     )
@@ -1202,6 +1228,7 @@ def generate_minimal_figures(
             metric="ratio",
             filters=_filters_to_serializable(fig09_filters),
             num_points=_count_points(_apply_filters(payloads["distribution_sf"], fig09_filters), "ratio"),
+            points_by_curve=_count_points_by_curve(_apply_filters(payloads["distribution_sf"], fig09_filters), "ratio"),
             generated=did_generate,
         )
     )
@@ -1219,6 +1246,7 @@ def generate_minimal_figures(
             metric="ratio",
             filters=_filters_to_serializable(fig09b_filters),
             num_points=_count_points(_apply_filters(payloads["distribution_sf"], fig09b_filters), "ratio"),
+            points_by_curve=_count_points_by_curve(_apply_filters(payloads["distribution_sf"], fig09b_filters), "ratio"),
             generated=did_generate,
         )
     )
@@ -1236,6 +1264,7 @@ def generate_minimal_figures(
             metric="sinr_db",
             filters=_filters_to_serializable(fig10_filters),
             num_points=_count_points(_apply_filters(payloads["sinr_cdf"], fig10_filters), "sinr_db"),
+            points_by_curve=_count_points_by_curve(_apply_filters(payloads["sinr_cdf"], fig10_filters), "sinr_db"),
             generated=did_generate,
         )
     )
@@ -1265,6 +1294,7 @@ def generate_minimal_figures(
                     metric=metric,
                     filters=_filters_to_serializable(effective_filters),
                     num_points=_count_points(selected, metric),
+                    points_by_curve=_count_points_by_curve(selected, metric),
                     generated=did_generate,
                 )
             )
@@ -1297,6 +1327,7 @@ def generate_minimal_figures(
                 "metric": trace.metric,
                 "filters": trace.filters,
                 "num_points": trace.num_points,
+                "points_by_curve": trace.points_by_curve,
                 "generated": trace.generated,
             }
             for trace in traces
