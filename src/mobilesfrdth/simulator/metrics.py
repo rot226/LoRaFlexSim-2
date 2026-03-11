@@ -44,7 +44,6 @@ def convergence_tc(
     samples: Sequence[float],
     *,
     dt_s: float,
-    target: float | None = None,
     moving_window_bins: int = 3,
     stationary_tail_bins: int = 5,
     target_ratio: float = 0.9,
@@ -56,8 +55,6 @@ def convergence_tc(
     ``stationary_tail_bins`` derniers points de cette métrique lissée (ou moins si la
     série est courte). On cherche ensuite le premier indice ``i`` tel que:
     ``smoothed[i] >= target_ratio * stationary_estimate``.
-
-    Le paramètre ``target`` reste possible pour forcer une cible explicite.
 
     Formule explicite: ``Tc = i * dt_s``.
     Retourne ``inf`` si non convergé.
@@ -81,7 +78,7 @@ def convergence_tc(
         smoothed.append(sum(window) / len(window))
 
     stationary_window = smoothed[-min(stationary_tail_bins, len(smoothed)) :]
-    stationary_estimate = target if target is not None else (sum(stationary_window) / len(stationary_window))
+    stationary_estimate = sum(stationary_window) / len(stationary_window)
     threshold = target_ratio * stationary_estimate
 
     start_index = min(moving_window_bins - 1, len(smoothed) - 1)
