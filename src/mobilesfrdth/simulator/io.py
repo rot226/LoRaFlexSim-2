@@ -140,16 +140,57 @@ def write_run_outputs(
     outage_events = 0
     total_switch_count = 0
 
+    anomaly_count = 0
+
     for idx, item in enumerate(events):
         event = _coerce_event(item)
-        event_type = str(event.get("event_type", "uplink"))
-        time_s = float(event.get("time_s", 0.0))
-        node_id = int(event.get("node_id", -1))
+
+        required_fields = ("event_type", "time_s", "node_id")
+        missing_required = [field for field in required_fields if field not in event]
+        if missing_required:
+            anomaly_count += 1
+            warnings.warn(
+                (
+                    f"Événement invalide ignoré à l'index {idx}: "
+                    f"champ(s) obligatoire(s) manquant(s): {', '.join(sorted(missing_required))}"
+                ),
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            continue
+
+        event_type = str(event["event_type"])
+        if event_type == "uplink":
+            uplink_missing = [field for field in ("success", "delivered") if field not in event]
+            if uplink_missing:
+                anomaly_count += 1
+                warnings.warn(
+                    (
+                        f"Événement uplink invalide ignoré à l'index {idx}: "
+                        f"champ(s) obligatoire(s) manquant(s): {', '.join(sorted(uplink_missing))}"
+                    ),
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+                continue
+
+        try:
+            time_s = float(event["time_s"])
+            node_id = int(event["node_id"])
+        except (TypeError, ValueError) as exc:
+            anomaly_count += 1
+            warnings.warn(
+                f"Événement invalide ignoré à l'index {idx}: type invalide ({exc})",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            continue
+
         sf = int(event.get("sf", 7) or 7)
         snr_db = float(event.get("snr_db", 0.0) or 0.0)
         sinr_db = float(event.get("sinr_db", snr_db) or 0.0)
         threshold_db = float(event.get("threshold_db", 0.0) or 0.0)
-        success = int(bool(event.get("success", event_type == "uplink")))
+        success = int(bool(event.get("success", False)))
         delivered = int(bool(event.get("delivered", success)))
         payload_bytes = int(event.get("payload_bytes", 0) or 0)
         airtime_s = float(event.get("airtime_s", 0.0) or 0.0)
@@ -229,6 +270,13 @@ def write_run_outputs(
             slot["exploration_sum"] += exploration_rate
             slot["decision_stability_sum"] += decision_stability
             slot["delivered_bytes"] += payload_bytes if delivered else 0
+
+    if anomaly_count:
+        warnings.warn(
+            f"{anomaly_count} événement(s) invalide(s) ignoré(s) pendant l'écriture du run {run_id}.",
+            RuntimeWarning,
+            stacklevel=2,
+        )
 
     _write_csv(run_dir / "events.csv", EVENT_COLUMNS, event_rows)
 
