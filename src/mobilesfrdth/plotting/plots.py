@@ -797,13 +797,19 @@ def _plot_sf_distribution(rows: list[dict[str, str]], out_path: Path) -> bool:
     sf_values = list(range(7, 13))
     algos = sorted(grouped)
 
+    # Unified output format: always render usage share as percentages (0-100%).
     data_percent: dict[str, list[float]] = {}
     for algo in algos:
         means = {sf: sum(grouped[algo][sf]) / len(grouped[algo][sf]) for sf in grouped[algo]}
         ordered = [max(0.0, means.get(sf, 0.0)) for sf in sf_values]
         if has_ratio:
+            # distribution_sf.ratio can be stored either in fractions (sum~1)
+            # or in percentages (sum~100): normalize first to fractions.
             total = sum(ordered)
-            if total > 0 and total > 1.5:
+            if total > 1.5:
+                ordered = [value / 100.0 for value in ordered]
+            total = sum(ordered)
+            if total > 0:
                 ordered = [value / total for value in ordered]
         else:
             total = sum(ordered)
@@ -822,7 +828,7 @@ def _plot_sf_distribution(rows: list[dict[str, str]], out_path: Path) -> bool:
         plt.bar(xs, data_percent[algo], width=width, label=algo, color=_algo_style_kwargs(algo).get("color"))
     plt.grid(axis="y", alpha=0.3)
     plt.xlabel(_axis_label("sf"))
-    plt.ylabel(_axis_label("ratio"))
+    plt.ylabel("Usage share (%)")
     plt.xticks(x_positions, [str(sf) for sf in sf_values])
     plt.ylim(0, 100)
     plt.yticks(y_ticks)
@@ -865,10 +871,15 @@ def _plot_sf_distribution_small_multiples(rows: list[dict[str, str]], out_path: 
 
     sf_values = list(range(7, 13))
     algos = sorted(grouped)
+    # Unified output format: always render usage share as percentages (0-100%).
     data_percent: dict[str, list[float]] = {}
     for algo in algos:
         means = {sf: sum(grouped[algo][sf]) / len(grouped[algo][sf]) for sf in grouped[algo]}
         ordered = [max(0.0, means.get(sf, 0.0)) for sf in sf_values]
+        if has_ratio:
+            total = sum(ordered)
+            if total > 1.5:
+                ordered = [value / 100.0 for value in ordered]
         total = sum(ordered)
         if total > 0:
             ordered = [value / total for value in ordered]
@@ -893,7 +904,7 @@ def _plot_sf_distribution_small_multiples(rows: list[dict[str, str]], out_path: 
 
     axes_list[-1].set_xticks(x_positions, [str(sf) for sf in sf_values])
     axes_list[-1].set_xlabel(_axis_label("sf"))
-    fig.supylabel(_axis_label("ratio"))
+    fig.supylabel("Usage share (%)")
     fig.tight_layout()
     fig.savefig(out_path.with_suffix(".png"), dpi=PLOT_DPI)
     fig.savefig(out_path.with_suffix(".pdf"))
