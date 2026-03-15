@@ -143,6 +143,21 @@ ALGO_VALUE_ALIASES = {
     "ucb_f": "ucb_forget",
 }
 
+
+COLUMN_NAME_ALIASES = {
+    "n": "N",
+    "algo": "algo",
+    "mode": "mode",
+    "speed": "speed",
+    "sf": "sf",
+    "ratio": "ratio",
+    "quantile": "quantile",
+    "sinr_db": "sinr_db",
+    "tc_s": "Tc_s",
+    "tc_s_mean": "Tc_s_mean",
+    "mobility_model": "mobility_model",
+    "model": "mobility_model",
+}
 METRIC_COLUMN_ALIASES = {
     "pdr_mean": ("pdr_mean", "pdr"),
     "der_mean": ("der_mean", "der"),
@@ -198,12 +213,28 @@ class FigureTrace:
     generated: bool
 
 
+def _normalize_csv_row(row: dict[str, str]) -> dict[str, str]:
+    normalized: dict[str, str] = {}
+    for key, value in row.items():
+        canonical = COLUMN_NAME_ALIASES.get(str(key).strip().lower(), key)
+        normalized[str(canonical)] = value
+
+    if "mode" in normalized:
+        normalized["mode"] = _normalize_filter_value("mode", normalized.get("mode", ""))
+    if "algo" in normalized:
+        normalized["algo"] = _normalize_filter_value("algo", normalized.get("algo", ""))
+    if "mobility_model" in normalized:
+        mobility_raw = str(normalized.get("mobility_model", "")).strip().lower().replace("-", "_")
+        normalized["mobility_model"] = "smooth" if mobility_raw == "smooth" else "rwp"
+    return normalized
+
+
 def _read_csv_rows(path: Path) -> list[dict[str, str]]:
     if not path.is_file():
         warnings.warn(f"Fichier agrégé manquant: {path}.", stacklevel=2)
         return []
     with path.open("r", encoding="utf-8", newline="") as handle:
-        return list(csv.DictReader(handle))
+        return [_normalize_csv_row(row) for row in csv.DictReader(handle)]
 
 
 def validate_aggregates_inputs(aggregates_dir: Path) -> list[str]:
@@ -217,13 +248,16 @@ def validate_aggregates_inputs(aggregates_dir: Path) -> list[str]:
             continue
         with csv_path.open("r", encoding="utf-8", newline="") as handle:
             reader = csv.DictReader(handle)
-            fieldnames = set(reader.fieldnames or [])
+            raw_fieldnames = reader.fieldnames or []
+            normalized_fieldnames = {
+                str(COLUMN_NAME_ALIASES.get(str(name).strip().lower(), name)) for name in raw_fieldnames
+            }
 
         expected = REQUIRED_COLUMNS.get(key, set())
         missing: list[str] = []
         for column in sorted(expected):
             candidates = METRIC_COLUMN_ALIASES.get(column, (column,))
-            if not any(candidate in fieldnames for candidate in candidates):
+            if not any(candidate in normalized_fieldnames for candidate in candidates):
                 missing.append(column)
 
         if missing:
