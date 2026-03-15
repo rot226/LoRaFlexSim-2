@@ -12,7 +12,12 @@ from pathlib import Path
 from typing import Any
 from statistics import stdev
 
-from .metrics import convergence_tc_performance, der, jain_fairness, outage_ratio, pdr, throughput
+from .metrics import convergence_tc, der, jain_fairness, outage_ratio, pdr, throughput
+
+
+TC_PROTOCOL_DT_S = 10.0
+TC_PROTOCOL_TOLERANCE = 0.1
+TC_PROTOCOL_STABLE_BINS = 5
 
 SCENARIO_ID_COLUMNS = ["N", "speed", "mobility_model", "mode", "algo", "gateways", "sigma", "seed", "rep"]
 EVENT_COLUMNS = [
@@ -135,12 +140,26 @@ def write_run_outputs(
     duration_s: float,
     time_bin_s: float = 10.0,
 ) -> dict[str, Path]:
-    """Écrit les artefacts d'un run dans ``results/<run_id>/``."""
+    """Écrit les artefacts d'un run dans ``results/<run_id>/``.
+
+    Protocole fixe pour le calcul de ``Tc_s`` (convergence) :
+    - ``dt_s = 10`` secondes (binning imposé via ``time_bin_s``)
+    - ``tolerance = 0.1`` (seuil à ``1 - tolerance = 0.9`` du régime stationnaire)
+    - ``stable_bins = 5`` bins de fin de série pour estimer le régime stationnaire
+
+    ``Tc_s`` est évalué via :func:`mobilesfrdth.simulator.metrics.convergence_tc`
+    sur une série temporelle de performance (``PDR`` par bin). Si la convergence
+    n'est pas observée, la valeur est ``inf``.
+    """
 
     if duration_s <= 0:
         raise ValueError("duration_s doit être > 0")
     if time_bin_s <= 0:
         raise ValueError("time_bin_s doit être > 0")
+    if not math.isclose(time_bin_s, TC_PROTOCOL_DT_S, rel_tol=0.0, abs_tol=1e-9):
+        raise ValueError(
+            f"time_bin_s doit être fixé à {TC_PROTOCOL_DT_S}s pour respecter le protocole Tc"
+        )
 
     run_dir = output_root / "results" / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
@@ -161,7 +180,6 @@ def write_run_outputs(
     outage_events = 0
     total_switch_count = 0
     node_generated_totals: dict[int, int] = defaultdict(int)
-    generated_by_bin: dict[int, int] = defaultdict(int)
 
     anomaly_count = 0
 
@@ -267,7 +285,6 @@ def write_run_outputs(
             else:
                 generated_delta = 1
             generated_packets += generated_delta
-            generated_by_bin[bin_index] += generated_delta
 
         if event_type == "uplink":
             tx_count += 1
@@ -359,25 +376,16 @@ def write_run_outputs(
         pdr_by_bin[bin_index]["success"] += int(row["success_count"])
 
     pdr_series: list[float] = []
-    der_series: list[float] = []
-    cumulative_tx = 0
-    cumulative_success = 0
-    cumulative_generated = 0
     for bin_index in sorted(pdr_by_bin):
         bucket = pdr_by_bin[bin_index]
         pdr_series.append(pdr(bucket["success"], bucket["tx"]))
-        cumulative_tx += int(bucket["tx"])
-        cumulative_success += int(bucket["success"])
-        cumulative_generated += int(generated_by_bin.get(bin_index, bucket["tx"]))
-        der_series.append(der(cumulative_success, cumulative_generated))
 
-    stationary_tail_bins = max(1, math.ceil(len(pdr_series) * 0.2))
-    tc_from_timeseries = convergence_tc_performance(
-        pdr_samples=pdr_series,
-        der_samples=der_series,
-        dt_s=time_bin_s,
-        stationary_tail_bins=stationary_tail_bins,
-        target_ratio=0.9,
+    pdr_binary_series = [1.0 if value >= (1.0 - TC_PROTOCOL_TOLERANCE) else 0.0 for value in pdr_series]
+    tc_from_timeseries = convergence_tc(
+        pdr_binary_series,
+        dt_s=TC_PROTOCOL_DT_S,
+        stationary_tail_bins=TC_PROTOCOL_STABLE_BINS,
+        target_ratio=1.0 - TC_PROTOCOL_TOLERANCE,
     )
 
     summary_row = {
@@ -540,11 +548,13 @@ def aggregate_runs(
     skipped = 0
     ignored_runs: list[dict[str, str]] = []
 
-    def _coerce_float(value: Any, *, field: str) -> float:
+    def _coerce_float(value: Any, *, field: str, allow_inf: bool = False) -> float:
         try:
             parsed = float(value or 0.0)
         except (TypeError, ValueError) as exc:
             raise ValueError(f"valeur non numérique pour '{field}' ({value!r})") from exc
+        if math.isinf(parsed) and allow_inf:
+            return parsed
         if not math.isfinite(parsed):
             raise ValueError(f"valeur non finie pour '{field}' ({value!r})")
         return parsed
@@ -586,7 +596,11 @@ def aggregate_runs(
                 key = tuple(_factor_value(row, column) for column in factor_columns)
                 parsed_metrics: dict[str, float] = {}
                 for metric_name in metric_names:
-                    parsed_metrics[metric_name] = _coerce_float(row.get(metric_name, 0.0), field=metric_name)
+                    parsed_metrics[metric_name] = _coerce_float(
+                        row.get(metric_name, 0.0),
+                        field=metric_name,
+                        allow_inf=metric_name == "Tc_s",
+                    )
             except ValueError as exc:
                 message = f"Run corrompu ignoré: {run_dir} ({exc})"
                 if strict:
@@ -681,9 +695,14 @@ def aggregate_runs(
     for key, bucket in sorted(metric_accumulators.items()):
         num_runs = len(bucket["pdr"])
 
-        def _mean_and_ci95(values: list[float]) -> tuple[float, float]:
+        def _mean_and_ci95(values: list[float], *, allow_inf: bool = False) -> tuple[float, float]:
             if not values:
                 return 0.0, 0.0
+            if allow_inf:
+                finite_values = [value for value in values if math.isfinite(value)]
+                if not finite_values:
+                    return math.inf, 0.0
+                values = finite_values
             mean = sum(values) / len(values)
             if len(values) < 2:
                 return mean, 0.0
@@ -692,7 +711,7 @@ def aggregate_runs(
         pdr_mean, pdr_ci95 = _mean_and_ci95(bucket["pdr"])
         der_mean, der_ci95 = _mean_and_ci95(bucket["der"])
         throughput_mean, throughput_ci95 = _mean_and_ci95(bucket["throughput_bps"])
-        tc_mean, tc_ci95 = _mean_and_ci95(bucket["Tc_s"])
+        tc_mean, tc_ci95 = _mean_and_ci95(bucket["Tc_s"], allow_inf=True)
         jain_mean, jain_ci95 = _mean_and_ci95(bucket["jain_fairness"])
         airtime_mean, airtime_ci95 = _mean_and_ci95(bucket["airtime_total_s"])
         outage_mean, outage_ci95 = _mean_and_ci95(bucket["outage_ratio"])
@@ -933,6 +952,7 @@ def aggregate_runs(
 
     grouped_tracking: dict[tuple[str, str, str], dict[str, float]] = defaultdict(lambda: {
         "num_runs": 0.0,
+        "num_runs_finite_tc": 0.0,
         "Tc_s_sum": 0.0,
         "regret_proxy_sum": 0.0,
         "exploration_rate_sum": 0.0,
@@ -942,7 +962,10 @@ def aggregate_runs(
         key = (str(row["speed"]), str(row["mode"]), str(row["algo"]))
         bucket = grouped_tracking[key]
         bucket["num_runs"] += 1.0
-        bucket["Tc_s_sum"] += float(row.get("Tc_s", 0.0) or 0.0)
+        tc_value = float(row.get("Tc_s", 0.0) or 0.0)
+        if math.isfinite(tc_value):
+            bucket["num_runs_finite_tc"] += 1.0
+            bucket["Tc_s_sum"] += tc_value
         bucket["regret_proxy_sum"] += float(row.get("regret_proxy_mean", 0.0) or 0.0)
         bucket["exploration_rate_sum"] += float(row.get("exploration_rate_mean", 0.0) or 0.0)
         bucket["decision_stability_sum"] += float(row.get("decision_stability_mean", 0.0) or 0.0)
@@ -956,7 +979,11 @@ def aggregate_runs(
                 "mode": mode,
                 "algo": algo,
                 "num_runs": num_runs,
-                "Tc_s_mean": bucket["Tc_s_sum"] / num_runs,
+                "Tc_s_mean": (
+                    bucket["Tc_s_sum"] / bucket["num_runs_finite_tc"]
+                    if bucket["num_runs_finite_tc"] > 0
+                    else math.inf
+                ),
                 "regret_proxy_mean": bucket["regret_proxy_sum"] / num_runs,
                 "exploration_rate_mean": bucket["exploration_rate_sum"] / num_runs,
                 "decision_stability_mean": bucket["decision_stability_sum"] / num_runs,

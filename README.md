@@ -161,6 +161,15 @@ ce qui est tracé et interprété.
   ADR (proxy de stabilité).
 - **`Tc_s` / tracking lag (`Tc_s_mean`)** : temps de convergence ou de
   ré-adaptation après changement de conditions.
+  - **Protocole fixe (pipeline)** : calcul via `metrics.convergence_tc` sur la
+    série temporelle de performance **PDR binaire par bin** (`1` si
+    `PDR_bin >= 0.9`, sinon `0`).
+  - Paramètres figés : `dt_s=10`, `tolerance=0.1` (donc seuil `0.9`) et
+    `stable_bins=5`.
+  - Si non convergé dans la fenêtre observée, `Tc_s=inf`.
+  - Agrégation/plots : les `Tc_s=inf` sont conservés dans les CSV run-level mais
+    exclus des moyennes/IC95 et des points tracés (si toutes les répétitions
+    sont non convergées, la moyenne agrégée reste `inf`).
 - **Outage probability (`outage_prob_mean`)** : probabilité de queue
   `P[SINR<th]` (seuil de travail configurable côté pipeline).
 - **Energy efficiency (`energy_efficiency_mean`)** : efficacité énergétique
