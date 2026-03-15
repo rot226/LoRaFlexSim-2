@@ -48,6 +48,10 @@ class Event:
     switch_count: int = 0
     decision_reason: str = ""
     target_sf: int = 7
+    generated_packets_total: int = 0
+    dropped_packets_total: int = 0
+    buffer_occupancy: int = 0
+    retry_attempt: int = 0
 
 
 @dataclass
@@ -65,6 +69,17 @@ class NodeState:
     last_uplink_time_s: float = 0.0
     mobility_model: str = "rwp"
     mobility_state: rwp.RandomWaypointState | smooth.SmoothState | None = None
+    packet_buffer: list[GeneratedPacket] = field(default_factory=list)
+    generated_packets_total: int = 0
+    dropped_packets_total: int = 0
+    next_radio_free_s: float = 0.0
+
+
+@dataclass
+class GeneratedPacket:
+    packet_id: int
+    retries_left: int
+    attempts: int = 0
 
 
 class EventDrivenEngine:
@@ -169,6 +184,14 @@ class EventDrivenEngine:
             heapq.heappush(queue, Event(time_s=node.next_uplink_s, kind="uplink", node_id=node.node_id))
         return queue
 
+    @staticmethod
+    def _buffer_policy_for_algo(algo_name: str) -> tuple[int, int, str]:
+        if algo_name in {"ucb", "ucb_forget"}:
+            return 2, 4, "drop_oldest"
+        if algo_name == "adr_mixra":
+            return 1, 3, "drop_oldest"
+        return 0, 2, "drop_newest"
+
     def _select_next_sf(
         self,
         *,
@@ -263,6 +286,9 @@ class EventDrivenEngine:
             elif algo_name == "ucb_forget":
                 mab_agents[node.node_id] = UCBForget(n_arms=len(sf_arms))
 
+        max_retries, buffer_capacity, drop_policy = self._buffer_policy_for_algo(algo_name)
+        packet_seq = 0
+
         queue = self._schedule_initial_events(nodes)
         result = SimulationResult()
         while queue:
@@ -274,9 +300,46 @@ class EventDrivenEngine:
                 progress_callback(min(max(event.time_s / until_s, 0.0), 1.0))
 
             if event.kind == "uplink":
-                result.uplink_count += 1
                 node = node_by_id[event.node_id]
                 node_state = node_states[node.node_id]
+
+                packet_seq += 1
+                generated_packet = GeneratedPacket(packet_id=packet_seq, retries_left=max_retries)
+                node_state.generated_packets_total += 1
+                if len(node_state.packet_buffer) >= buffer_capacity:
+                    node_state.dropped_packets_total += 1
+                    if drop_policy == "drop_oldest" and node_state.packet_buffer:
+                        node_state.packet_buffer.pop(0)
+                        node_state.packet_buffer.append(generated_packet)
+                else:
+                    node_state.packet_buffer.append(generated_packet)
+
+                result.events.append(
+                    Event(
+                        time_s=event.time_s,
+                        kind="packet_generated",
+                        node_id=node.node_id,
+                        generated_packets_total=node_state.generated_packets_total,
+                        dropped_packets_total=node_state.dropped_packets_total,
+                        buffer_occupancy=len(node_state.packet_buffer),
+                    )
+                )
+
+                if not node_state.packet_buffer:
+                    next_time = event.time_s + max(node.period_s, 1e-6)
+                    node.next_uplink_s = next_time
+                    heapq.heappush(queue, Event(time_s=next_time, kind="uplink", node_id=node.node_id))
+                    continue
+
+                if event.time_s < node_state.next_radio_free_s:
+                    next_time = event.time_s + max(node.period_s, 1e-6)
+                    node.next_uplink_s = next_time
+                    heapq.heappush(queue, Event(time_s=next_time, kind="uplink", node_id=node.node_id))
+                    continue
+
+                result.uplink_count += 1
+                packet_in_flight = node_state.packet_buffer[0]
+                packet_in_flight.attempts += 1
 
                 dt_s = event.time_s - node_state.last_uplink_time_s
                 node_x, node_y = self._advance_mobility(
@@ -341,6 +404,7 @@ class EventDrivenEngine:
                 node_state.current_sf = new_sf
                 node_state.tx_power_dbm = new_tx_power_dbm
                 node_state.last_uplink_time_s = event.time_s
+                node_state.next_radio_free_s = event.time_s + airtime_s
                 node_state.reward_history.append(reward)
 
                 node.meta["sf"] = new_sf
@@ -365,8 +429,20 @@ class EventDrivenEngine:
                         switch_count=node_state.switch_count_total,
                         decision_reason=decision_reason,
                         target_sf=new_sf,
+                        generated_packets_total=node_state.generated_packets_total,
+                        dropped_packets_total=node_state.dropped_packets_total,
+                        buffer_occupancy=len(node_state.packet_buffer),
+                        retry_attempt=packet_in_flight.attempts,
                     )
                 )
+
+                if success:
+                    node_state.packet_buffer.pop(0)
+                elif packet_in_flight.retries_left > 0:
+                    packet_in_flight.retries_left -= 1
+                else:
+                    node_state.packet_buffer.pop(0)
+                    node_state.dropped_packets_total += 1
 
                 next_time = event.time_s + max(node.period_s, 1e-6)
                 node.next_uplink_s = next_time

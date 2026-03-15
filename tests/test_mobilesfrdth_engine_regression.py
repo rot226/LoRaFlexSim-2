@@ -217,7 +217,9 @@ def test_events_csv_includes_radio_decision_fields(tmp_path: pathlib.Path) -> No
 
         rows = list(reader)
         assert rows
-        assert all(row["decision_reason"] != "" for row in rows)
+        uplink_rows = [row for row in rows if row["event_type"] == "uplink"]
+        assert uplink_rows
+        assert all(row["decision_reason"] != "" for row in uplink_rows)
 
 
 def test_run_log_contains_sinr_success_diagnostic(tmp_path: pathlib.Path) -> None:
@@ -269,3 +271,47 @@ def test_sf_distributions_differ_between_adr_and_adr_mixra() -> None:
     mixra_dist = _distribution("adr_mixra")
 
     assert adr_dist != mixra_dist
+
+
+def test_congestion_can_make_pdr_and_der_diverge(tmp_path: pathlib.Path) -> None:
+    engine = EventDrivenEngine(seed=2025)
+    nodes = [Node(node_id=i + 1, period_s=0.1, payload_size=51) for i in range(80)]
+    result = engine.run(
+        nodes=nodes,
+        until_s=120.0,
+        mode="snir_on",
+        algo="adr",
+        interference_db=12.0,
+        sigma=2.0,
+    )
+
+    write_run_outputs(
+        output_root=tmp_path,
+        run_id="pdr_der_diverge",
+        run_config={
+            "N": 80,
+            "speed": 1.0,
+            "mobility_model": "rwp",
+            "mode": "snir_on",
+            "algo": "adr",
+            "gateways": 1,
+            "sigma": 2.0,
+            "seed": 2025,
+            "rep": 1,
+        },
+        events=result.events,
+        duration_s=120.0,
+        time_bin_s=60.0,
+    )
+
+    summary_path = tmp_path / "results" / "pdr_der_diverge" / "summary.csv"
+    with summary_path.open("r", encoding="utf-8", newline="") as handle:
+        row = next(csv.DictReader(handle))
+
+    pdr_value = float(row["pdr"])
+    der_value = float(row["der"])
+    generated_packets = int(float(row["generated_packets"]))
+    tx_count = int(float(row["tx_count"]))
+
+    assert generated_packets > tx_count
+    assert abs(pdr_value - der_value) > 1e-6

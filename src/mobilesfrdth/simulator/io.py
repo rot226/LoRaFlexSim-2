@@ -37,6 +37,10 @@ EVENT_COLUMNS = [
     "decision_stability",
     "decision_reason",
     "target_sf",
+    "generated_packets_total",
+    "dropped_packets_total",
+    "buffer_occupancy",
+    "retry_attempt",
 ]
 NODE_TIMESERIES_COLUMNS = [
     *SCENARIO_ID_COLUMNS,
@@ -90,7 +94,24 @@ def _coerce_event(event: Any) -> dict[str, Any]:
         "event_type": getattr(event, "kind", "uplink"),
         "node_id": getattr(event, "node_id", -1),
     }
-    for field in ("sf", "snr_db", "sinr_db", "threshold_db", "success", "delivered", "payload_bytes", "airtime_s", "outage", "switch_count", "decision_reason", "target_sf"):
+    for field in (
+        "sf",
+        "snr_db",
+        "sinr_db",
+        "threshold_db",
+        "success",
+        "delivered",
+        "payload_bytes",
+        "airtime_s",
+        "outage",
+        "switch_count",
+        "decision_reason",
+        "target_sf",
+        "generated_packets_total",
+        "dropped_packets_total",
+        "buffer_occupancy",
+        "retry_attempt",
+    ):
         if hasattr(event, field):
             payload[field] = getattr(event, field)
     return payload
@@ -139,6 +160,8 @@ def write_run_outputs(
     delivered_bytes = 0
     outage_events = 0
     total_switch_count = 0
+    node_generated_totals: dict[int, int] = defaultdict(int)
+    generated_by_bin: dict[int, int] = defaultdict(int)
 
     anomaly_count = 0
 
@@ -201,6 +224,10 @@ def write_run_outputs(
         decision_stability = 1.0 - exploration_rate
         decision_reason = str(event.get("decision_reason", "") or "")
         target_sf = int(event.get("target_sf", sf) or sf)
+        generated_packets_total = int(event.get("generated_packets_total", 0) or 0)
+        dropped_packets_total = int(event.get("dropped_packets_total", 0) or 0)
+        buffer_occupancy = int(event.get("buffer_occupancy", 0) or 0)
+        retry_attempt = int(event.get("retry_attempt", 0) or 0)
 
         row = {
             **scenario,
@@ -224,12 +251,26 @@ def write_run_outputs(
             "decision_stability": decision_stability,
             "decision_reason": decision_reason,
             "target_sf": target_sf,
+            "generated_packets_total": generated_packets_total,
+            "dropped_packets_total": dropped_packets_total,
+            "buffer_occupancy": buffer_occupancy,
+            "retry_attempt": retry_attempt,
         }
         event_rows.append(row)
 
+        if event_type == "packet_generated":
+            bin_index = int(time_s // time_bin_s)
+            if "generated_packets_total" in event:
+                previous_total = node_generated_totals[node_id]
+                generated_delta = max(generated_packets_total - previous_total, 0)
+                node_generated_totals[node_id] = max(previous_total, generated_packets_total)
+            else:
+                generated_delta = 1
+            generated_packets += generated_delta
+            generated_by_bin[bin_index] += generated_delta
+
         if event_type == "uplink":
             tx_count += 1
-            generated_packets += 1
             success_count += success
             delivered_bytes += payload_bytes if delivered else 0
             outage_events += outage
@@ -327,7 +368,7 @@ def write_run_outputs(
         pdr_series.append(pdr(bucket["success"], bucket["tx"]))
         cumulative_tx += int(bucket["tx"])
         cumulative_success += int(bucket["success"])
-        cumulative_generated += int(bucket["tx"])
+        cumulative_generated += int(generated_by_bin.get(bin_index, bucket["tx"]))
         der_series.append(der(cumulative_success, cumulative_generated))
 
     stationary_tail_bins = max(1, math.ceil(len(pdr_series) * 0.2))
