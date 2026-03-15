@@ -69,6 +69,23 @@ def test_build_parser_accepts_plots_y_scale_option(tmp_path):
     assert args.y_scale == "full"
 
 
+def test_build_parser_accepts_plots_strict_option(tmp_path):
+    parser = cli.build_parser()
+
+    args = parser.parse_args(
+        [
+            "plots",
+            "--aggregates-dir",
+            str(tmp_path),
+            "--out",
+            str(tmp_path / "figures"),
+            "--strict",
+        ]
+    )
+
+    assert args.strict is True
+
+
 def test_build_parser_accepts_run_profile_without_grid(tmp_path):
     parser = cli.build_parser()
     config_path = tmp_path / "cfg.yaml"

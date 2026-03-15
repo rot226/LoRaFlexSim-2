@@ -359,6 +359,19 @@ def cmd_plots(args: argparse.Namespace) -> int:
     print(f"{len(generated)} figure(s) écrite(s) dans {out_dir}")
     print(f"Résumé de plots écrit dans {output_file}")
 
+    if args.strict:
+        from .qa.validate_results import validate_strict_plot_outputs
+
+        issues = validate_strict_plot_outputs(
+            aggregates_dir=aggregates_dir,
+            figure_filters=report["figure_filters"],
+        )
+        if issues:
+            print("Validation stricte échouée:")
+            for issue in issues:
+                print(f"- {issue}")
+            return 2
+
     campaign_log_file = _campaign_log_path(out_dir, args.campaign_log)
     _append_campaign_log(
         campaign_log_file,
@@ -542,6 +555,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         default=None,
         help="Chemin du log campagne JSONL (par défaut: ../campaign_log.jsonl depuis --out).",
+    )
+    plots_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Active la validation QA stricte des agrégats et figures (échec si résultats suspects).",
     )
     plots_parser.set_defaults(func=cmd_plots)
 
