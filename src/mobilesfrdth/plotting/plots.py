@@ -1,4 +1,4 @@
-"""Génération des figures à partir de ``aggregates/*.csv`` uniquement."""
+"""Generate figures from ``aggregates/*.csv`` only."""
 
 from __future__ import annotations
 
@@ -18,6 +18,27 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from .utils import ci95_from_samples, normalized_axis_label, setup_plot_style, PLOT_DPI
+
+
+AXIS_LABELS_EN = {
+    "N": "Number of nodes N",
+    "speed": "Speed (m/s)",
+    "pdr_mean": "Packet Delivery Ratio",
+    "der_mean": "Data Extraction Ratio",
+    "throughput_bps_mean": "Throughput (bit/s)",
+    "jain_fairness_mean": "Jain's fairness index (unitless)",
+    "airtime_total_s_mean": "Total airtime (s)",
+    "switch_count_mean": "Number of switches",
+    "Tc_s": "Convergence time Tc (s)",
+    "sinr_db": "SINR (dB)",
+    "quantile": "Cumulative probability",
+    "sf": "Spreading Factor",
+    "ratio": "Usage share (%)",
+}
+
+
+def _axis_label(name: str) -> str:
+    return AXIS_LABELS_EN.get(name, normalized_axis_label(name))
 
 
 
@@ -180,17 +201,17 @@ class ScenarioFilters:
         mapping: dict[str, set[str]] = defaultdict(set)
         for token in tokens or []:
             if "=" not in token:
-                warnings.warn(f"Filtre ignoré (format attendu clé=valeur1,valeur2): {token}", stacklevel=2)
+                warnings.warn(f"Ignored filter (expected format key=value1,value2): {token}", stacklevel=2)
                 continue
             key, values = token.split("=", 1)
             key = key.strip()
             if not key:
-                warnings.warn(f"Filtre ignoré (clé vide): {token}", stacklevel=2)
+                warnings.warn(f"Ignored filter (empty key): {token}", stacklevel=2)
                 continue
             key = FILTER_COLUMN_ALIASES.get(key, key)
             parsed = [item.strip() for item in values.split(",") if item.strip()]
             if not parsed:
-                warnings.warn(f"Filtre ignoré (aucune valeur): {token}", stacklevel=2)
+                warnings.warn(f"Ignored filter (no values): {token}", stacklevel=2)
                 continue
             mapping[key].update(_normalize_filter_value(key, value) for value in parsed)
         return cls(by_column=dict(mapping))
@@ -234,20 +255,20 @@ def _normalize_csv_row(row: dict[str, str]) -> dict[str, str]:
 
 def _read_csv_rows(path: Path) -> list[dict[str, str]]:
     if not path.is_file():
-        warnings.warn(f"Fichier agrégé manquant: {path}.", stacklevel=2)
+        warnings.warn(f"Missing aggregated file: {path}.", stacklevel=2)
         return []
     with path.open("r", encoding="utf-8", newline="") as handle:
         return [_normalize_csv_row(row) for row in csv.DictReader(handle)]
 
 
 def validate_aggregates_inputs(aggregates_dir: Path) -> list[str]:
-    """Valide la présence des CSV et des colonnes contractuelles avant plotting."""
+    """Validate required CSV presence and contractual columns before plotting."""
 
     errors: list[str] = []
     for key, filename in REQUIRED_FILES.items():
         csv_path = aggregates_dir / filename
         if not csv_path.is_file():
-            errors.append(f"fichier manquant: {csv_path}")
+            errors.append(f"missing file: {csv_path}")
             continue
         with csv_path.open("r", encoding="utf-8", newline="") as handle:
             reader = csv.DictReader(handle)
@@ -264,7 +285,7 @@ def validate_aggregates_inputs(aggregates_dir: Path) -> list[str]:
                 missing.append(column)
 
         if missing:
-            errors.append(f"colonnes manquantes dans {csv_path.name}: {', '.join(missing)}")
+            errors.append(f"missing columns in {csv_path.name}: {', '.join(missing)}")
     return errors
 
 
@@ -300,7 +321,7 @@ def _apply_filters(rows: list[dict[str, str]], filters: ScenarioFilters) -> list
         filter_expr = _format_filters(filters)
         debug = ", ".join(_format_filter_availability(normalized_rows, filters))
         warnings.warn(
-            f"Aucune ligne après filtrage. filtre={filter_expr}; lignes_candidates={len(rows)}. Détails: {debug}",
+            f"No rows after filtering. filter={filter_expr}; candidate_rows={len(rows)}. Details: {debug}",
             stacklevel=2,
         )
     return filtered
@@ -338,7 +359,7 @@ def _format_filter_availability(rows: list[dict[str, str]], filters: ScenarioFil
         with_key = sum(1 for row in rows if key in row)
         matched = sum(1 for row in rows if row.get(key, "") in allowed)
         details.append(
-            f"{key}∈{sorted(allowed)}: {matched}/{with_key} ligne(s) compatibles"
+            f"{key}∈{sorted(allowed)}: {matched}/{with_key} matching row(s)"
         )
     return details
 
@@ -359,7 +380,7 @@ def _resolve_profile_filter(article_profile: str, figure_name: str) -> dict[str,
 
 
 def _warn_skip(fig_name: str, reason: str) -> None:
-    warnings.warn(f"{fig_name} ignorée: {reason}", stacklevel=2)
+    warnings.warn(f"{fig_name} skipped: {reason}", stacklevel=2)
 
 
 def _algo_series(rows: list[dict[str, str]], *, fig_name: str) -> list[tuple[str, list[dict[str, str]]]]:
@@ -370,7 +391,7 @@ def _algo_series(rows: list[dict[str, str]], *, fig_name: str) -> list[tuple[str
         algo_rows = [row for row in normalized_rows if row.get("algo", "").strip() == algo]
         if not algo_rows:
             warnings.warn(
-                f"{fig_name}: série vide pour filtre exact algo={algo}. filtre=algo={algo}",
+                f"{fig_name}: empty series for exact filter algo={algo}. filter=algo={algo}",
                 stacklevel=2,
             )
             continue
@@ -381,7 +402,7 @@ def _algo_series(rows: list[dict[str, str]], *, fig_name: str) -> list[tuple[str
 def _log_figure_result(path: Path, generated: bool, *, verbose: bool) -> None:
     if not verbose:
         return
-    status = "générée" if generated else "ignorée"
+    status = "generated" if generated else "skipped"
     print(f"Figure {status}: {path}")
 
 def _is_reliability_metric(y_col: str) -> bool:
@@ -394,16 +415,16 @@ def _plot_xy_by_algo(
     resolved_metric = _resolve_metric_column(rows, expected=y_col)
     needed = {"N", "algo", resolved_metric}
     if not rows:
-        _warn_skip(fig_name, "aucune ligne disponible")
+        _warn_skip(fig_name, "no rows available")
         return False
     missing = [column for column in needed if column not in rows[0]]
     if missing:
-        _warn_skip(fig_name, f"colonnes manquantes {missing}")
+        _warn_skip(fig_name, f"missing columns {missing}")
         return False
 
     series = _algo_series(rows, fig_name=fig_name)
     if rows and not series:
-        _warn_skip(fig_name, "aucune série après filtrage strict par algo")
+        _warn_skip(fig_name, "no series after strict algo filtering")
         return False
 
     dropped = 0
@@ -421,7 +442,7 @@ def _plot_xy_by_algo(
             per_x[x].append(y)
         if not per_x:
             warnings.warn(
-                f"{fig_name}: série algo vide après nettoyage numérique. filtre=algo={algo}",
+                f"{fig_name}: empty algo series after numeric cleanup. filter=algo={algo}",
                 stacklevel=2,
             )
             continue
@@ -441,9 +462,9 @@ def _plot_xy_by_algo(
             plotted += 1
 
     if dropped:
-        warnings.warn(f"{fig_name}: {dropped} lignes ignorées (valeurs non numériques).", stacklevel=2)
+        warnings.warn(f"{fig_name}: {dropped} rows skipped (non-numeric values).", stacklevel=2)
     if plotted == 0:
-        _warn_skip(fig_name, "aucune donnée traçable après nettoyage")
+        _warn_skip(fig_name, "no plottable data after cleanup")
         plt.close()
         return False
 
@@ -464,21 +485,21 @@ def _plot_xy_by_algo(
                 lower = max(0.0, y_min - 0.02)
                 upper = min(1.0, max(y_max + 0.01, lower + 0.01))
                 plt.ylim(lower, upper)
-                scale_policy = f"auto→zoom [{lower:.3f},{upper:.3f}] + annexe [0,1]"
+                scale_policy = f"auto→zoom [{lower:.3f},{upper:.3f}] + annex [0,1]"
             else:
                 plt.ylim(0.0, 1.0)
                 scale_policy = "auto→full [0,1]"
 
     plt.grid(alpha=0.3)
-    plt.xlabel(normalized_axis_label("N"))
-    plt.ylabel(normalized_axis_label(y_col))
-    plt.legend(title=f"Algo | y-scale: {scale_policy}")
+    plt.xlabel(_axis_label("N"))
+    plt.ylabel(_axis_label(y_col))
+    plt.legend(title=f"Algorithm | y-scale: {scale_policy}")
     plt.tight_layout()
     _save_figure_variants(out_path)
 
     if _is_reliability_metric(y_col) and y_scale == "auto" and y_values and min(y_values) >= 0.9:
         plt.ylim(0.0, 1.0)
-        plt.legend(title="Algo | y-scale: annexe full [0,1]")
+        plt.legend(title="Algorithm | y-scale: full annex [0,1]")
         plt.tight_layout()
         annex_path = out_path.with_name(f"{out_path.stem}_annex_full_scale{out_path.suffix}")
         _save_figure_variants(annex_path)
@@ -543,7 +564,7 @@ def _resolve_metric_column(rows: list[dict[str, str]], *, expected: str) -> str:
         if candidate in rows[0]:
             if candidate != expected:
                 warnings.warn(
-                    f"Colonne '{expected}' absente, repli sur '{candidate}' (compatibilité agrégats).",
+                    f"Column '{expected}' missing, fallback to '{candidate}' (aggregates compatibility).",
                     stacklevel=3,
                 )
             return candidate
@@ -553,18 +574,18 @@ def _resolve_metric_column(rows: list[dict[str, str]], *, expected: str) -> str:
 def _plot_tc_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool:
     fig_name = out_path.name
     if not rows:
-        _warn_skip(fig_name, "fichier convergence_tc.csv vide ou absent")
+        _warn_skip(fig_name, "file convergence_tc.csv is empty or missing")
         return False
     tc_column = "Tc_s_mean" if rows and "Tc_s_mean" in rows[0] else "Tc_s"
     needed = {"speed", "algo", tc_column}
     missing = [column for column in needed if column not in rows[0]]
     if missing:
-        _warn_skip(fig_name, f"colonnes manquantes {missing}")
+        _warn_skip(fig_name, f"missing columns {missing}")
         return False
 
     series = _algo_series(rows, fig_name=fig_name)
     if not series:
-        _warn_skip(fig_name, "pas de couples speed/Tc_s exploitables")
+        _warn_skip(fig_name, "no usable speed/Tc_s pairs")
         return False
 
     plt.figure(figsize=(8, 5))
@@ -578,7 +599,7 @@ def _plot_tc_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool:
                 continue
             grouped[speed].append(tc_s)
         if not grouped:
-            warnings.warn(f"{fig_name}: série algo vide après filtre exact. filtre=algo={algo}", stacklevel=2)
+            warnings.warn(f"{fig_name}: empty algo series after exact filter. filter=algo={algo}", stacklevel=2)
             continue
 
         speeds = sorted(grouped)
@@ -595,11 +616,11 @@ def _plot_tc_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool:
             plotted += 1
     if plotted == 0:
         plt.close()
-        _warn_skip(fig_name, "pas de couples speed/Tc_s exploitables")
+        _warn_skip(fig_name, "no usable speed/Tc_s pairs")
         return False
     plt.grid(alpha=0.3)
-    plt.xlabel(normalized_axis_label("speed"))
-    plt.ylabel(normalized_axis_label("Tc_s"))
+    plt.xlabel(_axis_label("speed"))
+    plt.ylabel(_axis_label("Tc_s"))
     plt.legend()
     plt.tight_layout()
     _save_figure_variants(out_path)
@@ -610,12 +631,12 @@ def _plot_tc_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool:
 def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
     fig_name = out_path.name
     if not rows:
-        _warn_skip(fig_name, "fichier sinr_cdf.csv vide ou absent")
+        _warn_skip(fig_name, "file sinr_cdf.csv is empty or missing")
         return False
     needed = {"algo", "mode", "N", "speed", "mobility_model", "gateways", "sigma", "quantile", "sinr_db"}
     missing = [column for column in needed if column not in rows[0]]
     if missing:
-        _warn_skip(fig_name, f"colonnes manquantes {missing}")
+        _warn_skip(fig_name, f"missing columns {missing}")
         return False
 
     context_columns = ("algo", "mode", "N", "speed", "mobility_model", "gateways", "sigma")
@@ -629,7 +650,7 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
         by_group[context].append((q, sinr))
 
     if not by_group:
-        _warn_skip(fig_name, "pas de points quantile/sinr exploitables")
+        _warn_skip(fig_name, "no usable quantile/sinr points")
         return False
 
     contexts_by_algo: dict[str, set[tuple[str, str, str, str, str, str]]] = defaultdict(set)
@@ -642,8 +663,8 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
         _warn_skip(
             fig_name,
             (
-                "tracé global 'algo-only' interdit: contextes multiples détectés "
-                f"({details}) ; appliquer des filtres stricts ou tracer par scénario complet"
+                "global 'algo-only' plot disabled: multiple contexts detected "
+                f"({details}); apply strict filters or plot by full scenario"
             ),
         )
         return False
@@ -658,7 +679,7 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
             _warn_skip(
                 fig_name,
                 (
-                    "quantile hors ]0..1] pour groupe "
+                    "quantile outside ]0..1] for group "
                     f"algo={algo}, mode={mode}, N={n}, speed={speed}, "
                     f"mobility_model={mobility_model}, gateways={gateways}, sigma={sigma}"
                 ),
@@ -669,7 +690,7 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
             _warn_skip(
                 fig_name,
                 (
-                    "quantile non monotone croissant pour groupe "
+                    "quantile not monotonically increasing for group "
                     f"algo={algo}, mode={mode}, N={n}, speed={speed}, "
                     f"mobility_model={mobility_model}, gateways={gateways}, sigma={sigma}"
                 ),
@@ -680,7 +701,7 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
             _warn_skip(
                 fig_name,
                 (
-                    "sinr_db non monotone croissant pour groupe "
+                    "sinr_db not monotonically increasing for group "
                     f"algo={algo}, mode={mode}, N={n}, speed={speed}, "
                     f"mobility_model={mobility_model}, gateways={gateways}, sigma={sigma}"
                 ),
@@ -691,7 +712,7 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
             _warn_skip(
                 fig_name,
                 (
-                    "étendue SINR nulle pour groupe "
+                    "zero SINR span for group "
                     f"algo={algo}, mode={mode}, N={n}, speed={speed}, "
                     f"mobility_model={mobility_model}, gateways={gateways}, sigma={sigma}"
                 ),
@@ -707,13 +728,13 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
         plotted += 1
 
     if plotted == 0:
-        _warn_skip(fig_name, "aucune courbe CDF traçable")
+        _warn_skip(fig_name, "no plottable CDF curve")
         plt.close()
         return False
 
     plt.grid(alpha=0.3)
-    plt.xlabel(normalized_axis_label("sinr_db"))
-    plt.ylabel(normalized_axis_label("quantile"))
+    plt.xlabel(_axis_label("sinr_db"))
+    plt.ylabel(_axis_label("quantile"))
     plt.legend(fontsize=8)
     plt.tight_layout()
     _save_figure_variants(out_path)
@@ -724,15 +745,15 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
 def _plot_sf_distribution(rows: list[dict[str, str]], out_path: Path) -> bool:
     fig_name = out_path.name
     if not rows:
-        _warn_skip(fig_name, "fichier distribution_sf.csv vide ou absent")
+        _warn_skip(fig_name, "file distribution_sf.csv is empty or missing")
         return False
     needed = {"sf", "algo"}
     missing = [column for column in needed if column not in rows[0]]
     if missing:
-        _warn_skip(fig_name, f"colonnes manquantes {missing}")
+        _warn_skip(fig_name, f"missing columns {missing}")
         return False
     if "ratio" not in rows[0] and "count" not in rows[0]:
-        _warn_skip(fig_name, "colonnes manquantes ['ratio' ou 'count']")
+        _warn_skip(fig_name, "missing columns ['ratio' or 'count']")
         return False
 
     grouped: dict[str, dict[int, list[float]]] = defaultdict(lambda: defaultdict(list))
@@ -748,7 +769,7 @@ def _plot_sf_distribution(rows: list[dict[str, str]], out_path: Path) -> bool:
         grouped[row.get("algo", "unknown")][sf_int].append(value)
 
     if not grouped:
-        _warn_skip(fig_name, "pas de points SF/ratio exploitables")
+        _warn_skip(fig_name, "no usable SF/ratio points")
         return False
 
     sf_values = list(range(7, 13))
@@ -778,12 +799,12 @@ def _plot_sf_distribution(rows: list[dict[str, str]], out_path: Path) -> bool:
         xs = [x + offset for x in x_positions]
         plt.bar(xs, data_percent[algo], width=width, label=algo)
     plt.grid(axis="y", alpha=0.3)
-    plt.xlabel(normalized_axis_label("sf"))
-    plt.ylabel(normalized_axis_label("ratio"))
+    plt.xlabel(_axis_label("sf"))
+    plt.ylabel(_axis_label("ratio"))
     plt.xticks(x_positions, [str(sf) for sf in sf_values])
     plt.ylim(0, 100)
     plt.yticks(y_ticks)
-    plt.legend(title="Algo", ncols=2)
+    plt.legend(title="Algorithm", ncols=2)
     plt.tight_layout()
     _save_figure_variants(out_path)
     plt.close()
@@ -793,15 +814,15 @@ def _plot_sf_distribution(rows: list[dict[str, str]], out_path: Path) -> bool:
 def _plot_sf_distribution_small_multiples(rows: list[dict[str, str]], out_path: Path) -> bool:
     fig_name = out_path.name
     if not rows:
-        _warn_skip(fig_name, "fichier distribution_sf.csv vide ou absent")
+        _warn_skip(fig_name, "file distribution_sf.csv is empty or missing")
         return False
     needed = {"sf", "algo"}
     missing = [column for column in needed if column not in rows[0]]
     if missing:
-        _warn_skip(fig_name, f"colonnes manquantes {missing}")
+        _warn_skip(fig_name, f"missing columns {missing}")
         return False
     if "ratio" not in rows[0] and "count" not in rows[0]:
-        _warn_skip(fig_name, "colonnes manquantes ['ratio' ou 'count']")
+        _warn_skip(fig_name, "missing columns ['ratio' or 'count']")
         return False
 
     grouped: dict[str, dict[int, list[float]]] = defaultdict(lambda: defaultdict(list))
@@ -817,7 +838,7 @@ def _plot_sf_distribution_small_multiples(rows: list[dict[str, str]], out_path: 
         grouped[row.get("algo", "unknown")][sf_int].append(value)
 
     if not grouped:
-        _warn_skip(fig_name, "pas de points SF/ratio exploitables")
+        _warn_skip(fig_name, "no usable SF/ratio points")
         return False
 
     sf_values = list(range(7, 13))
@@ -846,11 +867,11 @@ def _plot_sf_distribution_small_multiples(rows: list[dict[str, str]], out_path: 
         axis.grid(axis="y", alpha=0.3)
         axis.set_ylim(0, 100)
         axis.set_yticks(y_ticks)
-        axis.legend(loc="upper right", title="Algo")
+        axis.legend(loc="upper right", title="Algorithm")
 
     axes_list[-1].set_xticks(x_positions, [str(sf) for sf in sf_values])
-    axes_list[-1].set_xlabel(normalized_axis_label("sf"))
-    fig.supylabel(normalized_axis_label("ratio"))
+    axes_list[-1].set_xlabel(_axis_label("sf"))
+    fig.supylabel(_axis_label("ratio"))
     fig.tight_layout()
     fig.savefig(out_path.with_suffix(".png"), dpi=PLOT_DPI)
     fig.savefig(out_path.with_suffix(".pdf"))
@@ -861,13 +882,13 @@ def _plot_sf_distribution_small_multiples(rows: list[dict[str, str]], out_path: 
 def _plot_delta_pdr_on_minus_off(rows: list[dict[str, str]], out_path: Path) -> bool:
     fig_name = out_path.name
     if not rows:
-        _warn_skip(fig_name, "aucune ligne disponible")
+        _warn_skip(fig_name, "no rows available")
         return False
     pdr_col = _resolve_metric_column(rows, expected="pdr_mean")
     needed = {"N", "algo", "mode", pdr_col}
     missing = [column for column in needed if column not in rows[0]]
     if missing:
-        _warn_skip(fig_name, f"colonnes manquantes {missing}")
+        _warn_skip(fig_name, f"missing columns {missing}")
         return False
 
     by_mode: dict[str, dict[float, dict[str, list[float]]]] = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
@@ -880,7 +901,7 @@ def _plot_delta_pdr_on_minus_off(rows: list[dict[str, str]], out_path: Path) -> 
         by_mode[row.get("algo", "unknown")][n_value][mode].append(pdr)
 
     if not by_mode:
-        _warn_skip(fig_name, "aucune paire N/algo exploitable")
+        _warn_skip(fig_name, "no usable N/algo pair")
         return False
 
     plt.figure(figsize=(8, 5))
@@ -906,13 +927,13 @@ def _plot_delta_pdr_on_minus_off(rows: list[dict[str, str]], out_path: Path) -> 
 
     if not plt.gca().lines:
         plt.close()
-        _warn_skip(fig_name, "aucune paire SNIR_ON/SNIR_OFF alignée")
+        _warn_skip(fig_name, "no aligned SNIR_ON/SNIR_OFF pair")
         return False
 
     plt.axhline(0.0, color="black", linewidth=1.0, linestyle="--", alpha=0.6)
     plt.grid(alpha=0.3)
-    plt.xlabel(normalized_axis_label("N"))
-    plt.ylabel("ΔPDR (SNIR_ON - SNIR_OFF) [-]")
+    plt.xlabel(_axis_label("N"))
+    plt.ylabel("ΔPDR (SNIR_ON - SNIR_OFF)")
     plt.legend()
     plt.tight_layout()
     _save_figure_variants(out_path)
@@ -933,13 +954,13 @@ def _duration_hours_from_row(row: dict[str, str]) -> float:
 def _plot_switching_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool:
     fig_name = out_path.name
     if not rows:
-        _warn_skip(fig_name, "aucune ligne disponible")
+        _warn_skip(fig_name, "no rows available")
         return False
     switch_col = _resolve_metric_column(rows, expected="switch_count_mean")
     needed = {"speed", "algo", switch_col}
     missing = [column for column in needed if column not in rows[0]]
     if missing:
-        _warn_skip(fig_name, f"colonnes manquantes {missing}")
+        _warn_skip(fig_name, f"missing columns {missing}")
         return False
 
     grouped: dict[str, dict[float, list[float]]] = defaultdict(lambda: defaultdict(list))
@@ -951,7 +972,7 @@ def _plot_switching_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool
         grouped[row.get("algo", "unknown")][speed].append(switch_count / _duration_hours_from_row(row))
 
     if not grouped:
-        _warn_skip(fig_name, "pas de couples speed/switch_count exploitables")
+        _warn_skip(fig_name, "no usable speed/switch_count pairs")
         return False
 
     plt.figure(figsize=(8, 5))
@@ -968,8 +989,8 @@ def _plot_switching_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool
         plt.errorbar(speeds, means, yerr=errors, marker="o", capsize=3, label=algo)
 
     plt.grid(alpha=0.3)
-    plt.xlabel(normalized_axis_label("speed"))
-    plt.ylabel("Instabilité [switch_count/h]")
+    plt.xlabel(_axis_label("speed"))
+    plt.ylabel("Instability (switch_count/h)")
     plt.legend()
     plt.tight_layout()
     _save_figure_variants(out_path)
@@ -982,18 +1003,18 @@ def _plot_switching_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool
 def _plot_ucb_tracking_lag_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool:
     fig_name = out_path.name
     if not rows:
-        _warn_skip(fig_name, "fichier ucb_tracking.csv vide ou absent")
+        _warn_skip(fig_name, "file ucb_tracking.csv is empty or missing")
         return False
     tc_column = "Tc_s_mean" if rows and "Tc_s_mean" in rows[0] else "Tc_s"
     needed = {"speed", "algo", tc_column}
     missing = [column for column in needed if column not in rows[0]]
     if missing:
-        _warn_skip(fig_name, f"colonnes manquantes {missing}")
+        _warn_skip(fig_name, f"missing columns {missing}")
         return False
 
     series = _algo_series(rows, fig_name=fig_name)
     if not series:
-        _warn_skip(fig_name, "pas de couples speed/Tc_s exploitables")
+        _warn_skip(fig_name, "no usable speed/Tc_s pairs")
         return False
 
     plt.figure(figsize=(8, 5))
@@ -1007,7 +1028,7 @@ def _plot_ucb_tracking_lag_vs_speed(rows: list[dict[str, str]], out_path: Path) 
                 continue
             grouped[speed].append(tc_s)
         if not grouped:
-            warnings.warn(f"{fig_name}: série algo vide après filtre exact. filtre=algo={algo}", stacklevel=2)
+            warnings.warn(f"{fig_name}: empty algo series after exact filter. filter=algo={algo}", stacklevel=2)
             continue
 
         speeds = sorted(grouped)
@@ -1024,13 +1045,13 @@ def _plot_ucb_tracking_lag_vs_speed(rows: list[dict[str, str]], out_path: Path) 
             plotted += 1
     if plotted == 0:
         plt.close()
-        _warn_skip(fig_name, "pas de couples speed/Tc_s exploitables")
+        _warn_skip(fig_name, "no usable speed/Tc_s pairs")
         return False
 
     plt.grid(alpha=0.3)
-    plt.xlabel(normalized_axis_label("speed"))
-    plt.ylabel("Délai de ré-adaptation Tc [s]")
-    plt.legend(title="Algo")
+    plt.xlabel(_axis_label("speed"))
+    plt.ylabel(_axis_label("Tc_s"))
+    plt.legend(title="Algorithm")
     plt.tight_layout()
     _save_figure_variants(out_path)
     plt.close()
@@ -1040,12 +1061,12 @@ def _plot_ucb_tracking_lag_vs_speed(rows: list[dict[str, str]], out_path: Path) 
 def _plot_outage_probability_vs_n(rows: list[dict[str, str]], out_path: Path) -> bool:
     fig_name = out_path.name
     if not rows:
-        _warn_skip(fig_name, "fichier outage_probability.csv vide ou absent")
+        _warn_skip(fig_name, "file outage_probability.csv is empty or missing")
         return False
     needed = {"algo", "N", "outage_prob_mean", "outage_prob_ci95"}
     missing = [column for column in needed if column not in rows[0]]
     if missing:
-        _warn_skip(fig_name, f"colonnes manquantes {missing}")
+        _warn_skip(fig_name, f"missing columns {missing}")
         return False
 
     grouped: dict[str, list[tuple[float, float, float]]] = defaultdict(list)
@@ -1058,7 +1079,7 @@ def _plot_outage_probability_vs_n(rows: list[dict[str, str]], out_path: Path) ->
         grouped[row.get("algo", "unknown")].append((n_value, outage, ci95 or 0.0))
 
     if not grouped:
-        _warn_skip(fig_name, "aucun point outage/N exploitable")
+        _warn_skip(fig_name, "no usable outage/N point")
         return False
 
     plt.figure(figsize=(8, 5))
@@ -1075,14 +1096,14 @@ def _plot_outage_probability_vs_n(rows: list[dict[str, str]], out_path: Path) ->
 
     if plotted == 0:
         plt.close()
-        _warn_skip(fig_name, "aucune série outage vs N traçable")
+        _warn_skip(fig_name, "no plottable outage vs N series")
         return False
 
     plt.grid(alpha=0.3)
-    plt.xlabel(normalized_axis_label("N"))
-    plt.ylabel("Probabilité d'outage (SNIR_ON)")
+    plt.xlabel(_axis_label("N"))
+    plt.ylabel("Outage probability")
     plt.ylim(0, 1)
-    plt.legend(title="Algo")
+    plt.legend(title="Algorithm")
     plt.tight_layout()
     _save_figure_variants(out_path)
     plt.close()
@@ -1092,12 +1113,12 @@ def _plot_outage_probability_vs_n(rows: list[dict[str, str]], out_path: Path) ->
 def _plot_energy_efficiency_vs_reliability(rows: list[dict[str, str]], out_path: Path) -> bool:
     fig_name = out_path.name
     if not rows:
-        _warn_skip(fig_name, "fichier energy_efficiency_reliability.csv vide ou absent")
+        _warn_skip(fig_name, "file energy_efficiency_reliability.csv is empty or missing")
         return False
     needed = {"algo", "pdr_mean", "pdr_ci95", "energy_efficiency_mean", "energy_efficiency_ci95"}
     missing = [column for column in needed if column not in rows[0]]
     if missing:
-        _warn_skip(fig_name, f"colonnes manquantes {missing}")
+        _warn_skip(fig_name, f"missing columns {missing}")
         return False
 
     grouped: dict[str, list[tuple[float, float, float, float]]] = defaultdict(list)
@@ -1111,7 +1132,7 @@ def _plot_energy_efficiency_vs_reliability(rows: list[dict[str, str]], out_path:
         grouped[row.get("algo", "unknown")].append((pdr_mean, pdr_ci95, eff_mean, eff_ci95))
 
     if not grouped:
-        _warn_skip(fig_name, "pas de couples efficacité/PDR exploitables")
+        _warn_skip(fig_name, "no usable efficiency/PDR pairs")
         return False
 
     plt.figure(figsize=(8, 5))
@@ -1128,14 +1149,14 @@ def _plot_energy_efficiency_vs_reliability(rows: list[dict[str, str]], out_path:
 
     if plotted == 0:
         plt.close()
-        _warn_skip(fig_name, "aucun point moyen±IC95 traçable")
+        _warn_skip(fig_name, "no plottable mean±CI95 point")
         return False
 
     plt.grid(alpha=0.3)
-    plt.xlabel(normalized_axis_label("pdr_mean"))
-    plt.ylabel("Efficacité énergétique [throughput/airtime]")
+    plt.xlabel(_axis_label("pdr_mean"))
+    plt.ylabel("Energy efficiency (throughput/airtime)")
     plt.xlim(0, 1.05)
-    plt.legend(title="Algo")
+    plt.legend(title="Algorithm")
     plt.tight_layout()
     _save_figure_variants(out_path)
     plt.close()
@@ -1145,12 +1166,12 @@ def _plot_airtime_reliability_pareto(rows: list[dict[str, str]], out_path: Path)
 
     fig_name = out_path.name
     if not rows:
-        _warn_skip(fig_name, "fichier pareto_reliability_airtime.csv vide ou absent")
+        _warn_skip(fig_name, "file pareto_reliability_airtime.csv is empty or missing")
         return False
     needed = {"algo", "pdr_mean", "pdr_ci95", "airtime_total_s_mean", "airtime_total_s_ci95"}
     missing = [column for column in needed if column not in rows[0]]
     if missing:
-        _warn_skip(fig_name, f"colonnes manquantes {missing}")
+        _warn_skip(fig_name, f"missing columns {missing}")
         return False
 
     grouped: dict[str, list[tuple[float, float, float, float]]] = defaultdict(list)
@@ -1164,7 +1185,7 @@ def _plot_airtime_reliability_pareto(rows: list[dict[str, str]], out_path: Path)
         grouped[row.get("algo", "unknown")].append((airtime_mean, airtime_ci95, pdr_mean, pdr_ci95))
 
     if not grouped:
-        _warn_skip(fig_name, "pas de couples airtime/PDR exploitables")
+        _warn_skip(fig_name, "no usable airtime/PDR pairs")
         return False
 
     plt.figure(figsize=(8, 5))
@@ -1183,14 +1204,14 @@ def _plot_airtime_reliability_pareto(rows: list[dict[str, str]], out_path: Path)
 
     if plotted == 0:
         plt.close()
-        _warn_skip(fig_name, "aucun point moyen±IC95 traçable")
+        _warn_skip(fig_name, "no plottable mean±CI95 point")
         return False
 
     plt.grid(alpha=0.3)
-    plt.xlabel(normalized_axis_label("airtime_total_s_mean"))
-    plt.ylabel(normalized_axis_label("pdr_mean"))
+    plt.xlabel(_axis_label("airtime_total_s_mean"))
+    plt.ylabel(_axis_label("pdr_mean"))
     plt.ylim(0, 1.05)
-    plt.legend(title="Algo")
+    plt.legend(title="Algorithm")
     plt.tight_layout()
     _save_figure_variants(out_path)
     plt.close()
@@ -1209,7 +1230,7 @@ def generate_minimal_figures(
     y_scale: str = "auto",
 ) -> tuple[list[Path], list[FigureTrace]]:
     if article_profile not in ARTICLE_PROFILE_FILTERS:
-        raise ValueError(f"Profil article inconnu: {article_profile}")
+        raise ValueError(f"Unknown article profile: {article_profile}")
 
     setup_plot_style(ieee_ready=ieee_ready)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -1366,14 +1387,14 @@ def generate_minimal_figures(
 
     manifest_path = out_dir / "plots_manifest.csv"
     with manifest_path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=["figure", "source", "filtre", "date", "nb_points"])
+        writer = csv.DictWriter(handle, fieldnames=["figure", "source", "filter", "date", "nb_points"])
         writer.writeheader()
         for trace in traces:
             writer.writerow(
                 {
                     "figure": trace.figure,
                     "source": REQUIRED_FILES.get(trace.source, trace.source),
-                    "filtre": json.dumps(trace.filters, ensure_ascii=False, sort_keys=True),
+                    "filter": json.dumps(trace.filters, ensure_ascii=False, sort_keys=True),
                     "nb_points": trace.num_points,
                     "date": datetime.now(timezone.utc).isoformat(),
                 }
@@ -1404,28 +1425,28 @@ def generate_minimal_figures(
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Génère les figures fig01..fig10 (et bonus fig11..fig16) depuis aggregates/*.csv")
-    parser.add_argument("--aggregates-dir", required=True, type=Path, help="Répertoire contenant les CSV agrégés.")
-    parser.add_argument("--out", required=True, type=Path, help="Répertoire cible pour les PNG.")
+    parser = argparse.ArgumentParser(description="Generate figures fig01..fig10 (and bonus fig11..fig16) from aggregates/*.csv")
+    parser.add_argument("--aggregates-dir", required=True, type=Path, help="Directory containing aggregated CSV files.")
+    parser.add_argument("--out", required=True, type=Path, help="Target directory for PNG files.")
     parser.add_argument(
         "--scenario-filter",
         action="append",
         default=[],
-        help="Filtre clé=val1,val2 (répétable), ex: --scenario-filter mode=snir_on --scenario-filter algo=ucb,legacy",
+        help="Filter key=val1,val2 (repeatable), e.g.: --scenario-filter mode=snir_on --scenario-filter algo=ucb,legacy",
     )
-    parser.add_argument("--no-bonus", action="store_true", help="N'écrit pas les figures bonus fig11..fig16.")
-    parser.add_argument("--ieee-ready", action="store_true", help="Active le style IEEE (couleurs daltonisme-friendly, linewidths, export PDF+PNG).")
+    parser.add_argument("--no-bonus", action="store_true", help="Do not generate bonus figures fig11..fig16.")
+    parser.add_argument("--ieee-ready", action="store_true", help="Enable IEEE style (colorblind-friendly palette, linewidths, PDF+PNG export).")
     parser.add_argument(
         "--article-profile",
         choices=sorted(ARTICLE_PROFILE_FILTERS),
         default="core",
-        help="Profil d'article figé pour imposer les filtres documentés par figure (core ou full).",
+        help="Fixed article profile to enforce documented per-figure filters (core or full).",
     )
     parser.add_argument(
         "--y-scale",
         choices=["auto", "full", "zoom"],
         default="auto",
-        help="Politique d'échelle Y pour PDR/DER: auto (zoom si proche de 1 + annexe full), full ([0,1]), zoom.",
+        help="Y-axis policy for PDR/DER: auto (zoom near 1 + full-scale annex), full ([0,1]), zoom.",
     )
     return parser
 
@@ -1441,7 +1462,7 @@ def main(argv: list[str] | None = None) -> int:
         ieee_ready=args.ieee_ready,
         y_scale=args.y_scale,
     )
-    print(f"{len(generated)} figure(s) générée(s).")
+    print(f"{len(generated)} figure(s) generated(s).")
     for path in generated:
         print(path)
     return 0
