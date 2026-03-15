@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 import heapq
 import json
 import logging
+import math
 from pathlib import Path
 import random
 from time import monotonic
@@ -14,9 +15,11 @@ from typing import Any, Callable
 from .io import write_run_outputs
 from .adr.adr_legacy import AdrLegacyConfig, recommend_sf_with_reason
 from .adr.adr_mixra import AdrMixRaConfig, adapt_link
+from .channel import ChannelConfig, received_power_dbm
 from .mab.ucb import UCB1
 from .mab.ucb_forget import UCBForget
-from .interference import InterferenceConfig, dbm_to_mw, mw_to_db, snr_db as compute_snr_db, transmission_success
+from .interference import InterferenceConfig, snr_db as compute_snr_db, transmission_success
+from .mobility import rwp, smooth
 
 
 @dataclass
@@ -53,6 +56,17 @@ class SimulationResult:
     events: list[Event] = field(default_factory=list)
 
 
+@dataclass
+class NodeState:
+    current_sf: int
+    tx_power_dbm: float
+    switch_count_total: int = 0
+    reward_history: list[float] = field(default_factory=list)
+    last_uplink_time_s: float = 0.0
+    mobility_model: str = "rwp"
+    mobility_state: rwp.RandomWaypointState | smooth.SmoothState | None = None
+
+
 class EventDrivenEngine:
     """Boucle event-driven basée sur une file de priorité.
 
@@ -68,42 +82,84 @@ class EventDrivenEngine:
         payload_factor = 1.0 + (max(payload_size, 1) / 12.0)
         return 0.015 * sf_factor * payload_factor
 
-    def _compute_channel_state(
+    def _compute_interferers(
         self,
         *,
         node_count: int,
-        mode: str,
-        interference_db: float,
-        sigma: float,
-    ) -> tuple[float, float]:
-        del mode, interference_db, sigma
-        snr_base = 13.0 - 0.06 * node_count
-        snr_db = snr_base + self.rng.uniform(-1.5, 1.5)
-        return snr_db, snr_db
-
-    def _derive_interferers(
-        self,
-        *,
-        node_count: int,
-        interference_db: float,
-        sigma: float,
         signal_dbm: float,
-        sf: int,
-        cfg: InterferenceConfig,
+        signal_sf: int,
+        interference_db: float,
+        sigma: float,
     ) -> list[tuple[float, int]]:
-        if not cfg.snir_enabled:
+        potential_interferers = max(node_count - 1, 0)
+        if potential_interferers == 0:
             return []
 
-        dynamic_interference_db = max(0.0, interference_db + (0.03 * node_count) + 2.0 + abs(self.rng.gauss(0.0, sigma)))
-        signal_mw = dbm_to_mw(signal_dbm)
-        noise_mw = dbm_to_mw(cfg.noise_floor_dbm)
-        snr_db = compute_snr_db(signal_dbm, cfg.noise_floor_dbm)
-        target_sinr_db = snr_db - dynamic_interference_db
-        target_denom_mw = signal_mw / (10.0 ** (target_sinr_db / 10.0))
-        interf_mw = max(target_denom_mw - noise_mw, 0.0)
-        if interf_mw <= 0.0:
+        if interference_db <= 0.0 and sigma <= 0.0:
             return []
-        return [(mw_to_db(interf_mw), sf)]
+
+        expected = min(
+            potential_interferers,
+            int(max(1.0, (0.05 + (interference_db / 40.0)) * potential_interferers)),
+        )
+        n_interferers = self.rng.randint(0, expected)
+        if n_interferers <= 0:
+            return []
+
+        sf_candidates = [7, 8, 9, 10, 11, 12]
+        interferers: list[tuple[float, int]] = []
+        for _ in range(n_interferers):
+            relative_drop = max(0.5, interference_db + abs(self.rng.gauss(0.0, max(sigma, 0.01))))
+            power_i_dbm = signal_dbm - relative_drop
+            sf_i = signal_sf if self.rng.random() < 0.55 else self.rng.choice(sf_candidates)
+            interferers.append((power_i_dbm, sf_i))
+        return interferers
+
+    def _init_mobility_state(self, *, mobility_model: str, speed_mps: float, area_size_m: float) -> Any:
+        if mobility_model == "smooth":
+            cfg = smooth.SmoothConfig(
+                area_width_m=area_size_m,
+                area_height_m=area_size_m,
+                min_speed_mps=max(speed_mps * 0.6, 0.1),
+                max_speed_mps=max(speed_mps * 1.4, 0.2),
+            )
+            return smooth.init_state(cfg, rng=self.rng)
+
+        cfg = rwp.RandomWaypointConfig(
+            area_width_m=area_size_m,
+            area_height_m=area_size_m,
+            min_speed_mps=max(speed_mps * 0.6, 0.1),
+            max_speed_mps=max(speed_mps * 1.4, 0.2),
+        )
+        return rwp.init_state(cfg, rng=self.rng)
+
+    def _advance_mobility(
+        self,
+        *,
+        mobility_model: str,
+        mobility_state: Any,
+        dt_s: float,
+        speed_mps: float,
+        area_size_m: float,
+    ) -> tuple[float, float]:
+        dt_s = max(dt_s, 0.0)
+        if mobility_model == "smooth":
+            cfg = smooth.SmoothConfig(
+                area_width_m=area_size_m,
+                area_height_m=area_size_m,
+                min_speed_mps=max(speed_mps * 0.6, 0.1),
+                max_speed_mps=max(speed_mps * 1.4, 0.2),
+            )
+            smooth.step(mobility_state, dt_s, cfg, rng=self.rng)
+        else:
+            cfg = rwp.RandomWaypointConfig(
+                area_width_m=area_size_m,
+                area_height_m=area_size_m,
+                min_speed_mps=max(speed_mps * 0.6, 0.1),
+                max_speed_mps=max(speed_mps * 1.4, 0.2),
+            )
+            rwp.step(mobility_state, dt_s, cfg, rng=self.rng)
+        return float(mobility_state.x), float(mobility_state.y)
 
     def _schedule_initial_events(self, nodes: list[Node]) -> list[Event]:
         queue: list[Event] = []
@@ -127,13 +183,15 @@ class EventDrivenEngine:
         mab_agents: dict[int, UCB1 | UCBForget],
         sf_arms: list[int],
         node_tx_power_dbm: float,
-     ) -> tuple[int, str]:
+    ) -> tuple[int, float, float, str]:
         """Calcule le SF cible et la raison via une interface commune."""
 
         if algo_name == "adr":
-            return recommend_sf_with_reason(current_sf=current_sf, snr_db=snr_db, cfg=adr_cfg)
+            sf, reason = recommend_sf_with_reason(current_sf=current_sf, snr_db=snr_db, cfg=adr_cfg)
+            reward = (1.0 if success else -0.25) - 0.08 * airtime_s
+            return sf, node_tx_power_dbm, reward, reason
         if algo_name == "adr_mixra":
-            sf, _, reason = adapt_link(
+            sf, tx_power_dbm, reason = adapt_link(
                 current_sf=current_sf,
                 current_tx_power_dbm=node_tx_power_dbm,
                 snr_db=snr_db,
@@ -141,7 +199,8 @@ class EventDrivenEngine:
                 latency_estimate_s=airtime_s,
                 cfg=adr_mixra_cfg,
             )
-            return sf, reason
+            reward = (1.0 if success else -0.35) - 0.1 * airtime_s
+            return sf, tx_power_dbm, reward, reason
         if algo_name in {"ucb", "ucb_forget"}:
             agent = mab_agents[node_id]
             arm = agent.select_arm()
@@ -149,8 +208,9 @@ class EventDrivenEngine:
             reward = (1.0 if success else -0.25) - 0.08 * airtime_s
             agent.update(arm, reward)
             reason = f"mab_reward={(1.0 if success else -0.25) - 0.08 * airtime_s:.3f}|airtime_cost={airtime_s:.3f}s|qos={'ok' if success else 'degraded'}"
-            return new_sf, reason
-        return current_sf, "no_adaptation"
+            return new_sf, node_tx_power_dbm, reward, reason
+        reward = (1.0 if success else -0.25) - 0.08 * airtime_s
+        return current_sf, node_tx_power_dbm, reward, "no_adaptation"
 
     def run(
         self,
@@ -159,6 +219,9 @@ class EventDrivenEngine:
         until_s: float,
         mode: str = "snir_off",
         algo: str = "adr",
+        mobility_model: str = "rwp",
+        speed_mps: float = 1.0,
+        area_size_m: float = 1_000.0,
         interference_db: float = 0.0,
         sigma: float = 0.0,
         progress_callback: Callable[[float], None] | None = None,
@@ -173,14 +236,28 @@ class EventDrivenEngine:
         adr_cfg = AdrLegacyConfig()
         adr_mixra_cfg = AdrMixRaConfig()
         interference_cfg = InterferenceConfig(snir_enabled=mode_name == "snir_on")
+        channel_cfg = ChannelConfig(sigma_shadowing=max(sigma, 0.0))
+        mobility_name = mobility_model.lower()
 
         mab_agents: dict[int, UCB1 | UCBForget] = {}
+        node_states: dict[int, NodeState] = {}
         sf_arms = [7, 8, 9, 10, 11, 12]
         for node in nodes:
-            node.meta.setdefault("sf", self.rng.randint(8, 11))
-            node.meta.setdefault("sf_previous", int(node.meta.get("sf", 7)))
+            initial_sf = int(node.meta.get("sf", self.rng.randint(8, 11)))
             node.meta.setdefault("tx_power_dbm", 14.0)
             node.meta.setdefault("switch_count", 0)
+            node_states[node.node_id] = NodeState(
+                current_sf=initial_sf,
+                tx_power_dbm=float(node.meta.get("tx_power_dbm", 14.0)),
+                switch_count_total=int(node.meta.get("switch_count", 0)),
+                reward_history=list(node.meta.get("reward_history", [])),
+                mobility_model=mobility_name,
+                mobility_state=self._init_mobility_state(
+                    mobility_model=mobility_name,
+                    speed_mps=speed_mps,
+                    area_size_m=area_size_m,
+                ),
+            )
             if algo_name == "ucb":
                 mab_agents[node.node_id] = UCB1(n_arms=len(sf_arms))
             elif algo_name == "ucb_forget":
@@ -199,24 +276,34 @@ class EventDrivenEngine:
             if event.kind == "uplink":
                 result.uplink_count += 1
                 node = node_by_id[event.node_id]
+                node_state = node_states[node.node_id]
 
-                current_sf = int(node.meta.get("sf", 7))
-                sf_previous = int(node.meta.get("sf_previous", current_sf))
-                snr_db, sinr_db = self._compute_channel_state(
-                    node_count=node_count,
-                    mode=mode_name,
-                    interference_db=interference_db,
-                    sigma=sigma,
+                dt_s = event.time_s - node_state.last_uplink_time_s
+                node_x, node_y = self._advance_mobility(
+                    mobility_model=node_state.mobility_model,
+                    mobility_state=node_state.mobility_state,
+                    dt_s=dt_s,
+                    speed_mps=speed_mps,
+                    area_size_m=area_size_m,
                 )
+                gateway_x = area_size_m / 2.0
+                gateway_y = area_size_m / 2.0
+                distance_m = max(math.hypot(node_x - gateway_x, node_y - gateway_y), 1.0)
+
+                current_sf = node_state.current_sf
                 airtime_s = self._airtime_s(sf=current_sf, payload_size=node.payload_size)
-                signal_dbm = interference_cfg.noise_floor_dbm + snr_db
-                interferers = self._derive_interferers(
+                signal_dbm = received_power_dbm(
+                    tx_power_dbm=node_state.tx_power_dbm,
+                    distance_m=distance_m,
+                    cfg=channel_cfg,
+                    rng=self.rng,
+                )
+                interferers = self._compute_interferers(
                     node_count=node_count,
+                    signal_dbm=signal_dbm,
+                    signal_sf=current_sf,
                     interference_db=interference_db,
                     sigma=sigma,
-                    signal_dbm=signal_dbm,
-                    sf=current_sf,
-                    cfg=interference_cfg,
                 )
                 success, metric_db = transmission_success(
                     signal_dbm,
@@ -228,7 +315,7 @@ class EventDrivenEngine:
                 sinr_db = metric_db if interference_cfg.snir_enabled else snr_db
                 threshold_db = float(interference_cfg.snr_thresholds_db.get(current_sf, -20.0))
 
-                new_sf, decision_reason = self._select_next_sf(
+                selection = self._select_next_sf(
                     algo_name=algo_name,
                     current_sf=current_sf,
                     snr_db=snr_db,
@@ -239,14 +326,27 @@ class EventDrivenEngine:
                     adr_mixra_cfg=adr_mixra_cfg,
                     mab_agents=mab_agents,
                     sf_arms=sf_arms,
-                    node_tx_power_dbm=float(node.meta.get("tx_power_dbm", 14.0)),
+                    node_tx_power_dbm=node_state.tx_power_dbm,
                 )
+                if len(selection) == 4:
+                    new_sf, new_tx_power_dbm, reward, decision_reason = selection
+                else:
+                    new_sf, decision_reason = selection
+                    new_tx_power_dbm = node_state.tx_power_dbm
+                    reward = (1.0 if success else -0.25) - 0.08 * airtime_s
 
-                switched = int(new_sf != sf_previous)
+                switched = int(new_sf != current_sf)
                 if switched:
-                    node.meta["switch_count"] = int(node.meta.get("switch_count", 0)) + 1
+                    node_state.switch_count_total += 1
+                node_state.current_sf = new_sf
+                node_state.tx_power_dbm = new_tx_power_dbm
+                node_state.last_uplink_time_s = event.time_s
+                node_state.reward_history.append(reward)
+
                 node.meta["sf"] = new_sf
-                node.meta["sf_previous"] = new_sf
+                node.meta["tx_power_dbm"] = new_tx_power_dbm
+                node.meta["switch_count"] = node_state.switch_count_total
+                node.meta["reward_history"] = list(node_state.reward_history)
 
                 result.events.append(
                     Event(
@@ -262,7 +362,7 @@ class EventDrivenEngine:
                         payload_bytes=node.payload_size,
                         airtime_s=airtime_s,
                         outage=not success,
-                        switch_count=switched,
+                        switch_count=node_state.switch_count_total,
                         decision_reason=decision_reason,
                         target_sf=new_sf,
                     )
@@ -524,6 +624,9 @@ class GridRunOrchestrator:
                     until_s=duration_s,
                     mode=str(params.get("mode", "snir_off")),
                     algo=str(params.get("algo", "adr")),
+                    mobility_model=str(params.get("model", params.get("mobility_model", "rwp"))),
+                    speed_mps=float(params.get("speed", 1.0)),
+                    area_size_m=float(params.get("area_size_m", 1_000.0)),
                     interference_db=float(params.get("interference_db", params.get("interference", 0.0))),
                     sigma=float(params.get("sigma", 0.0)),
                     progress_callback=_progress,
