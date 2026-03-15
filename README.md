@@ -13,8 +13,8 @@ table est injectée dans la fonction `_flora_noise_dBm` pour les calculs de
 sensibilité. Un chemin personnalisé peut être fourni via `flora_noise_path`.
 ## 🛠️ Installation
 
-> **Version Python recommandée : 3.11.x** (versions supportées: **3.11 à 3.14**).
-> **Support officiel : Windows 11 + Python 3.14** (également Linux/macOS sur Python 3.11–3.14).
+> **Version Python recommandée : 3.11.x** (versions supportées: **3.11 à 3.12**).
+> **Support officiel : Windows 11 + Python 3.11/3.12** (également Linux/macOS sur Python 3.11–3.12).
 
 Procédure d'entrée unique (Windows 11 / PowerShell), à copier-coller depuis la racine du dépôt :
 
@@ -41,6 +41,12 @@ Si vous préférez un bootstrap automatisé, utilisez aussi :
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/bootstrap_windows.ps1
+```
+
+Pipeline offline complet (run → aggregate → plots → validate) :
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/windows/run_offline.ps1
 ```
 
 ## 📦 CLI `mobilesfrdth` (Windows 11 / Linux / macOS)
@@ -77,11 +83,16 @@ $env:PYTHONPATH = "src"
 python -m mobilesfrdth --help
 ```
 
+Conservez ce mode recommandé (`PYTHONPATH=src`) pour l'exécution offline et les
+scripts PowerShell Windows.
+
 Wrapper PowerShell recommandé (notamment en offline si `pip install -e .` échoue) :
 
 ```powershell
 .\scripts\mobilesfrdth.ps1 --help
 .\scripts\mobilesfrdth.ps1 run ...
+# pipeline run/aggregate/plots/validate
+powershell -ExecutionPolicy Bypass -File scripts/windows/run_offline.ps1
 ```
 
 ### Windows 11
@@ -426,13 +437,17 @@ ou préparer une soumission.
 
 ### Versions Python supportées (et fallback offline)
 
-- **Supportées** : Python **3.11 à 3.14**.
+- **Supportées** : Python **3.11 à 3.12**.
 - **Recommandée** : Python **3.11.x** pour la compatibilité maximale des
   scripts historiques.
 - **Plateforme de référence** : Windows 11.
 - **Fallback offline officiel** (si `pip install -e .` échoue) :
   `scripts/mobilesfrdth.ps1`, qui exécute `python -m mobilesfrdth` avec
   `PYTHONPATH=src`.
+
+> Si vous lancez Python 3.13+ (dont 3.14), utilisez un environnement 3.11/3.12,
+> puis le mode offline recommandé (`PYTHONPATH=src`) via
+> `scripts/windows/run_offline.ps1` ou `scripts/mobilesfrdth.ps1`.
 
 Exemples Windows 11 (PowerShell) :
 
