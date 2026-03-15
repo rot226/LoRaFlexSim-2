@@ -216,6 +216,13 @@ def write_run_outputs(
     ``Tc_s`` est évalué via :func:`mobilesfrdth.simulator.metrics.convergence_tc`
     sur une série temporelle de performance (``PDR`` par bin). Si la convergence
     n'est pas observée, la valeur est ``inf``.
+
+    Contrat de métriques:
+    - ``switch_count`` (summary + séries temporelles) compte les transitions SF
+      effectives, i.e. l'agrégation somme uniquement les incréments de compteur
+      entre deux uplinks d'un même nœud (pas la valeur cumulée brute de l'événement).
+    - ``jain_fairness`` est calculé explicitement sur la distribution des succès
+      par nœud du run (et non sur l'airtime ni sur une moyenne implicite).
     """
 
     if duration_s <= 0:
@@ -245,6 +252,7 @@ def write_run_outputs(
     delivered_bytes = 0
     outage_events = 0
     total_switch_count = 0
+    node_previous_switch_count: dict[int, int] = defaultdict(int)
     node_generated_totals: dict[int, int] = defaultdict(int)
 
     anomaly_count = 0
@@ -303,8 +311,11 @@ def write_run_outputs(
         airtime_s = float(event.get("airtime_s", 0.0) or 0.0)
         outage = int(bool(event.get("outage", not success)))
         switch_count = int(event.get("switch_count", 0) or 0)
+        previous_switch_count = node_previous_switch_count[node_id]
+        switch_increment = max(switch_count - previous_switch_count, 0)
+        node_previous_switch_count[node_id] = max(previous_switch_count, switch_count)
         regret_proxy = max(0.0, (1.0 if success else 1.25) + 0.08 * airtime_s - (1.0 - 0.08 * 0.03))
-        exploration_rate = float(switch_count > 0)
+        exploration_rate = float(switch_increment > 0)
         decision_stability = 1.0 - exploration_rate
         decision_reason = str(event.get("decision_reason", "") or "")
         target_sf = int(event.get("target_sf", sf) or sf)
@@ -357,7 +368,7 @@ def write_run_outputs(
             success_count += success
             delivered_bytes += payload_bytes if delivered else 0
             outage_events += outage
-            total_switch_count += switch_count
+            total_switch_count += switch_increment
             node_successes[node_id] += success
             node_airtime[node_id] += airtime_s
 
@@ -389,7 +400,7 @@ def write_run_outputs(
             slot["sinr_sum"] += sinr_db
             slot["airtime_s"] += airtime_s
             slot["outage_count"] += outage
-            slot["switch_count"] += switch_count
+            slot["switch_count"] += switch_increment
             slot["regret_proxy_sum"] += regret_proxy
             slot["exploration_sum"] += exploration_rate
             slot["decision_stability_sum"] += decision_stability
@@ -454,6 +465,8 @@ def write_run_outputs(
         target_ratio=1.0 - TC_PROTOCOL_TOLERANCE,
     )
 
+    fairness_node_successes = [float(node_successes[node_id]) for node_id in sorted(node_ids)]
+
     summary_row = {
         **scenario,
         "run_id": run_id,
@@ -467,7 +480,7 @@ def write_run_outputs(
         "der": der(success_count, generated_packets),
         "throughput_bps": throughput(delivered_bytes, duration_s),
         "Tc_s": tc_from_timeseries,
-        "jain_fairness": jain_fairness(node_successes.values()),
+        "jain_fairness": jain_fairness(fairness_node_successes),
         "airtime_total_s": airtime_total,
         "airtime_mean_per_node_s": airtime_total / max(len(node_ids), 1),
         "outage_ratio": outage_ratio(outage_events, tx_count),

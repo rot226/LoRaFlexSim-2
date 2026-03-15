@@ -323,3 +323,71 @@ def test_write_run_outputs_validates_required_fields(tmp_path):
     events_path = tmp_path / "results" / "missing_required_fields" / "events.csv"
     rows = list(csv.DictReader(events_path.open("r", encoding="utf-8", newline="")))
     assert len(rows) == 1
+
+
+def test_write_run_outputs_uses_switch_deltas_and_explicit_success_fairness(tmp_path):
+    events = [
+        {
+            "event_type": "uplink",
+            "time_s": 1.0,
+            "node_id": 1,
+            "success": True,
+            "delivered": True,
+            "payload_bytes": 20,
+            "switch_count": 0,
+        },
+        {
+            "event_type": "uplink",
+            "time_s": 2.0,
+            "node_id": 1,
+            "success": True,
+            "delivered": True,
+            "payload_bytes": 20,
+            "switch_count": 1,
+        },
+        {
+            "event_type": "uplink",
+            "time_s": 3.0,
+            "node_id": 1,
+            "success": False,
+            "delivered": False,
+            "payload_bytes": 20,
+            "switch_count": 1,
+        },
+        {
+            "event_type": "uplink",
+            "time_s": 4.0,
+            "node_id": 2,
+            "success": False,
+            "delivered": False,
+            "payload_bytes": 20,
+            "switch_count": 0,
+        },
+        {
+            "event_type": "uplink",
+            "time_s": 5.0,
+            "node_id": 1,
+            "success": False,
+            "delivered": False,
+            "payload_bytes": 20,
+            "switch_count": 2,
+        },
+    ]
+
+    write_run_outputs(
+        output_root=tmp_path,
+        run_id="switch_delta_and_fairness",
+        run_config={"N": 2, "speed": 0.0, "mobility_model": "rwp", "mode": "snir_on", "algo": "adr", "gateways": 1, "sigma": 1, "seed": 1, "rep": 0},
+        events=events,
+        duration_s=10.0,
+    )
+
+    summary_path = tmp_path / "results" / "switch_delta_and_fairness" / "summary.csv"
+    summary_row = next(csv.DictReader(summary_path.open("r", encoding="utf-8", newline="")))
+    assert int(summary_row["switch_count"]) == 2
+    assert float(summary_row["jain_fairness"]) == 0.5
+
+    node_timeseries_path = tmp_path / "results" / "switch_delta_and_fairness" / "node_timeseries.csv"
+    node_rows = list(csv.DictReader(node_timeseries_path.open("r", encoding="utf-8", newline="")))
+    switch_total = sum(int(row["switch_count"]) for row in node_rows)
+    assert switch_total == 2

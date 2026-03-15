@@ -398,16 +398,18 @@ class EventDrivenEngine:
                     new_tx_power_dbm = node_state.tx_power_dbm
                     reward = (1.0 if success else -0.25) - 0.08 * airtime_s
 
-                switched = int(new_sf != current_sf)
+                sf_old = current_sf
+                sf_new = new_sf
+                switched = int(sf_new != sf_old)
                 if switched:
                     node_state.switch_count_total += 1
-                node_state.current_sf = new_sf
+                node_state.current_sf = sf_new
                 node_state.tx_power_dbm = new_tx_power_dbm
                 node_state.last_uplink_time_s = event.time_s
                 node_state.next_radio_free_s = event.time_s + airtime_s
                 node_state.reward_history.append(reward)
 
-                node.meta["sf"] = new_sf
+                node.meta["sf"] = sf_new
                 node.meta["tx_power_dbm"] = new_tx_power_dbm
                 node.meta["switch_count"] = node_state.switch_count_total
                 node.meta["reward_history"] = list(node_state.reward_history)
@@ -428,7 +430,7 @@ class EventDrivenEngine:
                         outage=not success,
                         switch_count=node_state.switch_count_total,
                         decision_reason=decision_reason,
-                        target_sf=new_sf,
+                        target_sf=sf_new,
                         generated_packets_total=node_state.generated_packets_total,
                         dropped_packets_total=node_state.dropped_packets_total,
                         buffer_occupancy=len(node_state.packet_buffer),
