@@ -37,6 +37,28 @@ AXIS_LABELS_EN = {
 }
 
 
+@dataclass(frozen=True)
+class AlgoStyle:
+    color: str
+    marker: str
+    linestyle: str
+
+
+ALGO_STYLE: dict[str, AlgoStyle] = {
+    "adr": AlgoStyle(color="#1f77b4", marker="o", linestyle="-"),
+    "adr_mixra": AlgoStyle(color="#ff7f0e", marker="s", linestyle="--"),
+    "ucb": AlgoStyle(color="#2ca02c", marker="^", linestyle="-."),
+    "ucb_forget": AlgoStyle(color="#d62728", marker="D", linestyle=":"),
+}
+
+
+def _algo_style_kwargs(algo: str) -> dict[str, str]:
+    style = ALGO_STYLE.get(algo)
+    if style is None:
+        return {"marker": "o", "linestyle": "-"}
+    return {"color": style.color, "marker": style.marker, "linestyle": style.linestyle}
+
+
 def _axis_label(name: str) -> str:
     return AXIS_LABELS_EN.get(name, normalized_axis_label(name))
 
@@ -458,7 +480,7 @@ def _plot_xy_by_algo(
             errors.append(ci.half_width)
             y_values.append(ci.mean)
         if means:
-            plt.errorbar(xs, means, yerr=errors, marker="o", capsize=3, label=algo)
+            plt.errorbar(xs, means, yerr=errors, capsize=3, label=algo, **_algo_style_kwargs(algo))
             plotted += 1
 
     if dropped:
@@ -612,7 +634,7 @@ def _plot_tc_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool:
             means.append(ci.mean)
             errors.append(ci.half_width)
         if means:
-            plt.errorbar(speeds, means, yerr=errors, marker="o", capsize=3, label=algo)
+            plt.errorbar(speeds, means, yerr=errors, capsize=3, label=algo, **_algo_style_kwargs(algo))
             plotted += 1
     if plotted == 0:
         plt.close()
@@ -724,7 +746,7 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
             f"{algo} | {mode}, N={n}, v={speed}, "
             f"mob={mobility_model}, gw={gateways}, sigma={sigma}"
         )
-        plt.plot(sinrs, quantiles, label=label)
+        plt.plot(sinrs, quantiles, label=label, **_algo_style_kwargs(algo))
         plotted += 1
 
     if plotted == 0:
@@ -797,7 +819,7 @@ def _plot_sf_distribution(rows: list[dict[str, str]], out_path: Path) -> bool:
     for idx, algo in enumerate(algos):
         offset = (idx - (len(algos) - 1) / 2) * width
         xs = [x + offset for x in x_positions]
-        plt.bar(xs, data_percent[algo], width=width, label=algo)
+        plt.bar(xs, data_percent[algo], width=width, label=algo, color=_algo_style_kwargs(algo).get("color"))
     plt.grid(axis="y", alpha=0.3)
     plt.xlabel(_axis_label("sf"))
     plt.ylabel(_axis_label("ratio"))
@@ -863,7 +885,7 @@ def _plot_sf_distribution_small_multiples(rows: list[dict[str, str]], out_path: 
         axes_list = [axes]
 
     for axis, algo in zip(axes_list, algos, strict=False):
-        axis.bar(x_positions, data_percent[algo], width=0.7, label=algo)
+        axis.bar(x_positions, data_percent[algo], width=0.7, label=algo, color=_algo_style_kwargs(algo).get("color"))
         axis.grid(axis="y", alpha=0.3)
         axis.set_ylim(0, 100)
         axis.set_yticks(y_ticks)
@@ -923,7 +945,7 @@ def _plot_delta_pdr_on_minus_off(rows: list[dict[str, str]], out_path: Path) -> 
             means.append(ci_on.mean - ci_off.mean)
             errors.append((ci_on.half_width**2 + ci_off.half_width**2) ** 0.5)
         if xs:
-            plt.errorbar(xs, means, yerr=errors, marker="o", capsize=3, label=algo)
+            plt.errorbar(xs, means, yerr=errors, capsize=3, label=algo, **_algo_style_kwargs(algo))
 
     if not plt.gca().lines:
         plt.close()
@@ -986,7 +1008,7 @@ def _plot_switching_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool
                 continue
             means.append(ci.mean)
             errors.append(ci.half_width)
-        plt.errorbar(speeds, means, yerr=errors, marker="o", capsize=3, label=algo)
+        plt.errorbar(speeds, means, yerr=errors, capsize=3, label=algo, **_algo_style_kwargs(algo))
 
     plt.grid(alpha=0.3)
     plt.xlabel(_axis_label("speed"))
@@ -1041,7 +1063,7 @@ def _plot_ucb_tracking_lag_vs_speed(rows: list[dict[str, str]], out_path: Path) 
             means.append(ci.mean)
             errors.append(ci.half_width)
         if means:
-            plt.errorbar(speeds, means, yerr=errors, marker="o", capsize=3, label=algo)
+            plt.errorbar(speeds, means, yerr=errors, capsize=3, label=algo, **_algo_style_kwargs(algo))
             plotted += 1
     if plotted == 0:
         plt.close()
@@ -1091,7 +1113,7 @@ def _plot_outage_probability_vs_n(rows: list[dict[str, str]], out_path: Path) ->
         errs = [item[2] for item in points]
         if not xs:
             continue
-        plt.errorbar(xs, ys, yerr=errs, marker="o", capsize=3, label=algo)
+        plt.errorbar(xs, ys, yerr=errs, capsize=3, label=algo, **_algo_style_kwargs(algo))
         plotted += 1
 
     if plotted == 0:
@@ -1144,7 +1166,7 @@ def _plot_energy_efficiency_vs_reliability(rows: list[dict[str, str]], out_path:
         ci_y = ci95_from_samples(ys)
         if ci_x is None or ci_y is None:
             continue
-        plt.errorbar([ci_x.mean], [ci_y.mean], xerr=[ci_x.half_width], yerr=[ci_y.half_width], fmt="o", markersize=7, capsize=4, label=algo)
+        plt.errorbar([ci_x.mean], [ci_y.mean], xerr=[ci_x.half_width], yerr=[ci_y.half_width], markersize=7, capsize=4, label=algo, **_algo_style_kwargs(algo))
         plotted += 1
 
     if plotted == 0:
@@ -1198,8 +1220,8 @@ def _plot_airtime_reliability_pareto(rows: list[dict[str, str]], out_path: Path)
         ci_y = ci95_from_samples(ys)
         if ci_x is None or ci_y is None:
             continue
-        ax.scatter([ci_x.mean], [ci_y.mean], s=45, label=algo)
-        ax.add_patch(Ellipse((ci_x.mean, ci_y.mean), width=max(2.0 * ci_x.half_width, 1e-12), height=max(2.0 * ci_y.half_width, 1e-12), fill=False, alpha=0.65))
+        ax.scatter([ci_x.mean], [ci_y.mean], s=45, label=algo, color=_algo_style_kwargs(algo).get("color"), marker=_algo_style_kwargs(algo).get("marker"))
+        ax.add_patch(Ellipse((ci_x.mean, ci_y.mean), width=max(2.0 * ci_x.half_width, 1e-12), height=max(2.0 * ci_y.half_width, 1e-12), fill=False, alpha=0.65, edgecolor=_algo_style_kwargs(algo).get("color")))
         plotted += 1
 
     if plotted == 0:

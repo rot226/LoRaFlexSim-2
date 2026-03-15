@@ -322,3 +322,53 @@ def test_plot_fig16_energy_efficiency_vs_reliability_uses_dedicated_aggregate(mo
     monkeypatch.setattr(plots.plt, "legend", lambda *args, **kwargs: None)
     out_path = tmp_path / "fig16_energy_efficiency_vs_reliability.png"
     assert plots._plot_energy_efficiency_vs_reliability(rows, out_path) is True
+
+
+def test_plot_xy_by_algo_applies_algo_style_colors(monkeypatch, tmp_path):
+    import matplotlib.colors as mcolors
+
+    rows = [
+        {"N": "50", "algo": "adr", "pdr_mean": "0.10"},
+        {"N": "100", "algo": "adr", "pdr_mean": "0.12"},
+        {"N": "50", "algo": "ucb", "pdr_mean": "0.30"},
+        {"N": "100", "algo": "ucb", "pdr_mean": "0.32"},
+    ]
+
+    captured_figs = []
+    monkeypatch.setattr(plots, "_save_figure_variants", lambda path: None)
+    monkeypatch.setattr(plots.plt, "close", lambda fig=None: captured_figs.append(plots.plt.gcf()))
+
+    out_path = tmp_path / "fig01_pdr_vs_n_snir_off.png"
+    assert plots._plot_xy_by_algo(rows, fig_name=out_path.name, y_col="pdr_mean", out_path=out_path) is True
+
+    assert captured_figs
+    ax = captured_figs[0].axes[0]
+    container_by_algo = {container.get_label(): container for container in ax.containers if hasattr(container, "lines")}
+    assert mcolors.to_hex(container_by_algo["adr"].lines[0].get_color()) == mcolors.to_hex(plots.ALGO_STYLE["adr"].color)
+    assert mcolors.to_hex(container_by_algo["ucb"].lines[0].get_color()) == mcolors.to_hex(plots.ALGO_STYLE["ucb"].color)
+
+
+def test_plot_sf_distribution_small_multiples_applies_algo_color_per_subplot(monkeypatch, tmp_path):
+    import matplotlib.colors as mcolors
+
+    rows = [
+        {"algo": "adr", "sf": "7", "ratio": "0.4"},
+        {"algo": "adr", "sf": "8", "ratio": "0.6"},
+        {"algo": "ucb", "sf": "7", "ratio": "0.2"},
+        {"algo": "ucb", "sf": "8", "ratio": "0.8"},
+    ]
+
+    captured_figs = []
+    monkeypatch.setattr(plots.plt, "close", lambda fig=None: captured_figs.append(fig if fig is not None else plots.plt.gcf()))
+
+    out_path = tmp_path / "fig09b_sf_distribution_snir_on_small_multiples.png"
+    assert plots._plot_sf_distribution_small_multiples(rows, out_path) is True
+
+    assert captured_figs
+    fig = captured_figs[0]
+    axes = fig.axes
+    algo_names = [axis.get_legend().get_texts()[0].get_text() for axis in axes]
+    for axis, algo in zip(axes, algo_names, strict=False):
+        assert axis.patches
+        first_patch_color = mcolors.to_hex(axis.patches[0].get_facecolor())
+        assert first_patch_color == mcolors.to_hex(plots.ALGO_STYLE[algo].color)
