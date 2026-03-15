@@ -213,6 +213,15 @@ METRIC_COLUMN_ALIASES = {
     "switch_count_mean": ("switch_count_mean", "switch_count"),
 }
 
+CI95_COLUMN_ALIASES = {
+    "pdr_mean": ("pdr_ci95", "pdr_ci95_low", "pdr_ci95_high"),
+    "der_mean": ("der_ci95", "der_ci95_low", "der_ci95_high"),
+    "throughput_bps_mean": ("throughput_bps_ci95", "throughput_bps_ci95_low", "throughput_bps_ci95_high"),
+    "jain_fairness_mean": ("jain_fairness_ci95", "jain_fairness_ci95_low", "jain_fairness_ci95_high"),
+    "Tc_s_mean": ("Tc_s_ci95", "Tc_s_ci95_low", "Tc_s_ci95_high"),
+    "outage_ratio_mean": ("outage_ratio_ci95", "outage_ratio_ci95_low", "outage_ratio_ci95_high"),
+}
+
 
 @dataclass(frozen=True)
 class ScenarioFilters:
@@ -436,6 +445,7 @@ def _plot_xy_by_algo(
 ) -> bool:
     resolved_metric = _resolve_metric_column(rows, expected=y_col)
     needed = {"N", "algo", resolved_metric}
+    ci95_columns = _resolve_ci95_columns(rows, metric_col=resolved_metric)
     if not rows:
         _warn_skip(fig_name, "no rows available")
         return False
@@ -455,32 +465,59 @@ def _plot_xy_by_algo(
     plotted = 0
     for algo, algo_rows in series:
         per_x: dict[float, list[float]] = defaultdict(list)
+        per_x_csv: dict[float, tuple[float, float, float]] = {}
         for row in algo_rows:
             x = _to_float(row.get("N"))
             y = _to_float(row.get(resolved_metric))
             if x is None or y is None:
                 dropped += 1
                 continue
+            if ci95_columns is not None:
+                _, low_col, high_col = ci95_columns
+                low = _to_float(row.get(low_col))
+                high = _to_float(row.get(high_col))
+                if low is not None and high is not None:
+                    per_x_csv[x] = (y, low, high)
+                    continue
             per_x[x].append(y)
         if not per_x:
-            warnings.warn(
-                f"{fig_name}: empty algo series after numeric cleanup. filter=algo={algo}",
-                stacklevel=2,
-            )
-            continue
+            if not per_x_csv:
+                warnings.warn(
+                    f"{fig_name}: empty algo series after numeric cleanup. filter=algo={algo}",
+                    stacklevel=2,
+                )
+                continue
 
-        xs = sorted(per_x)
+        xs = sorted(set(per_x) | set(per_x_csv))
+        plot_xs: list[float] = []
         means: list[float] = []
         errors: list[float] = []
+        lows: list[float] = []
+        highs: list[float] = []
         for x in xs:
+            if x in per_x_csv:
+                mean, low, high = per_x_csv[x]
+                plot_xs.append(x)
+                means.append(mean)
+                errors.append(max(0.0, (high - low) / 2.0))
+                lows.append(low)
+                highs.append(high)
+                y_values.append(mean)
+                continue
             ci = ci95_from_samples(per_x[x])
             if ci is None:
                 continue
+            plot_xs.append(x)
             means.append(ci.mean)
             errors.append(ci.half_width)
+            lows.append(ci.mean - ci.half_width)
+            highs.append(ci.mean + ci.half_width)
             y_values.append(ci.mean)
         if means:
-            plt.errorbar(xs, means, yerr=errors, capsize=3, label=algo, **_algo_style_kwargs(algo))
+            style = _algo_style_kwargs(algo)
+            plt.plot(plot_xs, means, label=algo, **style)
+            plt.fill_between(plot_xs, lows, highs, alpha=0.15, color=style.get("color"))
+            plt.errorbar(plot_xs, means, yerr=errors, capsize=3, linestyle="none", color=style.get("color"))
             plotted += 1
 
     if dropped:
@@ -591,6 +628,18 @@ def _resolve_metric_column(rows: list[dict[str, str]], *, expected: str) -> str:
                 )
             return candidate
     return expected
+
+
+def _resolve_ci95_columns(rows: list[dict[str, str]], *, metric_col: str) -> tuple[str, str, str] | None:
+    if not rows:
+        return None
+    candidates = CI95_COLUMN_ALIASES.get(metric_col)
+    if candidates is None:
+        return None
+    half, low, high = candidates
+    if half in rows[0] and low in rows[0] and high in rows[0]:
+        return half, low, high
+    return None
 
 
 def _plot_tc_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool:

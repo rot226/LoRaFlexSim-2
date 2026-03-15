@@ -147,6 +147,9 @@ def test_aggregate_runs_computes_ci95_and_effective_runs(tmp_path):
     assert row["num_runs"] == "2"
     assert float(row["pdr_mean"]) == 0.8
     assert float(row["pdr_ci95"]) > 0.0
+    assert float(row["pdr_std"]) > 0.0
+    assert row["pdr_n"] == "2"
+    assert float(row["pdr_ci95_low"]) < float(row["pdr_mean"]) < float(row["pdr_ci95_high"])
 
 
 def test_aggregate_runs_reports_ignored_corrupted_runs(tmp_path):

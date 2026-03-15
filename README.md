@@ -175,6 +175,37 @@ ce qui est tracé et interprété.
 - **Energy efficiency (`energy_efficiency_mean`)** : efficacité énergétique
   normalisée (fiabilité par coût énergétique).
 
+#### 1.b) Méthode d'intervalle de confiance (IC95)
+
+Pour les agrégats de `metric_by_factor.csv`, le pipeline exporte désormais, pour
+`PDR`, `DER`, `throughput`, `outage`, `fairness` et `Tc` :
+`*_mean`, `*_std`, `*_n`, `*_ci95`, `*_ci95_low`, `*_ci95_high`.
+
+Formule utilisée (demi-largeur IC95) :
+
+`IC95 = c(n) * s / sqrt(n)`
+
+- `n` = nombre de répétitions valides,
+- `s` = écart-type empirique (sample standard deviation),
+- `c(n)` = valeur critique bilatérale à 95 %.
+
+Choix de `c(n)` :
+
+- **Student-t** si `n <= 30` (`df = n-1`, table interne du pipeline),
+- **Approximation normale** si `n > 30` (`c(n)=1.96`).
+
+Bornes exportées :
+
+- `ci95_low = mean - IC95`,
+- `ci95_high = mean + IC95`.
+
+Cas particuliers :
+
+- si `n < 2`, alors `std=0` et `IC95=0` (borne basse = borne haute = moyenne),
+- pour `Tc`, les valeurs `inf` run-level sont exclues du calcul statistique ;
+  si toutes les répétitions sont non convergées, la moyenne agrégée reste `inf`
+  et les bornes sont `inf`.
+
 #### 2) Filtres IEEE-ready par figure
 
 - Les filtres imposés par le pipeline sont définis dans
