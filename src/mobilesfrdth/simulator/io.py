@@ -938,13 +938,14 @@ def aggregate_runs(
                 sinr_rows.append(
                     {
                         **factors,
+                        "sigma": factors.get("sigma_shadowing", ""),
                         "quantile": quantile,
                         "sinr_db": sinr,
                         "sample_count": n,
                     }
                 )
         sinr_path = out_dir / "sinr_cdf.csv"
-        _write_csv(sinr_path, factor_columns + ["quantile", "sinr_db", "sample_count"], sinr_rows)
+        _write_csv(sinr_path, factor_columns + ["sigma", "quantile", "sinr_db", "sample_count"], sinr_rows)
         files["sinr_cdf"] = sinr_path
 
     files["convergence_tc"] = convergence_path
