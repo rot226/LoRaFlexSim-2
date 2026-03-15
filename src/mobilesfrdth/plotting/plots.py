@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import random
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
@@ -26,10 +27,12 @@ AXIS_LABELS_EN = {
     "pdr_mean": "Packet Delivery Ratio",
     "der_mean": "Data Extraction Ratio",
     "throughput_bps_mean": "Throughput (bit/s)",
+    "outage_prob_mean": "Outage probability",
     "jain_fairness_mean": "Jain's fairness index (unitless)",
     "airtime_total_s_mean": "Total airtime (s)",
     "switch_count_mean": "Number of switches",
     "Tc_s": "Convergence time Tc (s)",
+    "adaptation_cost": "Adaptation cost (switch_count + Tc)",
     "sinr_db": "SINR (dB)",
     "quantile": "Cumulative probability",
     "sf": "Spreading Factor",
@@ -62,6 +65,9 @@ def _algo_style_kwargs(algo: str) -> dict[str, str]:
 def _axis_label(name: str) -> str:
     return AXIS_LABELS_EN.get(name, normalized_axis_label(name))
 
+
+def _add_compact_legend(*, title: str = "Algorithm") -> None:
+    plt.legend(title=title, fontsize=8, title_fontsize=9, ncols=2, frameon=False, handlelength=1.5)
 
 
 REQUIRED_FILES = {
@@ -113,13 +119,11 @@ FIGURE_SPECS = [
     ("fig06_throughput_vs_n_snir_on.png", "metric_by_factor", "throughput_bps_mean", {"mode": {"snir_on"}}),
 ]
 
-BONUS_SPECS = [
-    ("fig11_airtime_vs_n.png", "metric_by_factor", "airtime_total_s_mean", {}),
-    ("fig12_switch_count_vs_n.png", "metric_by_factor", "switch_count_mean", {}),
-    ("fig13_ucb_tracking_lag_vs_speed.png", "ucb_tracking", "Tc_s_mean", {"algo": {"ucb", "ucb_forget"}}),
-    ("fig14_pareto_reliability_airtime.png", "pareto_reliability_airtime", "pdr_mean", {}),
-    ("fig15_outage_probability_vs_n.png", "outage_probability", "outage_prob_mean", {}),
-    ("fig16_energy_efficiency_vs_reliability.png", "energy_efficiency_reliability", "pdr_mean", {}),
+CONTRIBUTION_SPECS = [
+    ("fig08_outage_probability_vs_n.png", "outage_probability", "outage_prob_mean", {}),
+    ("fig09_energy_efficiency_vs_pdr_pareto.png", "energy_efficiency_reliability", "pdr_mean", {}),
+    ("fig10_sinr_cdf_fixed_scenario.png", "sinr_cdf", "sinr_db", {}),
+    ("fig11_adaptation_cost_vs_speed.png", "metric_by_factor", "adaptation_cost", {}),
 ]
 
 ARTICLE_PROFILE_FILTERS: dict[str, dict[str, dict[str, set[str]]]] = {
@@ -130,6 +134,11 @@ ARTICLE_PROFILE_FILTERS: dict[str, dict[str, dict[str, set[str]]]] = {
         "fig04_der_vs_n_snir_on.png": {"mode": {"snir_on"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
         "fig05_throughput_vs_n_snir_off.png": {"mode": {"snir_off"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
         "fig06_throughput_vs_n_snir_on.png": {"mode": {"snir_on"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig07_sf_histogram_by_algo.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig08_outage_probability_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig09_energy_efficiency_vs_pdr_pareto.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig10_sinr_cdf_fixed_scenario.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig11_adaptation_cost_vs_speed.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
         "fig07_tc_vs_speed.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
         "fig08_fairness_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
         "fig09_sf_distribution_snir_on.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
@@ -151,6 +160,11 @@ ARTICLE_PROFILE_FILTERS: dict[str, dict[str, dict[str, set[str]]]] = {
         "fig04_der_vs_n_snir_on.png": {"mode": {"snir_on"}},
         "fig05_throughput_vs_n_snir_off.png": {"mode": {"snir_off"}},
         "fig06_throughput_vs_n_snir_on.png": {"mode": {"snir_on"}},
+        "fig07_sf_histogram_by_algo.png": {"mode": {"snir_on"}},
+        "fig08_outage_probability_vs_n.png": {"mode": {"snir_on"}},
+        "fig09_energy_efficiency_vs_pdr_pareto.png": {},
+        "fig10_sinr_cdf_fixed_scenario.png": {"mode": {"snir_on"}},
+        "fig11_adaptation_cost_vs_speed.png": {"mode": {"snir_on"}},
         "fig07_tc_vs_speed.png": {"speed": {"1", "3", "5"}},
         "fig08_fairness_vs_n.png": {"mode": {"snir_off", "snir_on"}},
         "fig09_sf_distribution_snir_on.png": {"mode": {"snir_on"}},
@@ -552,13 +566,13 @@ def _plot_xy_by_algo(
     plt.grid(alpha=0.3)
     plt.xlabel(_axis_label("N"))
     plt.ylabel(_axis_label(y_col))
-    plt.legend(title=f"Algorithm | y-scale: {scale_policy}")
+    _add_compact_legend(title=f"Algorithm | y-scale: {scale_policy}")
     plt.tight_layout()
     _save_figure_variants(out_path)
 
     if _is_reliability_metric(y_col) and y_scale == "auto" and y_values and min(y_values) >= 0.9:
         plt.ylim(0.0, 1.0)
-        plt.legend(title="Algorithm | y-scale: full annex [0,1]")
+        _add_compact_legend(title="Algorithm | y-scale: full annex [0,1]")
         plt.tight_layout()
         annex_path = out_path.with_name(f"{out_path.stem}_annex_full_scale{out_path.suffix}")
         _save_figure_variants(annex_path)
@@ -692,7 +706,7 @@ def _plot_tc_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool:
     plt.grid(alpha=0.3)
     plt.xlabel(_axis_label("speed"))
     plt.ylabel(_axis_label("Tc_s"))
-    plt.legend()
+    _add_compact_legend(title="Algorithm")
     plt.tight_layout()
     _save_figure_variants(out_path)
     plt.close()
@@ -710,92 +724,57 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
         _warn_skip(fig_name, f"missing columns {missing}")
         return False
 
-    context_columns = ("algo", "mode", "N", "speed", "mobility_model", "gateways", "sigma")
-    by_group: dict[tuple[str, str, str, str, str, str, str], list[tuple[float, float]]] = defaultdict(list)
+    by_context: dict[tuple[str, str, str, str, str, str], list[dict[str, str]]] = defaultdict(list)
     for row in rows:
+        context = (
+            row.get("mode", ""),
+            row.get("N", ""),
+            row.get("speed", ""),
+            row.get("mobility_model", ""),
+            row.get("gateways", ""),
+            row.get("sigma", ""),
+        )
+        by_context[context].append(row)
+
+    ranked = sorted(by_context.items(), key=lambda item: (-len(item[1]), item[0]))
+    if not ranked:
+        _warn_skip(fig_name, "no scenario context available")
+        return False
+    chosen_context, chosen_rows = ranked[0]
+
+    grouped: dict[str, dict[float, list[float]]] = defaultdict(lambda: defaultdict(list))
+    for row in chosen_rows:
         q = _to_float(row.get("quantile"))
         sinr = _to_float(row.get("sinr_db"))
-        if q is None or sinr is None:
+        if q is None or sinr is None or q <= 0.0 or q > 1.0:
             continue
-        context = tuple(row.get(column, "") for column in context_columns)
-        by_group[context].append((q, sinr))
+        grouped[row.get("algo", "unknown")][q].append(sinr)
 
-    if not by_group:
+    if not grouped:
         _warn_skip(fig_name, "no usable quantile/sinr points")
-        return False
-
-    contexts_by_algo: dict[str, set[tuple[str, str, str, str, str, str]]] = defaultdict(set)
-    for (algo, mode, n, speed, mobility_model, gateways, sigma) in by_group:
-        contexts_by_algo[algo].add((mode, n, speed, mobility_model, gateways, sigma))
-
-    conflicting_algos = {algo: len(contexts) for algo, contexts in contexts_by_algo.items() if len(contexts) > 1}
-    if conflicting_algos:
-        details = ", ".join(f"{algo}:{count}" for algo, count in sorted(conflicting_algos.items()))
-        _warn_skip(
-            fig_name,
-            (
-                "global 'algo-only' plot disabled: multiple contexts detected "
-                f"({details}); apply strict filters or plot by full scenario"
-            ),
-        )
         return False
 
     plt.figure(figsize=(8, 5))
     plotted = 0
-    for (algo, mode, n, speed, mobility_model, gateways, sigma), points in sorted(by_group.items()):
-        points.sort(key=lambda item: (item[0], item[1]))
-        quantiles = [item[0] for item in points]
-        sinrs = [item[1] for item in points]
-        if any(q <= 0.0 or q > 1.0 for q in quantiles):
-            _warn_skip(
-                fig_name,
-                (
-                    "quantile outside ]0..1] for group "
-                    f"algo={algo}, mode={mode}, N={n}, speed={speed}, "
-                    f"mobility_model={mobility_model}, gateways={gateways}, sigma={sigma}"
-                ),
-            )
-            plt.close()
-            return False
-        if any(curr < prev for prev, curr in zip(quantiles, quantiles[1:], strict=False)):
-            _warn_skip(
-                fig_name,
-                (
-                    "quantile not monotonically increasing for group "
-                    f"algo={algo}, mode={mode}, N={n}, speed={speed}, "
-                    f"mobility_model={mobility_model}, gateways={gateways}, sigma={sigma}"
-                ),
-            )
-            plt.close()
-            return False
-        if any(curr < prev for prev, curr in zip(sinrs, sinrs[1:], strict=False)):
-            _warn_skip(
-                fig_name,
-                (
-                    "sinr_db not monotonically increasing for group "
-                    f"algo={algo}, mode={mode}, N={n}, speed={speed}, "
-                    f"mobility_model={mobility_model}, gateways={gateways}, sigma={sigma}"
-                ),
-            )
-            plt.close()
-            return False
-        if sinrs[-1] <= sinrs[0]:
-            _warn_skip(
-                fig_name,
-                (
-                    "zero SINR span for group "
-                    f"algo={algo}, mode={mode}, N={n}, speed={speed}, "
-                    f"mobility_model={mobility_model}, gateways={gateways}, sigma={sigma}"
-                ),
-            )
-            plt.close()
-            return False
-
-        label = (
-            f"{algo} | {mode}, N={n}, v={speed}, "
-            f"mob={mobility_model}, gw={gateways}, sigma={sigma}"
-        )
-        plt.plot(sinrs, quantiles, label=label, **_algo_style_kwargs(algo))
+    for algo in sorted(grouped):
+        quantiles = sorted(grouped[algo])
+        xs: list[float] = []
+        means: list[float] = []
+        lows: list[float] = []
+        highs: list[float] = []
+        for q in quantiles:
+            ci = ci95_from_samples(grouped[algo][q])
+            if ci is None:
+                continue
+            xs.append(ci.mean)
+            means.append(q)
+            lows.append(max(-40.0, ci.mean - ci.half_width))
+            highs.append(ci.mean + ci.half_width)
+        if not xs:
+            continue
+        style = _algo_style_kwargs(algo)
+        plt.plot(xs, means, label=algo, **style)
+        plt.fill_betweenx(means, lows, highs, color=style.get("color"), alpha=0.15)
         plotted += 1
 
     if plotted == 0:
@@ -803,15 +782,16 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
         plt.close()
         return False
 
+    mode, n_value, speed, mobility, gateways, sigma = chosen_context
     plt.grid(alpha=0.3)
     plt.xlabel(_axis_label("sinr_db"))
     plt.ylabel(_axis_label("quantile"))
-    plt.legend(fontsize=8)
+    _add_compact_legend(title="Algorithm")
+    plt.title(f"Fixed scenario: mode={mode}, N={n_value}, v={speed}, mob={mobility}, gw={gateways}, sigma={sigma}")
     plt.tight_layout()
     _save_figure_variants(out_path)
     plt.close()
     return True
-
 
 def _plot_sf_distribution(rows: list[dict[str, str]], out_path: Path) -> bool:
     fig_name = out_path.name
@@ -835,9 +815,8 @@ def _plot_sf_distribution(rows: list[dict[str, str]], out_path: Path) -> bool:
         if sf is None or value is None:
             continue
         sf_int = int(sf)
-        if sf_int < 7 or sf_int > 12:
-            continue
-        grouped[row.get("algo", "unknown")][sf_int].append(value)
+        if 7 <= sf_int <= 12:
+            grouped[row.get("algo", "unknown")][sf_int].append(value)
 
     if not grouped:
         _warn_skip(fig_name, "no usable SF/ratio points")
@@ -845,48 +824,39 @@ def _plot_sf_distribution(rows: list[dict[str, str]], out_path: Path) -> bool:
 
     sf_values = list(range(7, 13))
     algos = sorted(grouped)
-
-    # Unified output format: always render usage share as percentages (0-100%).
-    data_percent: dict[str, list[float]] = {}
-    for algo in algos:
-        means = {sf: sum(grouped[algo][sf]) / len(grouped[algo][sf]) for sf in grouped[algo]}
-        ordered = [max(0.0, means.get(sf, 0.0)) for sf in sf_values]
-        if has_ratio:
-            # distribution_sf.ratio can be stored either in fractions (sum~1)
-            # or in percentages (sum~100): normalize first to fractions.
-            total = sum(ordered)
-            if total > 1.5:
-                ordered = [value / 100.0 for value in ordered]
-            total = sum(ordered)
-            if total > 0:
-                ordered = [value / total for value in ordered]
-        else:
-            total = sum(ordered)
-            if total > 0:
-                ordered = [value / total for value in ordered]
-        data_percent[algo] = [value * 100.0 for value in ordered]
-
-    x_positions = list(range(len(sf_values)))
-    y_ticks = list(range(0, 101, 10))
-
     width = 0.8 / max(len(algos), 1)
+    x_positions = list(range(len(sf_values)))
+
     plt.figure(figsize=(10, 5))
     for idx, algo in enumerate(algos):
         offset = (idx - (len(algos) - 1) / 2) * width
         xs = [x + offset for x in x_positions]
-        plt.bar(xs, data_percent[algo], width=width, label=algo, color=_algo_style_kwargs(algo).get("color"))
+        means_percent: list[float] = []
+        ci_percent: list[float] = []
+        for sf in sf_values:
+            samples = grouped[algo].get(sf, [])
+            if has_ratio:
+                samples = [sample / 100.0 if sample > 1.5 else sample for sample in samples]
+            ci = ci95_from_samples(samples)
+            if ci is None:
+                means_percent.append(0.0)
+                ci_percent.append(0.0)
+            else:
+                means_percent.append(max(0.0, ci.mean) * 100.0)
+                ci_percent.append(max(0.0, ci.half_width) * 100.0)
+        style = _algo_style_kwargs(algo)
+        plt.bar(xs, means_percent, width=width, label=algo, color=style.get("color"), alpha=0.85)
+        plt.errorbar(xs, means_percent, yerr=ci_percent, fmt="none", ecolor=style.get("color"), capsize=2)
+
     plt.grid(axis="y", alpha=0.3)
     plt.xlabel(_axis_label("sf"))
     plt.ylabel("Usage share (%)")
     plt.xticks(x_positions, [str(sf) for sf in sf_values])
-    plt.ylim(0, 100)
-    plt.yticks(y_ticks)
-    plt.legend(title="Algorithm", ncols=2)
+    _add_compact_legend(title="Algorithm")
     plt.tight_layout()
     _save_figure_variants(out_path)
     plt.close()
     return True
-
 
 def _plot_sf_distribution_small_multiples(rows: list[dict[str, str]], out_path: Path) -> bool:
     fig_name = out_path.name
@@ -949,7 +919,7 @@ def _plot_sf_distribution_small_multiples(rows: list[dict[str, str]], out_path: 
         axis.grid(axis="y", alpha=0.3)
         axis.set_ylim(0, 100)
         axis.set_yticks(y_ticks)
-        axis.legend(loc="upper right", title="Algorithm")
+        axis.legend(loc="upper right", title="Algorithm", fontsize=8, title_fontsize=9, frameon=False)
 
     axes_list[-1].set_xticks(x_positions, [str(sf) for sf in sf_values])
     axes_list[-1].set_xlabel(_axis_label("sf"))
@@ -1016,7 +986,7 @@ def _plot_delta_pdr_on_minus_off(rows: list[dict[str, str]], out_path: Path) -> 
     plt.grid(alpha=0.3)
     plt.xlabel(_axis_label("N"))
     plt.ylabel("ΔPDR (SNIR_ON - SNIR_OFF)")
-    plt.legend()
+    _add_compact_legend(title="Algorithm")
     plt.tight_layout()
     _save_figure_variants(out_path)
     plt.close()
@@ -1073,7 +1043,7 @@ def _plot_switching_vs_speed(rows: list[dict[str, str]], out_path: Path) -> bool
     plt.grid(alpha=0.3)
     plt.xlabel(_axis_label("speed"))
     plt.ylabel("Instability (switch_count/h)")
-    plt.legend()
+    _add_compact_legend(title="Algorithm")
     plt.tight_layout()
     _save_figure_variants(out_path)
     plt.close()
@@ -1133,7 +1103,7 @@ def _plot_ucb_tracking_lag_vs_speed(rows: list[dict[str, str]], out_path: Path) 
     plt.grid(alpha=0.3)
     plt.xlabel(_axis_label("speed"))
     plt.ylabel(_axis_label("Tc_s"))
-    plt.legend(title="Algorithm")
+    _add_compact_legend(title="Algorithm")
     plt.tight_layout()
     _save_figure_variants(out_path)
     plt.close()
@@ -1185,7 +1155,7 @@ def _plot_outage_probability_vs_n(rows: list[dict[str, str]], out_path: Path) ->
     plt.xlabel(_axis_label("N"))
     plt.ylabel("Outage probability")
     plt.ylim(0, 1)
-    plt.legend(title="Algorithm")
+    _add_compact_legend(title="Algorithm")
     plt.tight_layout()
     _save_figure_variants(out_path)
     plt.close()
@@ -1218,15 +1188,18 @@ def _plot_energy_efficiency_vs_reliability(rows: list[dict[str, str]], out_path:
         return False
 
     plt.figure(figsize=(8, 5))
+    ax = plt.gca()
     plotted = 0
     for algo in sorted(grouped):
+        style = _algo_style_kwargs(algo)
         xs = [v[0] for v in grouped[algo]]
         ys = [v[2] for v in grouped[algo]]
         ci_x = ci95_from_samples(xs)
         ci_y = ci95_from_samples(ys)
         if ci_x is None or ci_y is None:
             continue
-        plt.errorbar([ci_x.mean], [ci_y.mean], xerr=[ci_x.half_width], yerr=[ci_y.half_width], markersize=7, capsize=4, label=algo, **_algo_style_kwargs(algo))
+        ax.errorbar([ci_x.mean], [ci_y.mean], xerr=[ci_x.half_width], yerr=[ci_y.half_width], markersize=7, capsize=4, label=algo, **style)
+        ax.scatter([ci_x.mean], [ci_y.mean], color=style.get("color"), marker=style.get("marker"), s=45)
         plotted += 1
 
     if plotted == 0:
@@ -1238,11 +1211,12 @@ def _plot_energy_efficiency_vs_reliability(rows: list[dict[str, str]], out_path:
     plt.xlabel(_axis_label("pdr_mean"))
     plt.ylabel("Energy efficiency (throughput/airtime)")
     plt.xlim(0, 1.05)
-    plt.legend(title="Algorithm")
+    _add_compact_legend(title="Pareto frontier")
     plt.tight_layout()
     _save_figure_variants(out_path)
     plt.close()
     return True
+
 def _plot_airtime_reliability_pareto(rows: list[dict[str, str]], out_path: Path) -> bool:
     """Compromis PDR vs airtime avec point moyen et ellipse IC95 par algorithme."""
 
@@ -1293,7 +1267,91 @@ def _plot_airtime_reliability_pareto(rows: list[dict[str, str]], out_path: Path)
     plt.xlabel(_axis_label("airtime_total_s_mean"))
     plt.ylabel(_axis_label("pdr_mean"))
     plt.ylim(0, 1.05)
-    plt.legend(title="Algorithm")
+    _add_compact_legend(title="Algorithm")
+    plt.tight_layout()
+    _save_figure_variants(out_path)
+    plt.close()
+    return True
+
+
+def _plot_adaptation_cost_vs_speed(
+    metric_rows: list[dict[str, str]],
+    tc_rows: list[dict[str, str]],
+    out_path: Path,
+) -> bool:
+    fig_name = out_path.name
+    if not metric_rows or not tc_rows:
+        _warn_skip(fig_name, "metric_by_factor.csv or convergence_tc.csv is empty or missing")
+        return False
+
+    switch_col = _resolve_metric_column(metric_rows, expected="switch_count_mean")
+    tc_column = "Tc_s_mean" if tc_rows and "Tc_s_mean" in tc_rows[0] else "Tc_s"
+
+    switch_by_key: dict[tuple[str, str, str], list[float]] = defaultdict(list)
+    for row in metric_rows:
+        algo = row.get("algo", "unknown")
+        speed = row.get("speed", "")
+        mode = row.get("mode", "")
+        speed_value = _to_float(speed)
+        switch_count = _to_float(row.get(switch_col))
+        if speed_value is None or switch_count is None:
+            continue
+        switch_by_key[(algo, str(speed_value), mode)].append(switch_count)
+
+    tc_by_key: dict[tuple[str, str, str], list[float]] = defaultdict(list)
+    for row in tc_rows:
+        algo = row.get("algo", "unknown")
+        speed = row.get("speed", "")
+        mode = row.get("mode", "")
+        speed_value = _to_float(speed)
+        tc = _to_float(row.get(tc_column))
+        if speed_value is None or tc is None:
+            continue
+        tc_by_key[(algo, str(speed_value), mode)].append(tc)
+
+    grouped: dict[str, dict[float, list[float]]] = defaultdict(lambda: defaultdict(list))
+    for key, switch_samples in switch_by_key.items():
+        if key not in tc_by_key:
+            continue
+        algo, speed_token, _ = key
+        speed_value = _to_float(speed_token)
+        if speed_value is None:
+            continue
+        ci_switch = ci95_from_samples(switch_samples)
+        ci_tc = ci95_from_samples(tc_by_key[key])
+        if ci_switch is None or ci_tc is None:
+            continue
+        grouped[algo][speed_value].append(ci_switch.mean + ci_tc.mean)
+
+    if not grouped:
+        _warn_skip(fig_name, "no aligned speed/switch_count/Tc pairs")
+        return False
+
+    plt.figure(figsize=(8, 5))
+    plotted = 0
+    for algo in sorted(grouped):
+        speeds = sorted(grouped[algo])
+        means: list[float] = []
+        errors: list[float] = []
+        for speed in speeds:
+            ci = ci95_from_samples(grouped[algo][speed])
+            if ci is None:
+                continue
+            means.append(ci.mean)
+            errors.append(ci.half_width)
+        if means:
+            plt.errorbar(speeds, means, yerr=errors, capsize=3, label=algo, **_algo_style_kwargs(algo))
+            plotted += 1
+
+    if plotted == 0:
+        plt.close()
+        _warn_skip(fig_name, "no plottable adaptation cost curve")
+        return False
+
+    plt.grid(alpha=0.3)
+    plt.xlabel(_axis_label("speed"))
+    plt.ylabel(_axis_label("adaptation_cost"))
+    _add_compact_legend(title="Algorithm")
     plt.tight_layout()
     _save_figure_variants(out_path)
     plt.close()
@@ -1314,6 +1372,7 @@ def generate_minimal_figures(
     if article_profile not in ARTICLE_PROFILE_FILTERS:
         raise ValueError(f"Unknown article profile: {article_profile}")
 
+    random.seed(42)
     setup_plot_style(ieee_ready=ieee_ready)
     out_dir.mkdir(parents=True, exist_ok=True)
     payloads = {name: _read_csv_rows(aggregates_dir / filename) for name, filename in REQUIRED_FILES.items()}
@@ -1341,115 +1400,40 @@ def generate_minimal_figures(
         if did_generate:
             generated.append(out_path)
 
-    fig07 = out_dir / _stable_figure_name("fig07_tc_vs_speed.png")
-    fig07_filters = filters.merge(_resolve_profile_filter(article_profile, fig07.name))
-    did_generate = _plot_tc_vs_speed(_apply_filters(payloads["convergence_tc"], fig07_filters), fig07)
+    sf_name = "fig07_sf_histogram_by_algo.png"
+    sf_filters = filters.merge(_resolve_profile_filter(article_profile, sf_name))
+    sf_selected = _apply_filters(payloads["distribution_sf"], sf_filters)
+    sf_path = out_dir / _stable_figure_name(sf_name)
+    did_generate = _plot_sf_distribution(sf_selected, sf_path)
     traces.append(
         FigureTrace(
-            figure=fig07.name,
-            source="convergence_tc",
-            metric="Tc_s",
-            filters=_filters_to_serializable(fig07_filters),
-            num_points=_count_points(_apply_filters(payloads["convergence_tc"], fig07_filters), "Tc_s"),
-            points_by_curve=_count_points_by_curve(_apply_filters(payloads["convergence_tc"], fig07_filters), "Tc_s"),
-            generated=did_generate,
-        )
-    )
-    _log_figure_result(fig07, did_generate, verbose=verbose)
-    if did_generate:
-        generated.append(fig07)
-
-    fig08 = out_dir / _stable_figure_name("fig08_fairness_vs_n.png")
-    fig08_filters = filters.merge(_resolve_profile_filter(article_profile, fig08.name))
-    did_generate = _plot_xy_by_algo(
-        _apply_filters(payloads["metric_by_factor"], fig08_filters),
-        fig_name=fig08.name,
-        y_col="jain_fairness_mean",
-        out_path=fig08,
-        y_scale=y_scale,
-    )
-    traces.append(
-        FigureTrace(
-            figure=fig08.name,
-            source="metric_by_factor",
-            metric="jain_fairness_mean",
-            filters=_filters_to_serializable(fig08_filters),
-            num_points=_count_points(_apply_filters(payloads["metric_by_factor"], fig08_filters), "jain_fairness_mean"),
-            points_by_curve=_count_points_by_curve(_apply_filters(payloads["metric_by_factor"], fig08_filters), "jain_fairness_mean"),
-            generated=did_generate,
-        )
-    )
-    _log_figure_result(fig08, did_generate, verbose=verbose)
-    if did_generate:
-        generated.append(fig08)
-
-    fig09 = out_dir / _stable_figure_name("fig09_sf_distribution_snir_on.png")
-    fig09_filters = filters.merge(_resolve_profile_filter(article_profile, fig09.name))
-    did_generate = _plot_sf_distribution(_apply_filters(payloads["distribution_sf"], fig09_filters), fig09)
-    traces.append(
-        FigureTrace(
-            figure=fig09.name,
+            figure=sf_path.name,
             source="distribution_sf",
             metric="ratio",
-            filters=_filters_to_serializable(fig09_filters),
-            num_points=_count_points(_apply_filters(payloads["distribution_sf"], fig09_filters), "ratio"),
-            points_by_curve=_count_points_by_curve(_apply_filters(payloads["distribution_sf"], fig09_filters), "ratio"),
+            filters=_filters_to_serializable(sf_filters),
+            num_points=_count_points(sf_selected, "ratio"),
+            points_by_curve=_count_points_by_curve(sf_selected, "ratio"),
             generated=did_generate,
         )
     )
-    _log_figure_result(fig09, did_generate, verbose=verbose)
+    _log_figure_result(sf_path, did_generate, verbose=verbose)
     if did_generate:
-        generated.append(fig09)
-
-    fig09b = out_dir / _stable_figure_name("fig09b_sf_distribution_snir_on_small_multiples.png")
-    fig09b_filters = filters.merge(_resolve_profile_filter(article_profile, fig09b.name))
-    did_generate = _plot_sf_distribution_small_multiples(_apply_filters(payloads["distribution_sf"], fig09b_filters), fig09b)
-    traces.append(
-        FigureTrace(
-            figure=fig09b.name,
-            source="distribution_sf",
-            metric="ratio",
-            filters=_filters_to_serializable(fig09b_filters),
-            num_points=_count_points(_apply_filters(payloads["distribution_sf"], fig09b_filters), "ratio"),
-            points_by_curve=_count_points_by_curve(_apply_filters(payloads["distribution_sf"], fig09b_filters), "ratio"),
-            generated=did_generate,
-        )
-    )
-    _log_figure_result(fig09b, did_generate, verbose=verbose)
-    if did_generate:
-        generated.append(fig09b)
-
-    fig10 = out_dir / _stable_figure_name("fig10_sinr_cdf.png")
-    fig10_filters = filters.merge(_resolve_profile_filter(article_profile, fig10.name))
-    did_generate = _plot_sinr_cdf(_apply_filters(payloads["sinr_cdf"], fig10_filters), fig10)
-    traces.append(
-        FigureTrace(
-            figure=fig10.name,
-            source="sinr_cdf",
-            metric="sinr_db",
-            filters=_filters_to_serializable(fig10_filters),
-            num_points=_count_points(_apply_filters(payloads["sinr_cdf"], fig10_filters), "sinr_db"),
-            points_by_curve=_count_points_by_curve(_apply_filters(payloads["sinr_cdf"], fig10_filters), "sinr_db"),
-            generated=did_generate,
-        )
-    )
-    _log_figure_result(fig10, did_generate, verbose=verbose)
-    if did_generate:
-        generated.append(fig10)
+        generated.append(sf_path)
 
     if include_bonus:
-        for fig_name, source, metric, local_filter in BONUS_SPECS:
+        for fig_name, source, metric, local_filter in CONTRIBUTION_SPECS:
             effective_filters = filters.merge(local_filter).merge(_resolve_profile_filter(article_profile, fig_name))
             selected = _apply_filters(payloads[source], effective_filters)
             out_path = out_dir / _stable_figure_name(fig_name)
-            if fig_name == "fig13_ucb_tracking_lag_vs_speed.png":
-                did_generate = _plot_ucb_tracking_lag_vs_speed(selected, out_path)
-            elif fig_name == "fig14_pareto_reliability_airtime.png":
-                did_generate = _plot_airtime_reliability_pareto(selected, out_path)
-            elif fig_name == "fig15_outage_probability_vs_n.png":
+            if fig_name == "fig08_outage_probability_vs_n.png":
                 did_generate = _plot_outage_probability_vs_n(selected, out_path)
-            elif fig_name == "fig16_energy_efficiency_vs_reliability.png":
+            elif fig_name == "fig09_energy_efficiency_vs_pdr_pareto.png":
                 did_generate = _plot_energy_efficiency_vs_reliability(selected, out_path)
+            elif fig_name == "fig10_sinr_cdf_fixed_scenario.png":
+                did_generate = _plot_sinr_cdf(selected, out_path)
+            elif fig_name == "fig11_adaptation_cost_vs_speed.png":
+                tc_selected = _apply_filters(payloads["convergence_tc"], effective_filters)
+                did_generate = _plot_adaptation_cost_vs_speed(selected, tc_selected, out_path)
             else:
                 did_generate = _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path, y_scale=y_scale)
             traces.append(
@@ -1505,9 +1489,8 @@ def generate_minimal_figures(
 
     return generated, traces
 
-
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Generate figures fig01..fig10 (and bonus fig11..fig16) from aggregates/*.csv")
+    parser = argparse.ArgumentParser(description="Generate core and contribution figures from aggregates/*.csv")
     parser.add_argument("--aggregates-dir", required=True, type=Path, help="Directory containing aggregated CSV files.")
     parser.add_argument("--out", required=True, type=Path, help="Target directory for PNG files.")
     parser.add_argument(
@@ -1516,7 +1499,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         help="Filter key=val1,val2 (repeatable), e.g.: --scenario-filter mode=snir_on --scenario-filter algo=ucb,legacy",
     )
-    parser.add_argument("--no-bonus", action="store_true", help="Do not generate bonus figures fig11..fig16.")
+    parser.add_argument("--no-bonus", action="store_true", help="Do not generate contribution figures fig08..fig11.")
     parser.add_argument("--ieee-ready", action="store_true", help="Enable IEEE style (colorblind-friendly palette, linewidths, PDF+PNG export).")
     parser.add_argument(
         "--article-profile",
