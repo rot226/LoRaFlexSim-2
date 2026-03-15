@@ -1,6 +1,7 @@
 import csv
 import pathlib
 import sys
+import warnings
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
@@ -245,3 +246,77 @@ def test_aggregate_runs_writes_bonus_aggregate_files(tmp_path):
         rows = list(csv.DictReader(handle))
     assert rows
     assert {"pdr_mean", "pdr_ci95", "energy_efficiency_mean", "energy_efficiency_ci95"}.issubset(rows[0])
+
+
+def test_write_run_outputs_skips_uplink_without_explicit_success_and_delivered(tmp_path):
+    events = [
+        {
+            "event_type": "uplink",
+            "time_s": 1.0,
+            "node_id": 1,
+            "payload_bytes": 20,
+        },
+        {
+            "event_type": "uplink",
+            "time_s": 2.0,
+            "node_id": 1,
+            "success": True,
+            "delivered": True,
+            "payload_bytes": 20,
+        },
+    ]
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        write_run_outputs(
+            output_root=tmp_path,
+            run_id="missing_uplink_fields",
+            run_config={"N": 1, "speed": 0.0, "mobility_model": "rwp", "mode": "snir_on", "algo": "adr", "gateways": 1, "sigma": 1, "seed": 1, "rep": 0},
+            events=events,
+            duration_s=10.0,
+        )
+
+    messages = [str(w.message) for w in caught]
+    assert any("Événement uplink invalide ignoré" in msg for msg in messages)
+    assert any("1 événement(s) invalide(s) ignoré(s)" in msg for msg in messages)
+
+    summary_path = tmp_path / "results" / "missing_uplink_fields" / "summary.csv"
+    summary_row = next(csv.DictReader(summary_path.open("r", encoding="utf-8", newline="")))
+    assert int(summary_row["tx_count"]) == 1
+    assert int(summary_row["success_count"]) == 1
+
+
+def test_write_run_outputs_validates_required_fields(tmp_path):
+    events = [
+        {
+            "time_s": 1.0,
+            "node_id": 1,
+            "success": True,
+            "delivered": True,
+        },
+        {
+            "event_type": "uplink",
+            "time_s": 2.0,
+            "node_id": 1,
+            "success": True,
+            "delivered": True,
+            "payload_bytes": 20,
+        },
+    ]
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        write_run_outputs(
+            output_root=tmp_path,
+            run_id="missing_required_fields",
+            run_config={"N": 1, "speed": 0.0, "mobility_model": "rwp", "mode": "snir_on", "algo": "adr", "gateways": 1, "sigma": 1, "seed": 1, "rep": 0},
+            events=events,
+            duration_s=10.0,
+        )
+
+    messages = [str(w.message) for w in caught]
+    assert any("champ(s) obligatoire(s) manquant(s): event_type" in msg for msg in messages)
+
+    events_path = tmp_path / "results" / "missing_required_fields" / "events.csv"
+    rows = list(csv.DictReader(events_path.open("r", encoding="utf-8", newline="")))
+    assert len(rows) == 1
