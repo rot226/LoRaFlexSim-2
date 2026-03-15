@@ -244,24 +244,27 @@ etc.), afin de reprendre ensuite sans perdre le suivi.
 Exemple PowerShell :
 
 ```powershell
-python -m mobilesfrdth run --config experiments/default.yaml --out runs\core --grid "N=50,100;speed=1;mode=SNIR_OFF,SNIR_ON;algo=ADR,UCB;reps=2;seed_base=123" --resume --max-runs 8 --max-walltime 7200
+python -m mobilesfrdth run --config experiments/default.yaml --out runs\paper_core --grid "N=40,60,80,100,120,140,160,180,200;speed=1,3;mode=SNIR_OFF,SNIR_ON;algo=ADR,ADR_MIXRA,UCB,UCB_FORGET;reps=8;seed_base=1234" --resume --max-runs 8 --max-walltime 7200
 ```
 
 ### Templates de campagne (Windows 11)
 
-Le script `scripts/run_campaign_profiles.ps1` fournit trois profils prêts à
-lancer :
+Les presets CLI recommandés sont :
 
-- `smoke` (rapide),
-- `core_article` (raisonnable),
-- `full_article` (long).
+- `smoke` : rapide (sanity check),
+- `paper_core` : robuste (grille N dense + `reps=8`),
+- `paper_extended` : annexe (grille N dense + `reps=10`).
 
-Exemples :
+La grille N recommandée est : `40,60,80,100,120,140,160,180,200` avec **au moins 8–10 répétitions**.
+
+Exemples (Windows 11 / PowerShell) :
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/run_campaign_profiles.ps1 -Profile smoke
-powershell -ExecutionPolicy Bypass -File scripts/run_campaign_profiles.ps1 -Profile core_article -Out runs\article_core
+python -m mobilesfrdth run --config experiments/default.yaml --out runs\smoke --profile smoke
+python -m mobilesfrdth run --config experiments/default.yaml --out runs\paper_core --profile paper_core
+python -m mobilesfrdth run --config experiments/default.yaml --out runs\paper_extended --profile paper_extended
 ```
+
 
 Sur Windows 11 (PowerShell), pensez à activer d'abord votre venv :
 
@@ -282,7 +285,7 @@ Sur Windows 11 (PowerShell), pensez à activer d'abord votre venv :
 > Les flags à utiliser sont bien `--output-root`, `--logs-root`,
 > `--campaign-id` et `--manifest`.
 
-### Bloc Windows 11 « core paper » (copier-coller)
+### Bloc Windows 11 « paper_core » (copier-coller)
 
 ```powershell
 # Depuis la racine du dépôt, dans un venv actif

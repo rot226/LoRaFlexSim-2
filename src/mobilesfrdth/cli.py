@@ -16,7 +16,10 @@ MIN_SUPPORTED_PYTHON = (3, 11)
 MAX_SUPPORTED_PYTHON_EXCLUSIVE = (3, 15)
 
 PROFILE_PRESETS: dict[str, str] = {
-    "smoke": "N=30,50;speed=1;mode=SNIR_OFF,SNIR_ON;algo=ADR,UCB;reps=1;duration_s=300;seed_base=1234",
+    "smoke": "N=40,100,200;speed=1;mode=SNIR_OFF,SNIR_ON;algo=ADR,UCB;reps=1;duration_s=300;seed_base=1234",
+    "paper_core": "N=40,60,80,100,120,140,160,180,200;speed=1,3;mode=SNIR_OFF,SNIR_ON;algo=ADR,ADR_MIXRA,UCB,UCB_FORGET;reps=8;duration_s=3600;seed_base=1234",
+    "paper_extended": "N=40,60,80,100,120,140,160,180,200;speed=0,1,3,5;mode=SNIR_OFF,SNIR_ON;algo=ADR,ADR_MIXRA,UCB,UCB_FORGET;reps=10;duration_s=5400;seed_base=1234",
+    # Alias rétro-compatibilité (anciens profils documentés).
     "core": "N=50,100,160;speed=1,3;mode=SNIR_OFF,SNIR_ON;algo=ADR,ADR_MIXRA,UCB,UCB_FORGET;reps=2;duration_s=1800;seed_base=1234",
     "full": "N=50,100,160,320;speed=0,1,3,6;mode=SNIR_OFF,SNIR_ON;algo=ADR,ADR_MIXRA,UCB,UCB_FORGET;reps=5;duration_s=3600;seed_base=1234",
 }
@@ -387,8 +390,8 @@ def build_parser() -> argparse.ArgumentParser:
         prog="mobilesfrdth",
         description="CLI de campagnes mobile-sfrd_th: génération, agrégation et préparation des plots.",
         epilog=(
-            "Exemple grille: N=50,100,160;speed=1,3;seed=1,2\n"
-            "Exemple run: mobilesfrdth run --config experiments/default.yaml --out runs --grid 'N=50,100;speed=1,3'"
+            "Exemple grille: N=40,60,80,100,120,140,160,180,200;speed=1,3;reps=8;seed_base=1234\n"
+            "Exemple run: mobilesfrdth run --config experiments/default.yaml --out runs --profile paper_core"
         ),
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -404,7 +407,7 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument(
         "--profile",
         choices=sorted(PROFILE_PRESETS),
-        help="Profil prédéfini de campagne (smoke, core, full). Utilisable à la place de --grid.",
+        help="Profil prédéfini de campagne (smoke, paper_core, paper_extended). Utilisable à la place de --grid.",
     )
     run_parser.add_argument(
         "--seed",
