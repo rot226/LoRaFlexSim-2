@@ -167,6 +167,8 @@ def cmd_run(args: argparse.Namespace) -> int:
         resume=args.resume,
         max_runs=args.max_runs,
         max_walltime_s=args.max_walltime,
+        progress_interval_s=args.progress_interval,
+        verbose=args.verbose,
         on_run_complete=_on_run_complete,
     )
     failures = [
@@ -450,6 +452,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=lambda value: _positive_int(value, name="--max-runs"),
         default=None,
         help="Limite le nombre de runs exécutés pendant cet appel (utile pour reprendre par tranches).",
+    )
+    run_parser.add_argument(
+        "--progress-interval",
+        type=lambda value: _positive_float(value, name="--progress-interval"),
+        default=30.0,
+        help="Intervalle (secondes) entre deux logs de progression par run.",
     )
     run_parser.add_argument(
         "--max-walltime",
