@@ -491,18 +491,51 @@ class GridRunOrchestrator:
         ]
 
     def _build_run_config(self, params: dict[str, Any]) -> dict[str, Any]:
-        return {
-            "N": int(params["N"]),
-            "speed": float(params.get("speed", 0.0)),
-            "mobility_model": str(params.get("model", "RWP")).lower(),
-            "mode": str(params.get("mode", "SNIR_OFF")).lower(),
-            "algo": str(params.get("algo", "ADR")).lower(),
-            "gateways": int(params.get("gateways", 1)),
-            "sigma": float(params.get("sigma", 0.0)),
-            "seed": int(params.get("seed", 0)),
-            "rep": int(params.get("rep", 1)),
-            **params,
+        run_config: dict[str, Any] = {**params}
+
+        run_config["N"] = int(params["N"])
+        run_config["speed"] = float(params.get("speed", run_config.get("speed", 0.0)))
+
+        mobility_raw = str(
+            params.get(
+                "mobility_model",
+                params.get("model", run_config.get("mobility_model", run_config.get("model", "rwp"))),
+            )
+        )
+        mobility_normalized = mobility_raw.strip().lower().replace("-", "_")
+        run_config["mobility_model"] = "smooth" if mobility_normalized == "smooth" else "rwp"
+
+        mode_raw = str(params.get("mode", run_config.get("mode", "snir_off")))
+        mode_token = mode_raw.strip().lower().replace("-", "_")
+        mode_aliases = {
+            "snir_on": "snir_on",
+            "sniron": "snir_on",
+            "on": "snir_on",
+            "snir_off": "snir_off",
+            "sniroff": "snir_off",
+            "off": "snir_off",
         }
+        run_config["mode"] = mode_aliases.get(mode_token, "snir_off")
+
+        algo_raw = str(params.get("algo", run_config.get("algo", "adr")))
+        algo_token = algo_raw.strip().lower().replace("-", "_")
+        algo_aliases = {
+            "adr": "adr",
+            "adr_mixra": "adr_mixra",
+            "adrmixra": "adr_mixra",
+            "mixra": "adr_mixra",
+            "ucb": "ucb",
+            "ucb_forget": "ucb_forget",
+            "ucbforget": "ucb_forget",
+            "ucb_f": "ucb_forget",
+        }
+        run_config["algo"] = algo_aliases.get(algo_token, "adr")
+
+        run_config["gateways"] = int(params.get("gateways", run_config.get("gateways", 1)))
+        run_config["sigma"] = float(params.get("sigma", run_config.get("sigma", 0.0)))
+        run_config["seed"] = int(params.get("seed", run_config.get("seed", 0)))
+        run_config["rep"] = int(params.get("rep", run_config.get("rep", 1)))
+        return run_config
 
     def _logger_for_run(
         self,
