@@ -10,6 +10,7 @@ import math
 from pathlib import Path
 import random
 from time import monotonic
+import traceback
 from typing import Any, Callable
 
 from .io import write_run_outputs
@@ -539,22 +540,35 @@ class GridRunOrchestrator:
         run_config["rep"] = int(params.get("rep", run_config.get("rep", 1)))
         return run_config
 
+    @staticmethod
+    def _format_eta(seconds: float | None) -> str:
+        if seconds is None:
+            return "N/A"
+        total = max(int(seconds), 0)
+        hours, rem = divmod(total, 3600)
+        minutes, sec = divmod(rem, 60)
+        return f"{hours:02d}:{minutes:02d}:{sec:02d}"
+
     def _logger_for_run(
         self,
         run_id: str,
+        *,
+        verbose: bool = False,
     ) -> tuple[logging.Logger, list[logging.Handler], Path]:
         run_dir = self.output_root / "results" / run_id
         run_dir.mkdir(parents=True, exist_ok=True)
         logger = logging.getLogger(f"mobilesfrdth.run.{run_id}")
-        logger.setLevel(logging.INFO)
+        logger.setLevel(logging.DEBUG if verbose else logging.INFO)
         logger.propagate = False
         for handler in list(logger.handlers):
             logger.removeHandler(handler)
             handler.close()
         log_path = run_dir / "run.log"
         file_handler = logging.FileHandler(log_path, mode="w", encoding="utf-8")
+        file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(logging.Formatter("%(asctime)s | %(levelname)s | %(message)s"))
         console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.DEBUG if verbose else logging.INFO)
         console_handler.setFormatter(logging.Formatter("%(levelname)s | %(message)s"))
         logger.addHandler(file_handler)
         logger.addHandler(console_handler)
@@ -655,6 +669,7 @@ class GridRunOrchestrator:
         max_walltime_s: float | None = None,
         progress_path: Path | None = None,
         progress_interval_s: float = 30.0,
+        verbose: bool = False,
         on_run_complete: Callable[[RunExecutionReport, int, int, int, int, float | None], None] | None = None,
     ) -> BatchExecutionReport:
         if max_runs is not None and max_runs < 1:
@@ -696,7 +711,7 @@ class GridRunOrchestrator:
         for job in pending_jobs:
             params = dict(job.get("params", {}))
             run_id = str(params.get("run_id", job.get("job_id", "run")))
-            logger, handlers, run_dir = self._logger_for_run(run_id)
+            logger, handlers, run_dir = self._logger_for_run(run_id, verbose=verbose)
             run_started_at_s = monotonic()
             run_success = False
             run_recorded = False
@@ -714,6 +729,8 @@ class GridRunOrchestrator:
                 duration_s = float(params.get("duration_s", 3600.0))
                 logger.info("Démarrage run_id=%s seed=%s", run_id, seed)
                 logger.info("Paramètres: %s", params)
+                if verbose:
+                    logger.debug("Contexte exécution: scheduled_runs=%s total_runs=%s skipped=%s", scheduled_runs, total_runs, skipped_runs)
 
                 engine = EventDrivenEngine(seed=seed)
                 nodes = self._build_nodes(params)
@@ -724,10 +741,14 @@ class GridRunOrchestrator:
                     now = monotonic()
                     if now >= next_progress_log_at:
                         next_progress_log_at = now + progress_interval_s
+                        run_elapsed_s = max(now - run_started_at_s, 1e-6)
+                        eta_run_s = (run_elapsed_s / max(progress, 1e-6)) * (1.0 - progress) if progress > 0 else None
                         logger.info(
-                            "Progression périodique run_id=%s: %s%%",
+                            "Progression run run_id=%s: %.1f%% | elapsed=%.1fs | eta=%s",
                             run_id,
-                            int(progress * 100),
+                            progress * 100.0,
+                            run_elapsed_s,
+                            self._format_eta(eta_run_s),
                         )
 
                 result = engine.run(
@@ -757,6 +778,21 @@ class GridRunOrchestrator:
                     events=result.events,
                     mode=str(params.get("mode", "snir_off")).lower(),
                 )
+                uplink_events = [event for event in result.events if event.kind == "uplink"]
+                success_count = sum(1 for event in uplink_events if event.success)
+                mean_sinr_db = (
+                    sum(float(event.sinr_db) for event in uplink_events) / len(uplink_events)
+                    if uplink_events
+                    else 0.0
+                )
+                logger.info(
+                    "Métriques run run_id=%s: uplinks=%s success=%s pdr=%.3f sinr_moy=%.2f dB",
+                    run_id,
+                    result.uplink_count,
+                    success_count,
+                    success_count / max(len(uplink_events), 1),
+                    mean_sinr_db,
+                )
                 logger.info("Run terminé: uplinks=%s", result.uplink_count)
                 reports.append(RunExecutionReport(run_id=run_id, success=True, run_dir=run_dir))
                 run_success = True
@@ -774,8 +810,21 @@ class GridRunOrchestrator:
                 run_recorded = True
                 interrupted = True
             except Exception as exc:
-                logger.exception("Run en erreur: %s", exc)
-                reports.append(RunExecutionReport(run_id=run_id, success=False, run_dir=run_dir, error=str(exc)))
+                structured_error = {
+                    "run_id": run_id,
+                    "error_type": type(exc).__name__,
+                    "message": str(exc),
+                    "traceback": traceback.format_exc(),
+                }
+                logger.error("Run en erreur (structuré): %s", json.dumps(structured_error, ensure_ascii=False))
+                reports.append(
+                    RunExecutionReport(
+                        run_id=run_id,
+                        success=False,
+                        run_dir=run_dir,
+                        error=json.dumps(structured_error, ensure_ascii=False),
+                    )
+                )
                 run_recorded = True
             finally:
                 if run_recorded:
@@ -788,19 +837,28 @@ class GridRunOrchestrator:
                     handler.close()
 
             run_index = len(reports)
+            elapsed_s = monotonic() - walltime_start_s
+            remaining_runs = max(scheduled_runs - run_index, 0)
+            eta_s = None
+            if run_index > 0 and remaining_runs > 0:
+                eta_s = (elapsed_s / run_index) * remaining_runs
+            success_reports = [report for report in reports if report.success]
+            failed_reports = [report for report in reports if not report.success]
+            if reports:
+                print(
+                    "Progression job: "
+                    f"{run_index}/{scheduled_runs} | succès={len(success_reports)} | "
+                    f"échecs={len(failed_reports)} | ETA campagne={self._format_eta(eta_s)}"
+                )
+
             if on_run_complete is not None:
-                elapsed_s = monotonic() - walltime_start_s
-                remaining_runs = max(scheduled_runs - run_index, 0)
-                eta_s = None
-                if run_index > 0 and remaining_runs > 0:
-                    eta_s = (elapsed_s / run_index) * remaining_runs
                 last_report = reports[-1]
                 on_run_complete(
                     last_report,
                     run_index,
                     scheduled_runs,
-                    len([report for report in reports if report.success]),
-                    len([report for report in reports if not report.success]),
+                    len(success_reports),
+                    len(failed_reports),
                     eta_s,
                 )
 
