@@ -19,6 +19,18 @@ SNR_THRESHOLDS_DB: dict[int, float] = {
     12: -20.0,
 }
 
+
+SNR_THRESHOLD_BOUNDS_DB = {
+    7: (-10.0, -5.0),
+    8: (-12.5, -7.5),
+    9: (-15.0, -10.0),
+    10: (-17.5, -12.5),
+    11: (-20.0, -15.0),
+    12: (-22.5, -17.0),
+}
+
+ALPHA_BOUNDS = (0.0, 1.0)
+
 INTER_SF_ALPHA_MATRIX: dict[int, dict[int, float]] = {
     # Matrice alpha(SF_i, SF_s): co-SF dominant, inter-SF partiellement
     # orthogonaux mais non nuls avec asymétrie plus marquée à fort SF.
@@ -45,6 +57,35 @@ class InterferenceConfig:
     max_density_penalty_db: float = 11.0
     snr_thresholds_db: Mapping[int, float] = field(default_factory=lambda: dict(SNR_THRESHOLDS_DB))
     alpha_matrix: Mapping[int, Mapping[int, float]] = field(default_factory=lambda: {sf_i: dict(values) for sf_i, values in INTER_SF_ALPHA_MATRIX.items()})
+
+    def calibration_sanity_check(self) -> list[str]:
+        """Retourne les avertissements de calibration SNIR/SINR."""
+
+        warnings: list[str] = []
+        a_min, a_max = ALPHA_BOUNDS
+        if not (-130.0 <= self.noise_floor_dbm <= -105.0):
+            warnings.append(
+                f"noise_floor_dbm hors plage [-130.0, -105.0] dBm : {self.noise_floor_dbm}"
+            )
+
+        for sf, threshold in self.snr_thresholds_db.items():
+            bounds = SNR_THRESHOLD_BOUNDS_DB.get(sf)
+            if bounds is None:
+                continue
+            lo, hi = bounds
+            if not (lo <= float(threshold) <= hi):
+                warnings.append(
+                    f"seuil SNR/SINR SF{sf} hors plage [{lo}, {hi}] dB : {float(threshold)}"
+                )
+
+        for sf_i, row in self.alpha_matrix.items():
+            for sf_s, alpha in row.items():
+                alpha_value = float(alpha)
+                if not (a_min <= alpha_value <= a_max):
+                    warnings.append(
+                        f"alpha(SF{sf_i}->SF{sf_s}) hors plage [{a_min}, {a_max}] : {alpha_value}"
+                    )
+        return warnings
 
     def alpha(self, sf_interferer: int, sf_signal: int) -> float:
         """Retourne le coefficient d'interférence alpha(SF_i, SF_s)."""

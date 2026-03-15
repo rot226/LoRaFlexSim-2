@@ -1,0 +1,77 @@
+# Calibration reproductible SNIR/SINR pour mobilesfrdth.
+name: snir_calibration_profiles
+seed: 20260601
+simulation:
+  tx_power_dbm: 14.0
+  generated_multiplier: 1.25
+  distance_model:
+    base_distance_m: 100.0
+    ring_step_m: 25.0
+    stripe_step_m: 20.0
+    ring_size: 40
+  sf_cycle: [7, 8, 9, 10, 11, 12]
+
+# Les ordres de grandeur attendus sont des bornes de validation de calibration.
+# low  : faible interférence, PDR élevé.
+# medium: interférence moyenne, PDR intermédiaire.
+# high : interférence forte, outage proche de 1.
+profiles:
+  low_interference:
+    node_count: 90
+    active_interferer_probability: 0.08
+    channel:
+      pathloss_exponent: 2.7
+      sigma_shadowing_db: 2.0
+      rayleigh_fading: false
+    interference:
+      noise_figure_db: 6.0
+      alpha_scale: 0.70
+      snr_threshold_offset_db: -1.0
+      density_penalty_scale: 0.65
+    expected_orders_of_magnitude:
+      pdr_min: 0.45
+      pdr_max: 0.75
+      der_min: 0.36
+      der_max: 0.60
+      outage_min: 0.25
+      outage_max: 0.55
+
+  medium_interference:
+    node_count: 140
+    active_interferer_probability: 0.16
+    channel:
+      pathloss_exponent: 2.8
+      sigma_shadowing_db: 4.0
+      rayleigh_fading: false
+    interference:
+      noise_figure_db: 7.5
+      alpha_scale: 1.00
+      snr_threshold_offset_db: 0.0
+      density_penalty_scale: 1.00
+    expected_orders_of_magnitude:
+      pdr_min: 0.08
+      pdr_max: 0.28
+      der_min: 0.06
+      der_max: 0.22
+      outage_min: 0.72
+      outage_max: 0.92
+
+  high_interference:
+    node_count: 220
+    active_interferer_probability: 0.24
+    channel:
+      pathloss_exponent: 3.0
+      sigma_shadowing_db: 6.0
+      rayleigh_fading: false
+    interference:
+      noise_figure_db: 9.5
+      alpha_scale: 1.30
+      snr_threshold_offset_db: 1.0
+      density_penalty_scale: 1.35
+    expected_orders_of_magnitude:
+      pdr_min: 0.00
+      pdr_max: 0.08
+      der_min: 0.00
+      der_max: 0.06
+      outage_min: 0.92
+      outage_max: 1.00
