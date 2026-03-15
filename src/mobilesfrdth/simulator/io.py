@@ -18,6 +18,38 @@ from .metrics import convergence_tc, der, jain_fairness, outage_ratio, pdr, thro
 TC_PROTOCOL_DT_S = 10.0
 TC_PROTOCOL_TOLERANCE = 0.1
 TC_PROTOCOL_STABLE_BINS = 5
+STUDENT_T_975_BY_DF: dict[int, float] = {
+    1: 12.706,
+    2: 4.303,
+    3: 3.182,
+    4: 2.776,
+    5: 2.571,
+    6: 2.447,
+    7: 2.365,
+    8: 2.306,
+    9: 2.262,
+    10: 2.228,
+    11: 2.201,
+    12: 2.179,
+    13: 2.160,
+    14: 2.145,
+    15: 2.131,
+    16: 2.120,
+    17: 2.110,
+    18: 2.101,
+    19: 2.093,
+    20: 2.086,
+    21: 2.080,
+    22: 2.074,
+    23: 2.069,
+    24: 2.064,
+    25: 2.060,
+    26: 2.056,
+    27: 2.052,
+    28: 2.048,
+    29: 2.045,
+    30: 2.042,
+}
 
 SCENARIO_ID_COLUMNS = ["N", "speed", "mobility_model", "mode", "algo", "gateways", "sigma", "seed", "rep"]
 EVENT_COLUMNS = [
@@ -129,6 +161,40 @@ def _write_csv(path: Path, columns: list[str], rows: Iterable[Mapping[str, Any]]
         writer.writeheader()
         for row in rows:
             writer.writerow({column: row.get(column, "") for column in columns})
+
+
+def _ci95_critical_value(n: int) -> float:
+    if n <= 1:
+        return 0.0
+    if n <= 30:
+        return STUDENT_T_975_BY_DF[n - 1]
+    return 1.96
+
+
+def _mean_std_ci95_stats(values: list[float], *, allow_inf: bool = False) -> dict[str, float]:
+    if not values:
+        return {"mean": 0.0, "std": 0.0, "n": 0.0, "ci95": 0.0, "ci95_low": 0.0, "ci95_high": 0.0}
+    if allow_inf:
+        finite_values = [value for value in values if math.isfinite(value)]
+        if not finite_values:
+            return {"mean": math.inf, "std": 0.0, "n": 0.0, "ci95": 0.0, "ci95_low": math.inf, "ci95_high": math.inf}
+        values = finite_values
+
+    mean = sum(values) / len(values)
+    n = float(len(values))
+    if len(values) < 2:
+        return {"mean": mean, "std": 0.0, "n": n, "ci95": 0.0, "ci95_low": mean, "ci95_high": mean}
+
+    std = stdev(values)
+    half_width = _ci95_critical_value(len(values)) * std / math.sqrt(len(values))
+    return {
+        "mean": mean,
+        "std": std,
+        "n": n,
+        "ci95": half_width,
+        "ci95_low": mean - half_width,
+        "ci95_high": mean + half_width,
+    }
 
 
 def write_run_outputs(
@@ -693,29 +759,15 @@ def aggregate_runs(
     algo_index = factor_columns.index("algo")
     distinct_groups_by_algo: dict[str, int] = {}
     for key, bucket in sorted(metric_accumulators.items()):
-        num_runs = len(bucket["pdr"])
-
-        def _mean_and_ci95(values: list[float], *, allow_inf: bool = False) -> tuple[float, float]:
-            if not values:
-                return 0.0, 0.0
-            if allow_inf:
-                finite_values = [value for value in values if math.isfinite(value)]
-                if not finite_values:
-                    return math.inf, 0.0
-                values = finite_values
-            mean = sum(values) / len(values)
-            if len(values) < 2:
-                return mean, 0.0
-            return mean, 1.96 * stdev(values) / math.sqrt(len(values))
-
-        pdr_mean, pdr_ci95 = _mean_and_ci95(bucket["pdr"])
-        der_mean, der_ci95 = _mean_and_ci95(bucket["der"])
-        throughput_mean, throughput_ci95 = _mean_and_ci95(bucket["throughput_bps"])
-        tc_mean, tc_ci95 = _mean_and_ci95(bucket["Tc_s"], allow_inf=True)
-        jain_mean, jain_ci95 = _mean_and_ci95(bucket["jain_fairness"])
-        airtime_mean, airtime_ci95 = _mean_and_ci95(bucket["airtime_total_s"])
-        outage_mean, outage_ci95 = _mean_and_ci95(bucket["outage_ratio"])
-        switch_mean, switch_ci95 = _mean_and_ci95(bucket["switch_count"])
+        pdr_stats = _mean_std_ci95_stats(bucket["pdr"])
+        der_stats = _mean_std_ci95_stats(bucket["der"])
+        throughput_stats = _mean_std_ci95_stats(bucket["throughput_bps"])
+        tc_stats = _mean_std_ci95_stats(bucket["Tc_s"], allow_inf=True)
+        jain_stats = _mean_std_ci95_stats(bucket["jain_fairness"])
+        airtime_stats = _mean_std_ci95_stats(bucket["airtime_total_s"])
+        outage_stats = _mean_std_ci95_stats(bucket["outage_ratio"])
+        switch_stats = _mean_std_ci95_stats(bucket["switch_count"])
+        num_runs = int(pdr_stats["n"])
 
         metric_by_factor_rows.append(
             {
@@ -723,22 +775,46 @@ def aggregate_runs(
                 "sigma": key[-1],
                 "n_runs_effective": num_runs,
                 "num_runs": num_runs,
-                "pdr_mean": pdr_mean,
-                "pdr_ci95": pdr_ci95,
-                "der_mean": der_mean,
-                "der_ci95": der_ci95,
-                "throughput_bps_mean": throughput_mean,
-                "throughput_bps_ci95": throughput_ci95,
-                "Tc_s_mean": tc_mean,
-                "Tc_s_ci95": tc_ci95,
-                "jain_fairness_mean": jain_mean,
-                "jain_fairness_ci95": jain_ci95,
-                "airtime_total_s_mean": airtime_mean,
-                "airtime_total_s_ci95": airtime_ci95,
-                "outage_ratio_mean": outage_mean,
-                "outage_ratio_ci95": outage_ci95,
-                "switch_count_mean": switch_mean,
-                "switch_count_ci95": switch_ci95,
+                "pdr_mean": pdr_stats["mean"],
+                "pdr_std": pdr_stats["std"],
+                "pdr_n": int(pdr_stats["n"]),
+                "pdr_ci95": pdr_stats["ci95"],
+                "pdr_ci95_low": pdr_stats["ci95_low"],
+                "pdr_ci95_high": pdr_stats["ci95_high"],
+                "der_mean": der_stats["mean"],
+                "der_std": der_stats["std"],
+                "der_n": int(der_stats["n"]),
+                "der_ci95": der_stats["ci95"],
+                "der_ci95_low": der_stats["ci95_low"],
+                "der_ci95_high": der_stats["ci95_high"],
+                "throughput_bps_mean": throughput_stats["mean"],
+                "throughput_bps_std": throughput_stats["std"],
+                "throughput_bps_n": int(throughput_stats["n"]),
+                "throughput_bps_ci95": throughput_stats["ci95"],
+                "throughput_bps_ci95_low": throughput_stats["ci95_low"],
+                "throughput_bps_ci95_high": throughput_stats["ci95_high"],
+                "Tc_s_mean": tc_stats["mean"],
+                "Tc_s_std": tc_stats["std"],
+                "Tc_s_n": int(tc_stats["n"]),
+                "Tc_s_ci95": tc_stats["ci95"],
+                "Tc_s_ci95_low": tc_stats["ci95_low"],
+                "Tc_s_ci95_high": tc_stats["ci95_high"],
+                "jain_fairness_mean": jain_stats["mean"],
+                "jain_fairness_std": jain_stats["std"],
+                "jain_fairness_n": int(jain_stats["n"]),
+                "jain_fairness_ci95": jain_stats["ci95"],
+                "jain_fairness_ci95_low": jain_stats["ci95_low"],
+                "jain_fairness_ci95_high": jain_stats["ci95_high"],
+                "airtime_total_s_mean": airtime_stats["mean"],
+                "airtime_total_s_ci95": airtime_stats["ci95"],
+                "outage_ratio_mean": outage_stats["mean"],
+                "outage_ratio_std": outage_stats["std"],
+                "outage_ratio_n": int(outage_stats["n"]),
+                "outage_ratio_ci95": outage_stats["ci95"],
+                "outage_ratio_ci95_low": outage_stats["ci95_low"],
+                "outage_ratio_ci95_high": outage_stats["ci95_high"],
+                "switch_count_mean": switch_stats["mean"],
+                "switch_count_ci95": switch_stats["ci95"],
             }
         )
 
@@ -758,19 +834,43 @@ def aggregate_runs(
         "n_runs_effective",
         "num_runs",
         "pdr_mean",
+        "pdr_std",
+        "pdr_n",
         "pdr_ci95",
+        "pdr_ci95_low",
+        "pdr_ci95_high",
         "der_mean",
+        "der_std",
+        "der_n",
         "der_ci95",
+        "der_ci95_low",
+        "der_ci95_high",
         "throughput_bps_mean",
+        "throughput_bps_std",
+        "throughput_bps_n",
         "throughput_bps_ci95",
+        "throughput_bps_ci95_low",
+        "throughput_bps_ci95_high",
         "Tc_s_mean",
+        "Tc_s_std",
+        "Tc_s_n",
         "Tc_s_ci95",
+        "Tc_s_ci95_low",
+        "Tc_s_ci95_high",
         "jain_fairness_mean",
+        "jain_fairness_std",
+        "jain_fairness_n",
         "jain_fairness_ci95",
+        "jain_fairness_ci95_low",
+        "jain_fairness_ci95_high",
         "airtime_total_s_mean",
         "airtime_total_s_ci95",
         "outage_ratio_mean",
+        "outage_ratio_std",
+        "outage_ratio_n",
         "outage_ratio_ci95",
+        "outage_ratio_ci95_low",
+        "outage_ratio_ci95_high",
         "switch_count_mean",
         "switch_count_ci95",
     ], metric_by_factor_rows)

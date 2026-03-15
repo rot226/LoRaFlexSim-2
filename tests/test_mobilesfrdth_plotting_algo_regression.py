@@ -188,19 +188,67 @@ def test_plot_xy_by_algo_uses_distinct_series_per_algo(monkeypatch, tmp_path):
         captured.append({"label": kwargs.get("label"), "xs": tuple(xs), "ys": tuple(ys)})
         return []
 
+    monkeypatch.setattr(plots.plt, "plot", fake_plot)
     monkeypatch.setattr(plots.plt, "errorbar", fake_plot)
+    monkeypatch.setattr(plots.plt, "fill_between", lambda *args, **kwargs: [])
     monkeypatch.setattr(plots.plt, "legend", lambda *args, **kwargs: None)
 
     out_path = tmp_path / "fig01_pdr_vs_n_snir_off.png"
     generated = plots._plot_xy_by_algo(rows, fig_name=out_path.name, y_col="pdr_mean", out_path=out_path)
 
     assert generated is True
-    assert len(captured) == 4
+    assert len(captured) == 8
 
-    curves = {item["label"]: item["ys"] for item in captured}
+    curves = {item["label"]: item["ys"] for item in captured if item["label"] is not None}
     assert set(curves) == {"adr", "adr_mixra", "ucb", "ucb_forget"}
     assert "" not in curves
     assert len(set(curves.values())) == 4
+
+
+def test_plot_xy_by_algo_uses_csv_ci_band_when_available(monkeypatch, tmp_path):
+    rows = [
+        {
+            "N": "50",
+            "algo": "adr",
+            "pdr_mean": "0.90",
+            "pdr_ci95": "0.02",
+            "pdr_ci95_low": "0.88",
+            "pdr_ci95_high": "0.92",
+        },
+        {
+            "N": "100",
+            "algo": "adr",
+            "pdr_mean": "0.85",
+            "pdr_ci95": "0.01",
+            "pdr_ci95_low": "0.84",
+            "pdr_ci95_high": "0.86",
+        },
+    ]
+
+    fill_calls: list[tuple[tuple[float, ...], tuple[float, ...], tuple[float, ...]]] = []
+    err_calls: list[tuple[tuple[float, ...], tuple[float, ...], tuple[float, ...]]] = []
+
+    monkeypatch.setattr(plots.plt, "plot", lambda *args, **kwargs: [])
+    monkeypatch.setattr(
+        plots.plt,
+        "fill_between",
+        lambda xs, lows, highs, *args, **kwargs: fill_calls.append((tuple(xs), tuple(lows), tuple(highs))),
+    )
+    monkeypatch.setattr(
+        plots.plt,
+        "errorbar",
+        lambda xs, ys, *args, **kwargs: err_calls.append((tuple(xs), tuple(ys), tuple(kwargs.get("yerr", [])))),
+    )
+    monkeypatch.setattr(plots.plt, "legend", lambda *args, **kwargs: None)
+
+    out_path = tmp_path / "fig01_pdr_vs_n_snir_off.png"
+    generated = plots._plot_xy_by_algo(rows, fig_name=out_path.name, y_col="pdr_mean", out_path=out_path)
+
+    assert generated is True
+    assert len(fill_calls) == 1
+    assert fill_calls[0] == ((50.0, 100.0), (0.88, 0.84), (0.92, 0.86))
+    assert len(err_calls) == 1
+    assert err_calls[0][2] == (0.020000000000000018, 0.010000000000000009)
 
 
 def test_plot_xy_by_algo_auto_adds_annex_for_reliability_close_to_one(monkeypatch, tmp_path):
