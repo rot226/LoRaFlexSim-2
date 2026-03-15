@@ -238,9 +238,12 @@ def _to_float(value: str | None) -> float | None:
     if not token:
         return None
     try:
-        return float(token)
+        parsed = float(token)
     except ValueError:
         return None
+    if not (parsed == parsed) or parsed in (float("inf"), float("-inf")):
+        return None
+    return parsed
 
 
 def _apply_filters(rows: list[dict[str, str]], filters: ScenarioFilters) -> list[dict[str, str]]:
