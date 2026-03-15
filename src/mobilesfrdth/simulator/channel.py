@@ -9,6 +9,9 @@ import random
 
 THERMAL_NOISE_DENSITY_DBM_PER_HZ = -174.0
 IMPLEMENTATION_MARGIN_DB = 2.5
+PATHLOSS_EXPONENT_BOUNDS = (2.0, 4.2)
+SIGMA_SHADOWING_BOUNDS_DB = (0.0, 12.0)
+LORA_NOISE_FLOOR_BOUNDS_DBM = (-130.0, -105.0)
 
 
 def thermal_noise_floor_dbm(*, bandwidth_hz: float = 125_000.0, noise_figure_db: float = 7.5) -> float:
@@ -47,6 +50,30 @@ class ChannelConfig:
     sigma_shadowing: float = 4.0
     rayleigh_fading: bool = False
     min_distance_m: float = 1.0
+
+
+def channel_parameter_sanity_check(cfg: ChannelConfig, *, noise_floor_dbm: float = DEFAULT_LORA_NOISE_FLOOR_DBM) -> list[str]:
+    """Retourne les avertissements de calibration pour les paramètres de canal.
+
+    Les bornes visent une calibration LoRaWAN terrestre sub-GHz standard.
+    """
+
+    warnings: list[str] = []
+    min_n, max_n = PATHLOSS_EXPONENT_BOUNDS
+    min_sigma, max_sigma = SIGMA_SHADOWING_BOUNDS_DB
+    min_noise, max_noise = LORA_NOISE_FLOOR_BOUNDS_DBM
+
+    if not (min_n <= cfg.pathloss_exponent <= max_n):
+        warnings.append(f"pathloss_exponent hors plage [{min_n}, {max_n}] : {cfg.pathloss_exponent}")
+    if not (min_sigma <= cfg.sigma_shadowing <= max_sigma):
+        warnings.append(f"sigma_shadowing hors plage [{min_sigma}, {max_sigma}] dB : {cfg.sigma_shadowing}")
+    if not (min_noise <= noise_floor_dbm <= max_noise):
+        warnings.append(f"noise_floor_dbm hors plage [{min_noise}, {max_noise}] dBm : {noise_floor_dbm}")
+    if cfg.reference_distance_m <= 0.0:
+        warnings.append("reference_distance_m doit être strictement positive")
+    if cfg.min_distance_m <= 0.0:
+        warnings.append("min_distance_m doit être strictement positive")
+    return warnings
 
 
 def pathloss_log_distance_db(distance_m: float, cfg: ChannelConfig) -> float:
