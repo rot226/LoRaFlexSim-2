@@ -47,7 +47,7 @@ REQUIRED_COLUMNS = {
     },
     "distribution_sf": {"algo", "sf", "ratio"},
     "convergence_tc": {"algo", "speed", "Tc_s"},
-    "sinr_cdf": {"algo", "mode", "N", "speed", "quantile", "sinr_db"},
+    "sinr_cdf": {"algo", "mode", "N", "speed", "mobility_model", "gateways", "sigma", "quantile", "sinr_db"},
     "fairness_airtime_switching": {"N", "algo", "jain_fairness", "airtime_total_s", "switch_count"},
     "ucb_tracking": {"speed", "mode", "algo", "Tc_s_mean"},
     "pareto_reliability_airtime": {"algo", "pdr_mean", "pdr_ci95", "airtime_total_s_mean", "airtime_total_s_ci95"},
@@ -157,6 +157,9 @@ COLUMN_NAME_ALIASES = {
     "tc_s_mean": "Tc_s_mean",
     "mobility_model": "mobility_model",
     "model": "mobility_model",
+    "gateways": "gateways",
+    "sigma": "sigma",
+    "sigma_shadowing": "sigma",
 }
 METRIC_COLUMN_ALIASES = {
     "pdr_mean": ("pdr_mean", "pdr"),
@@ -609,76 +612,98 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
     if not rows:
         _warn_skip(fig_name, "fichier sinr_cdf.csv vide ou absent")
         return False
-    needed = {"algo", "mode", "N", "speed", "quantile", "sinr_db"}
+    needed = {"algo", "mode", "N", "speed", "mobility_model", "gateways", "sigma", "quantile", "sinr_db"}
     missing = [column for column in needed if column not in rows[0]]
     if missing:
         _warn_skip(fig_name, f"colonnes manquantes {missing}")
         return False
 
-    by_group: dict[tuple[str, str, str, str], list[tuple[float, float]]] = defaultdict(list)
+    context_columns = ("algo", "mode", "N", "speed", "mobility_model", "gateways", "sigma")
+    by_group: dict[tuple[str, str, str, str, str, str, str], list[tuple[float, float]]] = defaultdict(list)
     for row in rows:
         q = _to_float(row.get("quantile"))
         sinr = _to_float(row.get("sinr_db"))
         if q is None or sinr is None:
             continue
-        algo = row.get("algo", "unknown")
-        mode = row.get("mode", "")
-        n = row.get("N", "")
-        speed = row.get("speed", "")
-        by_group[(algo, mode, n, speed)].append((q, sinr))
+        context = tuple(row.get(column, "") for column in context_columns)
+        by_group[context].append((q, sinr))
 
     if not by_group:
         _warn_skip(fig_name, "pas de points quantile/sinr exploitables")
         return False
 
-    by_algo: dict[str, list[tuple[float, float]]] = defaultdict(list)
-    for (algo, mode, n, speed), points in sorted(by_group.items()):
-        points.sort(key=lambda item: (item[0], item[1]))
-        quantiles = [item[0] for item in points]
-        sinrs = [item[1] for item in points]
-        if any(q <= 0.0 or q > 1.0 for q in quantiles):
-            _warn_skip(fig_name, f"quantile hors ]0..1] pour groupe algo={algo}, mode={mode}, N={n}, speed={speed}")
-            plt.close()
-            return False
-        if any(curr < prev for prev, curr in zip(quantiles, quantiles[1:], strict=False)):
-            _warn_skip(fig_name, f"quantile non monotone croissant pour groupe algo={algo}, mode={mode}, N={n}, speed={speed}")
-            plt.close()
-            return False
-        if any(curr < prev for prev, curr in zip(sinrs, sinrs[1:], strict=False)):
-            _warn_skip(fig_name, f"sinr_db non monotone croissant pour groupe algo={algo}, mode={mode}, N={n}, speed={speed}")
-            plt.close()
-            return False
-        if sinrs[-1] <= sinrs[0]:
-            _warn_skip(fig_name, f"étendue SINR nulle pour groupe algo={algo}, mode={mode}, N={n}, speed={speed}")
-            plt.close()
-            return False
+    contexts_by_algo: dict[str, set[tuple[str, str, str, str, str, str]]] = defaultdict(set)
+    for (algo, mode, n, speed, mobility_model, gateways, sigma) in by_group:
+        contexts_by_algo[algo].add((mode, n, speed, mobility_model, gateways, sigma))
 
-        by_algo[algo].extend(points)
-
-    if not by_algo:
-        _warn_skip(fig_name, "aucune courbe CDF traçable")
+    conflicting_algos = {algo: len(contexts) for algo, contexts in contexts_by_algo.items() if len(contexts) > 1}
+    if conflicting_algos:
+        details = ", ".join(f"{algo}:{count}" for algo, count in sorted(conflicting_algos.items()))
+        _warn_skip(
+            fig_name,
+            (
+                "tracé global 'algo-only' interdit: contextes multiples détectés "
+                f"({details}) ; appliquer des filtres stricts ou tracer par scénario complet"
+            ),
+        )
         return False
 
     plt.figure(figsize=(8, 5))
     plotted = 0
-    for algo, points in sorted(by_algo.items()):
+    for (algo, mode, n, speed, mobility_model, gateways, sigma), points in sorted(by_group.items()):
         points.sort(key=lambda item: (item[0], item[1]))
-        by_quantile: dict[float, list[float]] = defaultdict(list)
-        for quantile, sinr in points:
-            by_quantile[quantile].append(sinr)
-        quantiles = sorted(by_quantile)
-        mean_sinrs = [sum(by_quantile[q]) / len(by_quantile[q]) for q in quantiles]
-
-        if any(curr <= prev for prev, curr in zip(quantiles, quantiles[1:], strict=False)):
-            _warn_skip(fig_name, f"quantile non monotone croissant pour algo={algo}")
+        quantiles = [item[0] for item in points]
+        sinrs = [item[1] for item in points]
+        if any(q <= 0.0 or q > 1.0 for q in quantiles):
+            _warn_skip(
+                fig_name,
+                (
+                    "quantile hors ]0..1] pour groupe "
+                    f"algo={algo}, mode={mode}, N={n}, speed={speed}, "
+                    f"mobility_model={mobility_model}, gateways={gateways}, sigma={sigma}"
+                ),
+            )
             plt.close()
             return False
-        if mean_sinrs and all(value == mean_sinrs[0] for value in mean_sinrs[1:]):
-            _warn_skip(fig_name, f"sinr_db constant sur tout le groupe pour algo={algo}")
+        if any(curr < prev for prev, curr in zip(quantiles, quantiles[1:], strict=False)):
+            _warn_skip(
+                fig_name,
+                (
+                    "quantile non monotone croissant pour groupe "
+                    f"algo={algo}, mode={mode}, N={n}, speed={speed}, "
+                    f"mobility_model={mobility_model}, gateways={gateways}, sigma={sigma}"
+                ),
+            )
+            plt.close()
+            return False
+        if any(curr < prev for prev, curr in zip(sinrs, sinrs[1:], strict=False)):
+            _warn_skip(
+                fig_name,
+                (
+                    "sinr_db non monotone croissant pour groupe "
+                    f"algo={algo}, mode={mode}, N={n}, speed={speed}, "
+                    f"mobility_model={mobility_model}, gateways={gateways}, sigma={sigma}"
+                ),
+            )
+            plt.close()
+            return False
+        if sinrs[-1] <= sinrs[0]:
+            _warn_skip(
+                fig_name,
+                (
+                    "étendue SINR nulle pour groupe "
+                    f"algo={algo}, mode={mode}, N={n}, speed={speed}, "
+                    f"mobility_model={mobility_model}, gateways={gateways}, sigma={sigma}"
+                ),
+            )
             plt.close()
             return False
 
-        plt.plot(mean_sinrs, quantiles, label=algo)
+        label = (
+            f"{algo} | {mode}, N={n}, v={speed}, "
+            f"mob={mobility_model}, gw={gateways}, sigma={sigma}"
+        )
+        plt.plot(sinrs, quantiles, label=label)
         plotted += 1
 
     if plotted == 0:
@@ -689,7 +714,7 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
     plt.grid(alpha=0.3)
     plt.xlabel(normalized_axis_label("sinr_db"))
     plt.ylabel(normalized_axis_label("quantile"))
-    plt.legend()
+    plt.legend(fontsize=8)
     plt.tight_layout()
     _save_figure_variants(out_path)
     plt.close()
