@@ -419,6 +419,121 @@ permet d'utiliser la CLI sans dépendre de l'installation de l'entrypoint.
 
 > ✅ Cette voie est le **mode officiel fallback offline** sous Windows 11.
 
+## 📘 Guide rapide reproductibilité (campagnes + figures)
+
+Cette section centralise les points à vérifier avant de lancer une campagne
+ou préparer une soumission.
+
+### Versions Python supportées (et fallback offline)
+
+- **Supportées** : Python **3.11 à 3.14**.
+- **Recommandée** : Python **3.11.x** pour la compatibilité maximale des
+  scripts historiques.
+- **Plateforme de référence** : Windows 11.
+- **Fallback offline officiel** (si `pip install -e .` échoue) :
+  `scripts/mobilesfrdth.ps1`, qui exécute `python -m mobilesfrdth` avec
+  `PYTHONPATH=src`.
+
+Exemples Windows 11 (PowerShell) :
+
+```powershell
+python -m pip install -e . --no-build-isolation
+# fallback offline
+powershell -ExecutionPolicy Bypass -File scripts/mobilesfrdth.ps1 --help
+```
+
+### Presets de campagnes recommandés
+
+Presets disponibles via `mobilesfrdth run --profile ...` :
+
+- `smoke` : vérification rapide du pipeline,
+- `paper_core` : preset principal pour résultats article,
+- `paper_extended` : preset élargi pour annexes / sensibilité.
+
+Exemples :
+
+```powershell
+python -m mobilesfrdth run --config experiments/default.yaml --out runs\smoke --profile smoke
+python -m mobilesfrdth run --config experiments/default.yaml --out runs\paper_core --profile paper_core
+python -m mobilesfrdth run --config experiments/default.yaml --out runs\paper_extended --profile paper_extended
+```
+
+### Seeds et reproductibilité
+
+- Fixez toujours une base de seed (`seed_base`) dans la grille,
+- Conservez la même seed de base entre exécutions comparatives,
+- En cas de reprise de campagne, gardez `--resume` pour éviter de
+  recalculer des runs déjà produits.
+
+Exemple :
+
+```powershell
+python -m mobilesfrdth run --config experiments/default.yaml --out runs\paper_core --grid "N=40,60,80,100,120,140,160,180,200;speed=1,3;mode=SNIR_OFF,SNIR_ON;algo=ADR,ADR_MIXRA,UCB,UCB_FORGET;reps=8;seed_base=1234" --resume
+```
+
+### Budget runs / répétitions (reps)
+
+- **Minimum publication interne** : `reps >= 8` sur la grille N dense.
+- **Cible soumission** : `reps = 10` pour stabiliser les IC95.
+- Utilisez `--max-runs` et `--max-walltime` pour découper l'exécution
+  selon vos contraintes machine/temps.
+
+Exemple :
+
+```powershell
+python -m mobilesfrdth run --config experiments/default.yaml --out runs\paper_core --profile paper_core --resume --max-runs 12 --max-walltime 7200
+```
+
+### Procédure de génération des figures
+
+Workflow recommandé :
+
+1. **Run** de la campagne (`mobilesfrdth run ...`),
+2. **Aggregate** des résultats (`mobilesfrdth aggregate ...`),
+3. **Plots** (`mobilesfrdth plots ...`) vers un dossier de figures versionné.
+
+Exemple type (adapter les chemins) :
+
+```powershell
+python -m mobilesfrdth run --config experiments/default.yaml --out runs\paper_core --profile paper_core --resume
+python -m mobilesfrdth aggregate --input runs\paper_core --out runs\paper_core\aggregates
+python -m mobilesfrdth plots --input runs\paper_core\aggregates --out figures\paper_core --profile core
+```
+
+Après génération, vérifiez la présence et la taille non nulle des PNG :
+
+```powershell
+Get-ChildItem figures\paper_core -Filter *.png | Select-Object Name, Length
+```
+
+### Checklist qualité avant soumission
+
+Avant de soumettre une branche ou un paquet de figures :
+
+- [ ] **Cohérence des paramètres** : même grille (`N`, `speed`, `mode`, `algo`),
+      même `seed_base`, même nombre de `reps` entre comparaisons.
+- [ ] **CI / validation locale** : exécuter `make validate` sans régression.
+- [ ] **Labels EN** : titres, axes et légendes des figures en anglais
+      (pas de mélange FR/EN dans un même lot).
+- [ ] **Figures non vides** : aucun PNG à taille nulle, aucune figure blanche,
+      aucune série manquante attendue.
+- [ ] **Traçabilité** : conserver commandes exactes et chemin de sortie
+      (`runs/...`, `figures/...`) dans la note de reproduction.
+
+### Known limitations
+
+Limites connues (volontairement explicites) :
+
+- Le mode `mobilesfrdth` est encore en migration ; des scripts historiques
+  `sfrd.*` coexistent selon les pipelines.
+- En environnement strictement offline, l'installation editable peut échouer ;
+  le fallback `PYTHONPATH=src`/wrapper PowerShell doit alors être utilisé.
+- Certaines analyses (notamment en fortes charges ou longues campagnes)
+  nécessitent des budgets de calcul importants ; des runs partiels peuvent
+  biaiser les IC95 si la campagne est interrompue trop tôt.
+- Les figures dépendent de filtres de scénario (`profile`, `mode`, `algo`) :
+  un mauvais profil peut produire des comparaisons incomplètes ou trompeuses.
+
 ## ✅ Vérification avant mise à jour
 
 Avant de mettre à jour votre branche ou de soumettre une contribution,
