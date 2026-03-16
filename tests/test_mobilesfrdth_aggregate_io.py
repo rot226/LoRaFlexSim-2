@@ -453,7 +453,31 @@ def test_aggregate_runs_writes_diagnostics_and_warns_on_partial_valid_runs(tmp_p
     assert any(entry["reason"] == "events_absent" for entry in diagnostics["incomplete_runs"])
     assert any(entry["reason"] == "csv_corrupted" for entry in diagnostics["incomplete_runs"])
     assert any(entry["run_id"] == "run_ok" for entry in diagnostics["complete_runs"])
-    assert any("incomplet(s)/corrompu(s)" in str(w.message) for w in caught)
+    assert any("incomplets/corrompus ignorés" in str(w.message) for w in caught)
+
+
+def test_aggregate_runs_aggregates_tc_dt_warnings_and_writes_details(tmp_path):
+    for idx in range(4):
+        run_id = f"run_{idx}"
+        row = _summary_row(run_id)
+        row["tc_dt_s"] = "30"
+        _write_csv(tmp_path / "results" / run_id / "summary.csv", SUMMARY_COLUMNS, row)
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        aggregate_runs(inputs=[tmp_path], output_root=tmp_path / "out", summary_only=True)
+
+    tc_warning = [w for w in caught if "utilisent tc_dt_s!=" in str(w.message)]
+    assert len(tc_warning) == 1
+    message = str(tc_warning[0].message)
+    assert "4 run(s) utilisent tc_dt_s!=" in message
+    assert "run_0, run_1, run_2" in message
+    assert "run_3" not in message
+
+    diagnostics = json.loads((tmp_path / "out" / "aggregates" / "aggregate_diagnostics.json").read_text(encoding="utf-8"))
+    key = next(name for name in diagnostics["warning_counts"] if name.startswith("utilisent tc_dt_s!= "))
+    assert diagnostics["warning_counts"][key] == 4
+    assert len(diagnostics["warning_details"][key]) == 4
 
 
 def test_aggregate_runs_fails_with_guided_message_when_no_valid_runs(tmp_path):
