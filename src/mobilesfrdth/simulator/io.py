@@ -19,6 +19,7 @@ from ..scenarios import RECOMMENDED_TIME_BIN_S, validate_time_bin_s
 TC_PROTOCOL_DT_S = RECOMMENDED_TIME_BIN_S
 TC_PROTOCOL_TOLERANCE = 0.1
 TC_PROTOCOL_STABLE_BINS = 5
+DEFAULT_SINR_CDF_QUANTILE_STEP = 0.01
 STUDENT_T_975_BY_DF: dict[int, float] = {
     1: 12.706,
     2: 4.303,
@@ -561,6 +562,59 @@ def _validate_sinr_cdf_group(
     context = ", ".join(f"{column}={value}" for column, value in zip(factor_columns, key, strict=False))
     if any(curr <= prev for prev, curr in zip(quantiles, quantiles[1:], strict=False)):
         raise ValueError(f"sinr_cdf invalide: quantiles non strictement croissants ({context})")
+    if any(curr < prev for prev, curr in zip(sinrs, sinrs[1:], strict=False)):
+        raise ValueError(f"sinr_cdf invalide: sinr_db non monotone ({context})")
+
+
+def _build_sinr_quantile_grid(*, step: float) -> list[float]:
+    if not math.isfinite(step) or step <= 0.0 or step > 1.0:
+        raise ValueError("sinr_quantile_step doit être dans ]0, 1].")
+
+    grid: list[float] = []
+    index = 1
+    while True:
+        quantile = min(index * step, 1.0)
+        if grid and math.isclose(quantile, grid[-1], rel_tol=0.0, abs_tol=1e-12):
+            break
+        grid.append(quantile)
+        if math.isclose(quantile, 1.0, rel_tol=0.0, abs_tol=1e-12):
+            break
+        index += 1
+    return grid
+
+
+def _nearest_rank_quantile(sorted_values: list[float], quantile: float) -> float:
+    if not sorted_values:
+        raise ValueError("quantile demandé sur une série vide")
+    rank = max(1, math.ceil(quantile * len(sorted_values)))
+    return sorted_values[rank - 1]
+
+
+def _validate_sinr_cdf_comparability(
+    *,
+    by_context: Mapping[tuple[str, ...], Mapping[str, list[float]]],
+    factor_columns: list[str],
+) -> None:
+    context_columns = [column for column in factor_columns if column != "algo"]
+    for context_key, grids_by_algo in by_context.items():
+        baseline_algo = ""
+        baseline_grid: list[float] | None = None
+        for algo, grid in sorted(grids_by_algo.items()):
+            if baseline_grid is None:
+                baseline_algo = algo
+                baseline_grid = grid
+                continue
+            if len(grid) != len(baseline_grid) or any(
+                not math.isclose(left, right, rel_tol=0.0, abs_tol=1e-12)
+                for left, right in zip(grid, baseline_grid, strict=False)
+            ):
+                context = ", ".join(
+                    f"{column}={value}" for column, value in zip(context_columns, context_key, strict=False)
+                )
+                raise ValueError(
+                    "sinr_cdf invalide: grille de quantiles incohérente entre algorithmes "
+                    f"({context}, baseline={baseline_algo}, algo={algo})."
+                )
 
 
 def aggregate_runs(
@@ -573,7 +627,9 @@ def aggregate_runs(
     strict: bool = False,
     verbose: bool = False,
     verbose_warnings: bool = False,
+    sinr_quantile_step: float = DEFAULT_SINR_CDF_QUANTILE_STEP,
     ignored_runs_report: list[dict[str, str]] | None = None,
+    sinr_cdf_metadata: dict[str, Any] | None = None,
 ) -> dict[str, Path]:
     """Agrège des runs et écrit les CSV dans ``aggregates/``."""
 
@@ -593,6 +649,10 @@ def aggregate_runs(
     if summary_only:
         skip_sinr_cdf = True
         skip_sf_distribution = True
+
+    sinr_quantile_grid: list[float] = []
+    if not skip_sinr_cdf:
+        sinr_quantile_grid = _build_sinr_quantile_grid(step=sinr_quantile_step)
 
     metric_names = [
         "pdr",
@@ -1195,20 +1255,24 @@ def aggregate_runs(
 
     if not skip_sinr_cdf:
         sinr_rows = []
+        quantile_grid_by_context: dict[tuple[str, ...], dict[str, list[float]]] = defaultdict(dict)
         for key, values in sorted(sinr_values.items()):
             if not values:
                 continue
             factors = dict(zip(factor_columns, key, strict=False))
             data = sorted(values)
             n = len(data)
-            quantiles = [index / n for index in range(1, n + 1)]
+            quantiles = list(sinr_quantile_grid)
+            sinrs = [_nearest_rank_quantile(data, quantile) for quantile in quantiles]
             _validate_sinr_cdf_group(
                 key=key,
                 quantiles=quantiles,
-                sinrs=data,
+                sinrs=sinrs,
                 factor_columns=factor_columns,
             )
-            for quantile, sinr in zip(quantiles, data, strict=False):
+            context_key = tuple(factors[column] for column in factor_columns if column != "algo")
+            quantile_grid_by_context[context_key][factors.get("algo", "")] = quantiles
+            for quantile, sinr in zip(quantiles, sinrs, strict=False):
                 sinr_rows.append(
                     {
                         **factors,
@@ -1217,9 +1281,23 @@ def aggregate_runs(
                         "sample_count": n,
                     }
                 )
+        _validate_sinr_cdf_comparability(by_context=quantile_grid_by_context, factor_columns=factor_columns)
         sinr_path = out_dir / "sinr_cdf.csv"
         _write_csv(sinr_path, factor_columns + ["quantile", "sinr_db", "sample_count"], sinr_rows)
         files["sinr_cdf"] = sinr_path
+        if sinr_cdf_metadata is not None:
+            sinr_cdf_metadata.update(
+                {
+                    "enabled": True,
+                    "quantile_step": sinr_quantile_step,
+                    "num_quantiles": len(sinr_quantile_grid),
+                    "quantile_min": sinr_quantile_grid[0] if sinr_quantile_grid else None,
+                    "quantile_max": sinr_quantile_grid[-1] if sinr_quantile_grid else None,
+                    "quantile_method": "nearest_rank",
+                }
+            )
+    elif sinr_cdf_metadata is not None:
+        sinr_cdf_metadata.update({"enabled": False})
 
     files["convergence_tc"] = convergence_path
     files["fairness_airtime_switching"] = fairness_path

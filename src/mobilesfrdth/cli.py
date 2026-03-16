@@ -594,6 +594,7 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
             return 2
 
         ignored_runs: list[dict[str, str]] = []
+        sinr_cdf_metadata: dict[str, object] = {}
         files = aggregate_runs(
             inputs=args.results,
             output_root=out_dir,
@@ -603,7 +604,9 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
             strict=args.strict,
             verbose=args.verbose,
             verbose_warnings=args.verbose_warnings,
+            sinr_quantile_step=args.sinr_quantile_step,
             ignored_runs_report=ignored_runs,
+            sinr_cdf_metadata=sinr_cdf_metadata,
         )
     except (ValueError, json.JSONDecodeError, FileNotFoundError) as exc:
         print(f"Erreur pendant l'agrégation: {exc}")
@@ -630,6 +633,7 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
                 distinct_groups_by_algo[algo] = distinct_groups_by_algo.get(algo, 0) + 1
 
     manifest["distinct_groups_by_algo"] = distinct_groups_by_algo
+    manifest["sinr_cdf"] = sinr_cdf_metadata
     output_file = out_dir / "aggregate.json"
     _dump_json(output_file, manifest)
 
@@ -906,6 +910,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--skip-sinr-cdf",
         action="store_true",
         help="N'écrit pas sinr_cdf.csv pour accélérer l'agrégation.",
+    )
+    aggregate_parser.add_argument(
+        "--sinr-quantile-step",
+        type=lambda value: _positive_float(value, name="--sinr-quantile-step"),
+        default=0.01,
+        help="Pas de discrétisation des quantiles SINR-CDF (ex: 0.01 ou 0.02).",
     )
     aggregate_parser.add_argument(
         "--skip-sf-distribution",
