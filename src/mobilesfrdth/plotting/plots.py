@@ -279,6 +279,8 @@ class FigureTrace:
     filters: dict[str, list[str]]
     num_points: int
     points_by_curve: dict[str, int]
+    source_rows_read: int
+    source_rows_usable: int
     generated: bool
 
 
@@ -306,6 +308,13 @@ def _read_csv_rows(path: Path) -> list[dict[str, str]]:
         return [_normalize_csv_row(row) for row in csv.DictReader(handle)]
 
 
+def _missing_file_hint(csv_path: Path) -> str:
+    return (
+        f"missing file: {csv_path} "
+        "(cause probable: l'agrégation n'a pas produit ce CSV suite à des runs incomplets/échoués)."
+    )
+
+
 def validate_aggregates_inputs(aggregates_dir: Path) -> list[str]:
     """Validate required CSV presence and contractual columns before plotting."""
 
@@ -313,7 +322,7 @@ def validate_aggregates_inputs(aggregates_dir: Path) -> list[str]:
     for key, filename in REQUIRED_FILES.items():
         csv_path = aggregates_dir / filename
         if not csv_path.is_file():
-            errors.append(f"missing file: {csv_path}")
+            errors.append(_missing_file_hint(csv_path))
             continue
         with csv_path.open("r", encoding="utf-8", newline="") as handle:
             reader = csv.DictReader(handle)
@@ -332,6 +341,16 @@ def validate_aggregates_inputs(aggregates_dir: Path) -> list[str]:
         if missing:
             errors.append(f"missing columns in {csv_path.name}: {', '.join(missing)}")
     return errors
+
+
+def build_resume_commands(*, aggregates_dir: Path, out_dir: Path) -> dict[str, str]:
+    campaign_root = aggregates_dir.parent
+    run_out = campaign_root / "runs"
+    return {
+        "run": f"mobilesfrdth run --config experiments/default.yaml --out {run_out} --resume",
+        "aggregate": f"mobilesfrdth aggregate --results {run_out} --out {aggregates_dir.parent}",
+        "plots": f"mobilesfrdth plots --aggregates-dir {aggregates_dir} --out {out_dir}",
+    }
 
 
 def _to_float(value: str | None) -> float | None:
@@ -417,6 +436,43 @@ def _format_filters(filters: ScenarioFilters) -> str:
 
 def _filters_to_serializable(filters: ScenarioFilters) -> dict[str, list[str]]:
     return {key: sorted(values) for key, values in sorted(filters.by_column.items())}
+
+
+def _count_rows_per_source(payloads: dict[str, list[dict[str, str]]]) -> dict[str, int]:
+    return {name: len(rows) for name, rows in payloads.items()}
+
+
+def _write_plots_diagnostics(
+    *,
+    out_dir: Path,
+    aggregates_dir: Path,
+    traces: list[FigureTrace],
+    source_rows_read: dict[str, int],
+    requested_filters: ScenarioFilters,
+) -> Path:
+    payload = {
+        "aggregates_dir": str(aggregates_dir),
+        "requested_filters": _filters_to_serializable(requested_filters),
+        "source_rows_read": source_rows_read,
+        "figures": [
+            {
+                "figure": trace.figure,
+                "source": trace.source,
+                "metric": trace.metric,
+                "filters": trace.filters,
+                "source_rows_read": trace.source_rows_read,
+                "source_rows_usable": trace.source_rows_usable,
+                "num_points": trace.num_points,
+                "points_by_curve": trace.points_by_curve,
+                "generated": trace.generated,
+                "empty_reason": ("no usable rows after filters" if (not trace.generated and trace.source_rows_usable == 0) else None),
+            }
+            for trace in traces
+        ],
+    }
+    path = out_dir / "plots_diagnostics.json"
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return path
 
 
 def _resolve_profile_filter(article_profile: str, figure_name: str) -> dict[str, set[str]]:
@@ -1376,6 +1432,7 @@ def generate_minimal_figures(
     setup_plot_style(ieee_ready=ieee_ready)
     out_dir.mkdir(parents=True, exist_ok=True)
     payloads = {name: _read_csv_rows(aggregates_dir / filename) for name, filename in REQUIRED_FILES.items()}
+    source_rows_read = _count_rows_per_source(payloads)
 
     generated: list[Path] = []
     traces: list[FigureTrace] = []
@@ -1393,6 +1450,8 @@ def generate_minimal_figures(
                 filters=_filters_to_serializable(effective_filters),
                 num_points=_count_points(selected, metric),
                 points_by_curve=_count_points_by_curve(selected, metric),
+                source_rows_read=source_rows_read.get(source, 0),
+                source_rows_usable=len(selected),
                 generated=did_generate,
             )
         )
@@ -1413,6 +1472,8 @@ def generate_minimal_figures(
             filters=_filters_to_serializable(sf_filters),
             num_points=_count_points(sf_selected, "ratio"),
             points_by_curve=_count_points_by_curve(sf_selected, "ratio"),
+            source_rows_read=source_rows_read.get("distribution_sf", 0),
+            source_rows_usable=len(sf_selected),
             generated=did_generate,
         )
     )
@@ -1444,6 +1505,8 @@ def generate_minimal_figures(
                     filters=_filters_to_serializable(effective_filters),
                     num_points=_count_points(selected, metric),
                     points_by_curve=_count_points_by_curve(selected, metric),
+                    source_rows_read=source_rows_read.get(source, 0),
+                    source_rows_usable=len(selected),
                     generated=did_generate,
                 )
             )
@@ -1477,6 +1540,8 @@ def generate_minimal_figures(
                 "filters": trace.filters,
                 "num_points": trace.num_points,
                 "points_by_curve": trace.points_by_curve,
+                "source_rows_read": trace.source_rows_read,
+                "source_rows_usable": trace.source_rows_usable,
                 "generated": trace.generated,
             }
             for trace in traces
@@ -1485,6 +1550,13 @@ def generate_minimal_figures(
     (out_dir / "plots_summary.json").write_text(
         json.dumps(summary_payload, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
+    )
+    _write_plots_diagnostics(
+        out_dir=out_dir,
+        aggregates_dir=aggregates_dir,
+        traces=traces,
+        source_rows_read=source_rows_read,
+        requested_filters=filters,
     )
 
     return generated, traces
