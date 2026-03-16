@@ -498,6 +498,7 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
             skip_sf_distribution=args.skip_sf_distribution,
             strict=args.strict,
             verbose=args.verbose,
+            verbose_warnings=args.verbose_warnings,
             ignored_runs_report=ignored_runs,
         )
     except (ValueError, json.JSONDecodeError, FileNotFoundError) as exc:
@@ -792,6 +793,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Échoue si num_jobs (jobs.json) ne correspond pas au nombre de run dirs trouvés.",
     )
     aggregate_parser.add_argument("--verbose", action="store_true", help="Affiche le détail des dossiers traités.")
+    aggregate_parser.add_argument(
+        "--verbose-warnings",
+        action="store_true",
+        help="Affiche chaque warning run-par-run en plus du résumé agrégé.",
+    )
     aggregate_parser.add_argument(
         "--campaign-log",
         type=Path,

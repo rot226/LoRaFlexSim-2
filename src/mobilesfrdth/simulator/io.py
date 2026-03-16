@@ -572,6 +572,7 @@ def aggregate_runs(
     skip_sf_distribution: bool = False,
     strict: bool = False,
     verbose: bool = False,
+    verbose_warnings: bool = False,
     ignored_runs_report: list[dict[str, str]] | None = None,
 ) -> dict[str, Path]:
     """Agrège des runs et écrit les CSV dans ``aggregates/``."""
@@ -651,6 +652,23 @@ def aggregate_runs(
     ignored_runs: list[dict[str, str]] = []
     complete_runs: list[dict[str, str]] = []
     incomplete_runs: list[dict[str, str]] = []
+    warning_groups: dict[str, list[dict[str, str]]] = defaultdict(list)
+
+    def _record_warning(*, category: str, message: str, run_id: str, run_dir: Path) -> None:
+        warning_groups[category].append(
+            {
+                "run_id": run_id,
+                "run_dir": str(run_dir),
+                "message": message,
+            }
+        )
+
+    def _format_warning_summary(category: str, entries: list[dict[str, str]], *, max_examples: int = 3) -> str:
+        count = len(entries)
+        sample_ids = [item["run_id"] for item in entries[:max_examples] if item.get("run_id")]
+        if sample_ids:
+            return f"{count} run(s) {category} (exemples: {', '.join(sample_ids)})."
+        return f"{count} run(s) {category}."
 
     def _record_incomplete(*, run_dir: Path, reason: str, details: str) -> None:
         nonlocal skipped
@@ -663,6 +681,8 @@ def aggregate_runs(
         diagnostics_payload = {
             "complete_runs": complete_runs,
             "incomplete_runs": incomplete_runs,
+            "warning_counts": {category: len(entries) for category, entries in warning_groups.items()},
+            "warning_details": warning_groups,
             "counts": {
                 "discovered_runs": total,
                 "valid_runs": processed,
@@ -691,7 +711,15 @@ def aggregate_runs(
             )
             if strict:
                 raise FileNotFoundError(message)
-            warnings.warn(message, RuntimeWarning, stacklevel=2)
+            run_id = run_dir.name
+            _record_warning(
+                category="incomplets/corrompus ignorés",
+                message=message,
+                run_id=run_id,
+                run_dir=run_dir,
+            )
+            if verbose_warnings:
+                warnings.warn(message, RuntimeWarning, stacklevel=2)
             missing_set = set(missing_files)
             if "summary.csv" in missing_set:
                 reason = "summary_absent"
@@ -707,7 +735,15 @@ def aggregate_runs(
             message = f"Run corrompu ignoré: {run_dir} (summary.csv vide)"
             if strict:
                 raise ValueError(message)
-            warnings.warn(message, RuntimeWarning, stacklevel=2)
+            run_id = run_dir.name
+            _record_warning(
+                category="incomplets/corrompus ignorés",
+                message=message,
+                run_id=run_id,
+                run_dir=run_dir,
+            )
+            if verbose_warnings:
+                warnings.warn(message, RuntimeWarning, stacklevel=2)
             _record_incomplete(run_dir=run_dir, reason="csv_corrupted", details="summary.csv vide")
             continue
 
@@ -731,19 +767,32 @@ def aggregate_runs(
                 message = f"Run corrompu ignoré: {run_dir} ({exc})"
                 if strict:
                     raise ValueError(message) from exc
-                warnings.warn(message, RuntimeWarning, stacklevel=2)
+                run_id = str(row.get("run_id", run_dir.name))
+                _record_warning(
+                    category="incomplets/corrompus ignorés",
+                    message=message,
+                    run_id=run_id,
+                    run_dir=run_dir,
+                )
+                if verbose_warnings:
+                    warnings.warn(message, RuntimeWarning, stacklevel=2)
                 _record_incomplete(run_dir=run_dir, reason="csv_corrupted", details=f"summary.csv: {exc}")
                 break
 
             if not math.isclose(tc_dt_s, TC_PROTOCOL_DT_S, rel_tol=0.0, abs_tol=1e-9):
-                warnings.warn(
-                    (
-                        f"Batch: run {run_dir} utilise tc_dt_s={tc_dt_s:.6g}s (méthode '{tc_method}') "
-                        f"au lieu du protocole {TC_PROTOCOL_DT_S:.1f}s."
-                    ),
-                    RuntimeWarning,
-                    stacklevel=2,
+                warning_message = (
+                    f"Run {run_dir} utilise tc_dt_s={tc_dt_s:.6g}s (méthode '{tc_method}') "
+                    f"au lieu du protocole {TC_PROTOCOL_DT_S:.1f}s."
                 )
+                run_id = str(row.get("run_id", run_dir.name))
+                _record_warning(
+                    category=f"utilisent tc_dt_s!= {TC_PROTOCOL_DT_S:.1f}s",
+                    message=warning_message,
+                    run_id=run_id,
+                    run_dir=run_dir,
+                )
+                if verbose_warnings:
+                    warnings.warn(f"Batch: {warning_message}", RuntimeWarning, stacklevel=2)
 
             valid_summary_rows.append(row)
             parsed_summary_values.append((key, parsed_metrics))
@@ -770,7 +819,15 @@ def aggregate_runs(
                 message = f"Run corrompu ignoré: {run_dir} (events.csv: {exc})"
                 if strict:
                     raise ValueError(message) from exc
-                warnings.warn(message, RuntimeWarning, stacklevel=2)
+                run_id = str(valid_summary_rows[0].get("run_id", run_dir.name))
+                _record_warning(
+                    category="incomplets/corrompus ignorés",
+                    message=message,
+                    run_id=run_id,
+                    run_dir=run_dir,
+                )
+                if verbose_warnings:
+                    warnings.warn(message, RuntimeWarning, stacklevel=2)
                 _record_incomplete(run_dir=run_dir, reason="csv_corrupted", details=f"events.csv: {exc}")
                 run_rejected = True
 
@@ -855,8 +912,17 @@ def aggregate_runs(
         )
 
     if skipped:
+        skipped_entries = warning_groups.get("incomplets/corrompus ignorés", [])
         warnings.warn(
-            f"{skipped} run(s) incomplet(s)/corrompu(s) ignoré(s). Détails: {diagnostics_path}",
+            f"{_format_warning_summary('incomplets/corrompus ignorés', skipped_entries)} Détails: {diagnostics_path}",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+
+    tc_dt_entries = warning_groups.get(f"utilisent tc_dt_s!= {TC_PROTOCOL_DT_S:.1f}s", [])
+    if tc_dt_entries:
+        warnings.warn(
+            f"{_format_warning_summary(f'utilisent tc_dt_s!= {TC_PROTOCOL_DT_S:.1f}s', tc_dt_entries)} Détails: {diagnostics_path}",
             RuntimeWarning,
             stacklevel=2,
         )
