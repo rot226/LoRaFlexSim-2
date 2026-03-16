@@ -26,7 +26,7 @@ def _summary_row(run_id: str, *, algo: str, pdr: float) -> dict[str, object]:
         "mode": "snir_on",
         "algo": algo,
         "gateways": "1",
-        "sigma": "2",
+        "sigma_shadowing": "2",
         "seed": "1",
         "rep": "0",
         "run_id": run_id,
@@ -147,7 +147,7 @@ def test_metric_by_factor_uses_full_factor_key_with_model_and_sigma_shadowing_al
     assert len(aggregated) == 2
     by_algo = {row["algo"]: row for row in aggregated}
     assert by_algo["adr"]["mobility_model"] == "rwp"
-    assert by_algo["adr"]["sigma"] == "2"
+    assert by_algo["adr"]["sigma_shadowing"] == "2"
     assert by_algo["adr"]["pdr_mean"] == "0.11"
     assert by_algo["ucb"]["pdr_mean"] == "0.77"
 
@@ -166,7 +166,7 @@ def test_metric_by_factor_exposes_sigma_shadowing_column(tmp_path):
 
     assert rows
     assert "sigma_shadowing" in rows[0]
-    assert rows[0]["sigma_shadowing"] == rows[0]["sigma"]
+    assert rows[0]["sigma_shadowing"] == "2"
 
 
 def test_plot_xy_by_algo_uses_distinct_series_per_algo(monkeypatch, tmp_path):

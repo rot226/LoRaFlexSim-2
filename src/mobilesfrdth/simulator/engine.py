@@ -106,13 +106,13 @@ class EventDrivenEngine:
         signal_dbm: float,
         signal_sf: int,
         interference_db: float,
-        sigma: float,
+        sigma_shadowing: float,
     ) -> list[tuple[float, int]]:
         potential_interferers = max(node_count - 1, 0)
         if potential_interferers == 0:
             return []
 
-        if interference_db <= 0.0 and sigma <= 0.0:
+        if interference_db <= 0.0 and sigma_shadowing <= 0.0:
             return []
 
         expected = min(
@@ -126,7 +126,7 @@ class EventDrivenEngine:
         sf_candidates = [7, 8, 9, 10, 11, 12]
         interferers: list[tuple[float, int]] = []
         for _ in range(n_interferers):
-            relative_drop = max(0.5, interference_db + abs(self.rng.gauss(0.0, max(sigma, 0.01))))
+            relative_drop = max(0.5, interference_db + abs(self.rng.gauss(0.0, max(sigma_shadowing, 0.01))))
             power_i_dbm = signal_dbm - relative_drop
             sf_i = signal_sf if self.rng.random() < 0.55 else self.rng.choice(sf_candidates)
             interferers.append((power_i_dbm, sf_i))
@@ -248,11 +248,15 @@ class EventDrivenEngine:
         speed_mps: float = 1.0,
         area_size_m: float = 1_000.0,
         interference_db: float = 0.0,
-        sigma: float = 0.0,
+        sigma_shadowing: float = 0.0,
+        sigma: float | None = None,
         progress_callback: Callable[[float], None] | None = None,
     ) -> SimulationResult:
         if until_s <= 0:
             return SimulationResult()
+
+        if sigma is not None:
+            sigma_shadowing = float(sigma)
 
         node_by_id = {n.node_id: n for n in nodes}
         node_count = len(nodes)
@@ -261,7 +265,7 @@ class EventDrivenEngine:
         adr_cfg = AdrLegacyConfig()
         adr_mixra_cfg = AdrMixRaConfig()
         interference_cfg = InterferenceConfig(snir_enabled=mode_name == "snir_on")
-        channel_cfg = ChannelConfig(sigma_shadowing=max(sigma, 0.0))
+        channel_cfg = ChannelConfig(sigma_shadowing=max(sigma_shadowing, 0.0))
         mobility_name = mobility_model.lower()
 
         mab_agents: dict[int, UCB1 | UCBForget] = {}
@@ -368,7 +372,7 @@ class EventDrivenEngine:
                     signal_dbm=signal_dbm,
                     signal_sf=current_sf,
                     interference_db=interference_db,
-                    sigma=sigma,
+                    sigma_shadowing=sigma_shadowing,
                 )
                 success, metric_db = transmission_success(
                     signal_dbm,
@@ -536,7 +540,7 @@ class GridRunOrchestrator:
         run_config["algo"] = algo_aliases.get(algo_token, "adr")
 
         run_config["gateways"] = int(params.get("gateways", run_config.get("gateways", 1)))
-        run_config["sigma"] = float(params.get("sigma", run_config.get("sigma", 0.0)))
+        run_config["sigma_shadowing"] = float(params.get("sigma_shadowing", params.get("sigma", run_config.get("sigma_shadowing", run_config.get("sigma", 0.0)))))
         run_config["seed"] = int(params.get("seed", run_config.get("seed", 0)))
         run_config["rep"] = int(params.get("rep", run_config.get("rep", 1)))
         return run_config
@@ -781,7 +785,7 @@ class GridRunOrchestrator:
                     speed_mps=float(params.get("speed", 1.0)),
                     area_size_m=float(params.get("area_size_m", 1_000.0)),
                     interference_db=float(params.get("interference_db", params.get("interference", 0.0))),
-                    sigma=float(params.get("sigma", 0.0)),
+                    sigma_shadowing=float(params.get("sigma_shadowing", params.get("sigma", 0.0))),
                     progress_callback=_progress,
                 )
                 run_config = self._build_run_config(params)

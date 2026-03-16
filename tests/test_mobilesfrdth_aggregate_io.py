@@ -125,7 +125,7 @@ def test_aggregate_runs_sinr_cdf_has_strict_columns(tmp_path):
 
     with files["sinr_cdf"].open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
-        assert reader.fieldnames == ["N", "speed", "mobility_model", "mode", "algo", "gateways", "sigma_shadowing", "sigma", "quantile", "sinr_db", "sample_count"]
+        assert reader.fieldnames == ["N", "speed", "mobility_model", "mode", "algo", "gateways", "sigma_shadowing", "quantile", "sinr_db", "sample_count"]
         rows = list(reader)
         assert rows
         assert rows[0]["quantile"] == "1.0"
@@ -484,3 +484,42 @@ def test_aggregate_runs_fails_with_guided_message_when_no_run_dir_found(tmp_path
         aggregate_runs(inputs=[tmp_path], output_root=tmp_path / "out", summary_only=True)
 
     assert "--verbose" in str(excinfo.value)
+
+
+def test_aggregate_runs_legacy_sigma_columns_are_read_and_rewritten_as_sigma_shadowing(tmp_path):
+    run_dir = tmp_path / "results" / "run_legacy"
+    _write_csv(
+        run_dir / "summary.csv",
+        [column if column != "sigma_shadowing" else "sigma" for column in SUMMARY_COLUMNS],
+        _summary_row("run_legacy"),
+    )
+    _write_csv(
+        run_dir / "events.csv",
+        ["event_type", "N", "speed", "mobility_model", "mode", "algo", "gateways", "sigma", "sf", "sinr_db"],
+        {
+            "event_type": "uplink",
+            "N": "50",
+            "speed": "1",
+            "mobility_model": "rwp",
+            "mode": "snir_on",
+            "algo": "ucb",
+            "gateways": "1",
+            "sigma": "2",
+            "sf": "9",
+            "sinr_db": "6.5",
+        },
+    )
+
+    files = aggregate_runs(inputs=[tmp_path], output_root=tmp_path / "out", summary_only=False)
+
+    metric_rows = list(csv.DictReader(files["metric_by_factor"].open("r", encoding="utf-8", newline="")))
+    assert metric_rows
+    assert "sigma_shadowing" in metric_rows[0]
+    assert "sigma" not in metric_rows[0]
+    assert metric_rows[0]["sigma_shadowing"] == "2"
+
+    sinr_rows = list(csv.DictReader(files["sinr_cdf"].open("r", encoding="utf-8", newline="")))
+    assert sinr_rows
+    assert "sigma_shadowing" in sinr_rows[0]
+    assert "sigma" not in sinr_rows[0]
+    assert sinr_rows[0]["sigma_shadowing"] == "2"

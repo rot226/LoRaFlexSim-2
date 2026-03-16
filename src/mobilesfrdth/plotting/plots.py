@@ -96,7 +96,7 @@ REQUIRED_COLUMNS = {
     },
     "distribution_sf": {"algo", "sf", "ratio"},
     "convergence_tc": {"algo", "speed", "Tc_s"},
-    "sinr_cdf": {"algo", "mode", "N", "speed", "mobility_model", "gateways", "sigma", "quantile", "sinr_db"},
+    "sinr_cdf": {"algo", "mode", "N", "speed", "mobility_model", "gateways", "sigma_shadowing", "quantile", "sinr_db"},
     "fairness_airtime_switching": {"N", "algo", "jain_fairness", "airtime_total_s", "switch_count"},
     "ucb_tracking": {"speed", "mode", "algo", "Tc_s_mean"},
     "pareto_reliability_airtime": {"algo", "pdr_mean", "pdr_ci95", "airtime_total_s_mean", "airtime_total_s_ci95"},
@@ -215,8 +215,8 @@ COLUMN_NAME_ALIASES = {
     "mobility_model": "mobility_model",
     "model": "mobility_model",
     "gateways": "gateways",
-    "sigma": "sigma",
-    "sigma_shadowing": "sigma",
+    "sigma": "sigma_shadowing",
+    "sigma_shadowing": "sigma_shadowing",
 }
 METRIC_COLUMN_ALIASES = {
     "pdr_mean": ("pdr_mean", "pdr"),
@@ -718,7 +718,7 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
     if not rows:
         _warn_skip(fig_name, "file sinr_cdf.csv is empty or missing")
         return False
-    needed = {"algo", "mode", "N", "speed", "mobility_model", "gateways", "sigma", "quantile", "sinr_db"}
+    needed = {"algo", "mode", "N", "speed", "mobility_model", "gateways", "sigma_shadowing", "quantile", "sinr_db"}
     missing = [column for column in needed if column not in rows[0]]
     if missing:
         _warn_skip(fig_name, f"missing columns {missing}")
@@ -732,7 +732,7 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
             row.get("speed", ""),
             row.get("mobility_model", ""),
             row.get("gateways", ""),
-            row.get("sigma", ""),
+            row.get("sigma_shadowing", ""),
         )
         by_context[context].append(row)
 
@@ -782,12 +782,12 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
         plt.close()
         return False
 
-    mode, n_value, speed, mobility, gateways, sigma = chosen_context
+    mode, n_value, speed, mobility, gateways, sigma_shadowing = chosen_context
     plt.grid(alpha=0.3)
     plt.xlabel(_axis_label("sinr_db"))
     plt.ylabel(_axis_label("quantile"))
     _add_compact_legend(title="Algorithm")
-    plt.title(f"Fixed scenario: mode={mode}, N={n_value}, v={speed}, mob={mobility}, gw={gateways}, sigma={sigma}")
+    plt.title(f"Fixed scenario: mode={mode}, N={n_value}, v={speed}, mob={mobility}, gw={gateways}, sigma_shadowing={sigma_shadowing}")
     plt.tight_layout()
     _save_figure_variants(out_path)
     plt.close()
