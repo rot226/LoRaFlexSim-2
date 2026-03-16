@@ -195,13 +195,12 @@ def _validate_grid_values(grid: dict[str, list[Any]], checks: JobValidationConfi
             if not isinstance(gateways, int) or gateways < 1:
                 raise ValueError("Toutes les valeurs gateways doivent être des entiers >= 1.")
 
-    if "sigma" in grid:
-        for sigma in grid["sigma"]:
-            if not isinstance(sigma, (int, float)) or sigma < 0:
-                raise ValueError("Toutes les valeurs sigma doivent être numériques et >= 0.")
+    if "sigma" in grid and "sigma_shadowing" in grid and grid["sigma"] != grid["sigma_shadowing"]:
+        raise ValueError("Les clés sigma et sigma_shadowing sont incompatibles: utilisez une seule valeur canonique.")
 
-    if "sigma_shadowing" in grid:
-        for sigma in grid["sigma_shadowing"]:
+    sigma_values = grid.get("sigma_shadowing", grid.get("sigma"))
+    if sigma_values is not None:
+        for sigma in sigma_values:
             if not isinstance(sigma, (int, float)) or sigma < 0:
                 raise ValueError("Toutes les valeurs sigma_shadowing doivent être numériques et >= 0.")
 
@@ -273,15 +272,19 @@ def generate_jobs(
     validate_run_parameters(seed=seed, reps=reps, sf_range=sf_range, checks=checks)
     _validate_grid_values(grid, checks)
 
-    keys = [key for key in grid if key not in {"reps", "seed_base"}]
-    combinations = list(product(*(grid[k] for k in keys)))
+    normalized_grid = dict(grid)
+    if "sigma_shadowing" not in normalized_grid and "sigma" in normalized_grid:
+        normalized_grid["sigma_shadowing"] = normalized_grid.pop("sigma")
+
+    keys = [key for key in normalized_grid if key not in {"reps", "seed_base"}]
+    combinations = list(product(*(normalized_grid[k] for k in keys)))
     jobs: list[dict[str, Any]] = []
 
     job_index = 1
     for values in combinations:
         base_params = dict(zip(keys, values, strict=True))
-        reps_count = reps if reps is not None else int(grid["reps"][0])
-        seed_origin = seed if seed is not None else int(grid["seed_base"][0])
+        reps_count = reps if reps is not None else int(normalized_grid["reps"][0])
+        seed_origin = seed if seed is not None else int(normalized_grid["seed_base"][0])
 
         for rep in range(1, reps_count + 1):
             rep_seed = seed_origin + rep - 1

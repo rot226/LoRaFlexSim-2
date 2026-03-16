@@ -52,7 +52,7 @@ STUDENT_T_975_BY_DF: dict[int, float] = {
     30: 2.042,
 }
 
-SCENARIO_ID_COLUMNS = ["N", "speed", "mobility_model", "mode", "algo", "gateways", "sigma", "seed", "rep"]
+SCENARIO_ID_COLUMNS = ["N", "speed", "mobility_model", "mode", "algo", "gateways", "sigma_shadowing", "seed", "rep"]
 EVENT_COLUMNS = [
     *SCENARIO_ID_COLUMNS,
     "run_id",
@@ -123,7 +123,10 @@ SUMMARY_COLUMNS = [
 
 
 def _scenario_row(run_config: Mapping[str, Any]) -> dict[str, Any]:
-    return {key: run_config.get(key, "") for key in SCENARIO_ID_COLUMNS}
+    row = {key: run_config.get(key, "") for key in SCENARIO_ID_COLUMNS}
+    if row.get("sigma_shadowing", "") == "":
+        row["sigma_shadowing"] = run_config.get("sigma", "")
+    return row
 
 
 def _coerce_event(event: Any) -> dict[str, Any]:
@@ -775,16 +778,19 @@ def aggregate_runs(
             continue
 
         for row in valid_summary_rows:
+            scenario_row = {column: row.get(column, "") for column in SCENARIO_ID_COLUMNS}
+            if scenario_row.get("sigma_shadowing", "") == "":
+                scenario_row["sigma_shadowing"] = row.get("sigma", "")
             convergence_writer.writerow(
                 {
-                    **{column: row.get(column, "") for column in SCENARIO_ID_COLUMNS},
+                    **scenario_row,
                     "run_id": row.get("run_id", ""),
                     "Tc_s": row.get("Tc_s", ""),
                 }
             )
             fairness_writer.writerow(
                 {
-                    **{column: row.get(column, "") for column in SCENARIO_ID_COLUMNS},
+                    **scenario_row,
                     "run_id": row.get("run_id", ""),
                     "jain_fairness": row.get("jain_fairness", ""),
                     "airtime_total_s": row.get("airtime_total_s", ""),
@@ -876,7 +882,6 @@ def aggregate_runs(
         metric_by_factor_rows.append(
             {
                 **dict(zip(factor_columns, key, strict=False)),
-                "sigma": key[-1],
                 "n_runs_effective": num_runs,
                 "num_runs": num_runs,
                 "pdr_mean": pdr_stats["mean"],
@@ -934,7 +939,6 @@ def aggregate_runs(
 
     metric_by_factor_path = out_dir / "metric_by_factor.csv"
     _write_csv(metric_by_factor_path, factor_columns + [
-        "sigma",
         "n_runs_effective",
         "num_runs",
         "pdr_mean",
@@ -1142,14 +1146,13 @@ def aggregate_runs(
                 sinr_rows.append(
                     {
                         **factors,
-                        "sigma": factors.get("sigma_shadowing", ""),
                         "quantile": quantile,
                         "sinr_db": sinr,
                         "sample_count": n,
                     }
                 )
         sinr_path = out_dir / "sinr_cdf.csv"
-        _write_csv(sinr_path, factor_columns + ["sigma", "quantile", "sinr_db", "sample_count"], sinr_rows)
+        _write_csv(sinr_path, factor_columns + ["quantile", "sinr_db", "sample_count"], sinr_rows)
         files["sinr_cdf"] = sinr_path
 
     files["convergence_tc"] = convergence_path
