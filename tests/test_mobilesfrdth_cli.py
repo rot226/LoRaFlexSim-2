@@ -204,3 +204,54 @@ def test_cmd_run_returns_130_when_interrupted(monkeypatch, tmp_path):
         ]
     )
     assert cli.cmd_run(args) == 130
+
+
+def test_cmd_run_accepts_time_bin_s_30_in_grid(monkeypatch, tmp_path):
+    config_path = tmp_path / "cfg.yaml"
+    config_path.write_text("demo: true\n", encoding="utf-8")
+
+    observed = {}
+
+    class _FakeOrchestrator:
+        def __init__(self, *, output_root):
+            self.output_root = output_root
+
+        def execute_jobs(self, jobs, **kwargs):
+            observed["jobs"] = jobs
+            return SimpleNamespace(
+                reports=[SimpleNamespace(run_id="run_01", success=True, run_dir=tmp_path / "run_01", error=None)],
+                total_jobs=1,
+                skipped_runs=0,
+                scheduled_runs=1,
+                failed_reports=[],
+                interrupted=False,
+            )
+
+    monkeypatch.setattr("mobilesfrdth.simulator.engine.GridRunOrchestrator", _FakeOrchestrator)
+
+    args = cli.build_parser().parse_args(
+        [
+            "run",
+            "--config",
+            str(config_path),
+            "--out",
+            str(tmp_path / "out"),
+            "--grid",
+            "N=40;speed=1;mode=SNIR_OFF;algo=ADR;reps=1;seed_base=1234;time_bin_s=30",
+        ]
+    )
+
+    assert cli.cmd_run(args) == 0
+    assert float(observed["jobs"][0]["params"]["time_bin_s"]) == 30.0
+
+
+def test_build_parser_run_grid_help_mentions_time_bin_recommendation(capsys):
+    with pytest.raises(SystemExit) as exc_info:
+        cli.build_parser().parse_args(["run", "--help"])
+
+    assert exc_info.value.code == 0
+    captured = capsys.readouterr()
+    assert "recommandé 10s" in captured.out
+    assert "comparabilité Tc" in captured.out
+    assert "autres valeurs > 0" in captured.out
+    assert "autorisées" in captured.out

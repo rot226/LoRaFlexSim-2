@@ -14,6 +14,7 @@ import traceback
 from typing import Any, Callable
 
 from .io import write_run_outputs
+from ..scenarios import validate_time_bin_s
 from .adr.adr_legacy import AdrLegacyConfig, recommend_sf_with_reason
 from .adr.adr_mixra import AdrMixRaConfig, adapt_link
 from .channel import ChannelConfig, received_power_dbm
@@ -770,7 +771,7 @@ class GridRunOrchestrator:
                     run_config=run_config,
                     events=result.events,
                     duration_s=duration_s,
-                    time_bin_s=float(params.get("time_bin_s", 10.0)),
+                    time_bin_s=validate_time_bin_s(params.get("time_bin_s", 10.0), field_name="time_bin_s"),
                 )
                 self._log_sinr_success_diagnostic(
                     logger=logger,

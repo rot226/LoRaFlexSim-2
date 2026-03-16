@@ -13,9 +13,10 @@ from typing import Any
 from statistics import stdev
 
 from .metrics import convergence_tc, der, jain_fairness, outage_ratio, pdr, throughput
+from ..scenarios import RECOMMENDED_TIME_BIN_S, validate_time_bin_s
 
 
-TC_PROTOCOL_DT_S = 10.0
+TC_PROTOCOL_DT_S = RECOMMENDED_TIME_BIN_S
 TC_PROTOCOL_TOLERANCE = 0.1
 TC_PROTOCOL_STABLE_BINS = 5
 STUDENT_T_975_BY_DF: dict[int, float] = {
@@ -229,8 +230,7 @@ def write_run_outputs(
 
     if duration_s <= 0:
         raise ValueError("duration_s doit être > 0")
-    if time_bin_s <= 0:
-        raise ValueError("time_bin_s doit être > 0")
+    time_bin_s = validate_time_bin_s(time_bin_s, field_name="time_bin_s")
     tc_method = "protocol_dt"
     tc_dt_s = TC_PROTOCOL_DT_S
     if not math.isclose(time_bin_s, TC_PROTOCOL_DT_S, rel_tol=0.0, abs_tol=1e-9):

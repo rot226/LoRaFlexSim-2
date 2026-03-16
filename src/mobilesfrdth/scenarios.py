@@ -53,6 +53,22 @@ class JobValidationConfig:
 
 
 DEFAULT_VALIDATION = JobValidationConfig()
+RECOMMENDED_TIME_BIN_S = 10.0
+
+
+def validate_time_bin_s(value: Any, *, field_name: str = "time_bin_s") -> float:
+    """Valide ``time_bin_s`` selon le contrat commun de la campagne.
+
+    Règle unique : valeur numérique strictement positive.
+    Recommandation protocolaire : ``10s`` pour comparabilité des métriques ``Tc``.
+    """
+
+    if not isinstance(value, (int, float)):
+        raise ValueError(f"{field_name} doit être numérique (> 0), valeur reçue: {value!r}.")
+    parsed = float(value)
+    if parsed <= 0:
+        raise ValueError(f"{field_name} doit être > 0.")
+    return parsed
 
 
 def _parse_scalar(value: str) -> Any:
@@ -129,6 +145,8 @@ def parse_grid_spec(grid_spec: str) -> dict[str, list[Any]]:
             values = [_normalize_enum(value, key=key, aliases=MODE_ALIASES) for value in values]
         elif key == "algo":
             values = [_normalize_enum(value, key=key, aliases=ALGO_ALIASES) for value in values]
+        elif key == "time_bin_s":
+            values = [validate_time_bin_s(value, field_name="time_bin_s") for value in values]
 
         result[key] = values
 
@@ -186,6 +204,10 @@ def _validate_grid_values(grid: dict[str, list[Any]], checks: JobValidationConfi
         for sigma in grid["sigma_shadowing"]:
             if not isinstance(sigma, (int, float)) or sigma < 0:
                 raise ValueError("Toutes les valeurs sigma_shadowing doivent être numériques et >= 0.")
+
+    if "time_bin_s" in grid:
+        for time_bin_s in grid["time_bin_s"]:
+            validate_time_bin_s(time_bin_s, field_name="time_bin_s")
 
 
 def _build_run_id(params: dict[str, Any], rep: int, seed: int) -> str:
@@ -270,6 +292,8 @@ def generate_jobs(
             if sf_range is not None:
                 params.setdefault("sf_min", sf_range[0])
                 params.setdefault("sf_max", sf_range[1])
+            if "time_bin_s" in params:
+                params["time_bin_s"] = validate_time_bin_s(params["time_bin_s"], field_name="time_bin_s")
 
             jobs.append(
                 {

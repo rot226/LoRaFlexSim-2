@@ -417,7 +417,10 @@ def build_parser() -> argparse.ArgumentParser:
     run_parser.add_argument(
         "--grid",
         required=False,
-        help="Grille de sweep au format clé=v1,v2;clé2=v3,v4 (ex: N=50,100;speed=1,3).",
+        help=(
+            "Grille de sweep au format clé=v1,v2;clé2=v3,v4 (ex: N=50,100;speed=1,3). "
+            "Pour time_bin_s: recommandé 10s pour comparabilité Tc, mais autres valeurs > 0 autorisées."
+        ),
     )
     run_parser.add_argument(
         "--profile",
