@@ -838,8 +838,47 @@ def build_parser() -> argparse.ArgumentParser:
     )
     diagnose_parser.set_defaults(func=cmd_diagnose)
 
+    validate_parser = subparsers.add_parser(
+        "validate",
+        help="Valide la cohérence statistique et l'intégrité des agrégats CSV.",
+    )
+    validate_parser.add_argument(
+        "--aggregates-dir",
+        required=True,
+        type=_existing_path,
+        help="Répertoire aggregates/ contenant metric_by_factor.csv, convergence_tc.csv et sinr_cdf.csv.",
+    )
+    validate_parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Retourne un code non-zéro si des warnings/erreurs QA sont détectés.",
+    )
+    validate_parser.set_defaults(func=cmd_validate)
+
     return parser
 
+
+
+def cmd_validate(args: argparse.Namespace) -> int:
+    from .qa.validate import validate_aggregates
+
+    report = validate_aggregates(args.aggregates_dir)
+
+    if report.errors:
+        print("Validation QA: ERREURS")
+        for issue in report.errors:
+            print(f"- [ERREUR] {issue}")
+    else:
+        print("Validation QA: aucune erreur bloquante détectée.")
+
+    if report.warnings:
+        print("Validation QA: avertissements")
+        for issue in report.warnings:
+            print(f"- [WARN] {issue}")
+
+    if args.strict and report.has_issues():
+        return 2
+    return 0
 
 def _ensure_supported_python() -> bool:
     major, minor = sys.version_info[:2]
