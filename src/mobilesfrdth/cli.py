@@ -639,6 +639,7 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
             verbose=args.verbose,
             verbose_warnings=args.verbose_warnings,
             sinr_quantile_step=args.sinr_quantile_step,
+            sinr_cdf_granularity=args.sinr_cdf_granularity,
             ignored_runs_report=ignored_runs,
             sinr_cdf_metadata=sinr_cdf_metadata,
         )
@@ -981,8 +982,14 @@ def build_parser() -> argparse.ArgumentParser:
     aggregate_parser.add_argument(
         "--sinr-quantile-step",
         type=lambda value: _positive_float(value, name="--sinr-quantile-step"),
-        default=0.01,
-        help="Pas de discrétisation des quantiles SINR-CDF (ex: 0.01 ou 0.02).",
+        default=0.05,
+        help="[Compatibilité] Pas de discrétisation des quantiles SINR-CDF (préférer --sinr-cdf-granularity).",
+    )
+    aggregate_parser.add_argument(
+        "--sinr-cdf-granularity",
+        type=lambda value: _positive_float(value, name="--sinr-cdf-granularity"),
+        default=None,
+        help="Granularité CDF configurable pour SINR (pas de quantile, ex: 0.05).",
     )
     aggregate_parser.add_argument(
         "--skip-sf-distribution",

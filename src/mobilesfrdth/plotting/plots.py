@@ -56,6 +56,7 @@ ALGO_STYLE: dict[str, AlgoStyle] = {
 }
 
 SINR_CDF_MAX_POINTS_PER_ALGO = 500
+SINR_CDF_DOWNSAMPLE_THRESHOLD_POINTS = 2000
 
 
 def _algo_style_kwargs(algo: str) -> dict[str, str]:
@@ -1199,11 +1200,18 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
     plotted = 0
     for algo in sorted(grouped):
         quantiles = sorted_quantiles_by_algo[algo]
-        if len(quantiles) > SINR_CDF_MAX_POINTS_PER_ALGO:
+        if len(quantiles) > SINR_CDF_DOWNSAMPLE_THRESHOLD_POINTS:
             stride = max(1, len(quantiles) // SINR_CDF_MAX_POINTS_PER_ALGO)
             quantiles = quantiles[::stride]
             if quantiles[-1] != sorted_quantiles_by_algo[algo][-1]:
                 quantiles.append(sorted_quantiles_by_algo[algo][-1])
+            warnings.warn(
+                (
+                    f"{fig_name}: defensive downsampling applied for algo={algo} "
+                    f"(points={len(sorted_quantiles_by_algo[algo])}, stride={stride}, kept={len(quantiles)})."
+                ),
+                stacklevel=2,
+            )
         xs: list[float] = []
         means: list[float] = []
         lows: list[float] = []
@@ -1218,6 +1226,36 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
             highs.append(ci.mean + ci.half_width)
         if not xs:
             continue
+
+        quantile_anomalies = [
+            (index, prev, curr)
+            for index, (prev, curr) in enumerate(zip(means, means[1:], strict=False), start=1)
+            if curr < prev
+        ]
+        sinr_anomalies = [
+            (index, prev, curr)
+            for index, (prev, curr) in enumerate(zip(xs, xs[1:], strict=False), start=1)
+            if curr < prev
+        ]
+        if quantile_anomalies:
+            warnings.warn(
+                (
+                    f"{fig_name}: quantile non monotone pour algo={algo} "
+                    f"(premier index={quantile_anomalies[0][0]}, "
+                    f"{quantile_anomalies[0][1]:.6g}->{quantile_anomalies[0][2]:.6g})."
+                ),
+                stacklevel=2,
+            )
+        if sinr_anomalies:
+            warnings.warn(
+                (
+                    f"{fig_name}: sinr_db non monotone pour algo={algo} "
+                    f"(premier index={sinr_anomalies[0][0]}, "
+                    f"{sinr_anomalies[0][1]:.6g}->{sinr_anomalies[0][2]:.6g})."
+                ),
+                stacklevel=2,
+            )
+
         style = _algo_style_kwargs(algo)
         plt.plot(xs, means, label=algo, **style)
         plt.fill_betweenx(means, lows, highs, color=style.get("color"), alpha=0.15)
