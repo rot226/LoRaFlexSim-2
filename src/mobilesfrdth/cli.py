@@ -110,6 +110,24 @@ def _append_campaign_log(path: Path, *, step: str, payload: dict[str, object]) -
         handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 
+def _error_categories(failures: list[dict[str, object]]) -> dict[str, int]:
+    categories: dict[str, int] = {}
+    for failure in failures:
+        raw_error = failure.get("error")
+        category = "UnknownError"
+        if isinstance(raw_error, str) and raw_error:
+            try:
+                payload = json.loads(raw_error)
+            except json.JSONDecodeError:
+                payload = None
+            if isinstance(payload, dict):
+                parsed = payload.get("error_type")
+                if isinstance(parsed, str) and parsed.strip():
+                    category = parsed.strip()
+        categories[category] = categories.get(category, 0) + 1
+    return categories
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     out_dir: Path = args.out
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -164,6 +182,7 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     report = orchestrator.execute_jobs(
         jobs,
+        fail_fast=args.fail_fast,
         resume=args.resume,
         max_runs=args.max_runs,
         max_walltime_s=args.max_walltime,
@@ -184,6 +203,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         "num_skipped": report.skipped_runs,
         "num_success": successful_runs,
         "num_failures": len(failures),
+        "error_categories": _error_categories(failures),
         "interrupted": report.interrupted,
         "elapsed_s": monotonic() - start_s,
         "failures": failures,
@@ -444,6 +464,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=_sf_range,
         default=None,
         help="Plage SF globale, format min-max (bornes attendues: 7-12).",
+    )
+    run_parser.add_argument(
+        "--fail-fast",
+        action="store_true",
+        help="Arrête la campagne au premier run en échec (par défaut, continue les runs restants).",
     )
     run_parser.add_argument(
         "--resume",
