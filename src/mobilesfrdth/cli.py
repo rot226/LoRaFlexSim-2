@@ -5,7 +5,9 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 import sys
+from collections import Counter
 from pathlib import Path
 from time import monotonic
 
@@ -126,6 +128,206 @@ def _error_categories(failures: list[dict[str, object]]) -> dict[str, int]:
                     category = parsed.strip()
         categories[category] = categories.get(category, 0) + 1
     return categories
+
+
+def _extract_error_payload(raw_error: object) -> tuple[str, str]:
+    if isinstance(raw_error, str) and raw_error.strip():
+        try:
+            payload = json.loads(raw_error)
+        except json.JSONDecodeError:
+            payload = None
+        if isinstance(payload, dict):
+            error_type = str(payload.get("error_type", "UnknownError") or "UnknownError").strip() or "UnknownError"
+            message = str(payload.get("message", "") or "").strip()
+            return error_type, message
+        return "UnknownError", raw_error.strip()
+    if isinstance(raw_error, dict):
+        error_type = str(raw_error.get("error_type", "UnknownError") or "UnknownError").strip() or "UnknownError"
+        message = str(raw_error.get("message", "") or "").strip()
+        return error_type, message
+    return "UnknownError", ""
+
+
+def _collect_batch_summary_errors(batch_summary: dict[str, object]) -> list[dict[str, str]]:
+    errors: list[dict[str, str]] = []
+    failures = batch_summary.get("failures")
+    if not isinstance(failures, list):
+        return errors
+    for failure in failures:
+        if not isinstance(failure, dict):
+            continue
+        run_id = str(failure.get("run_id", "unknown"))
+        error_type, message = _extract_error_payload(failure.get("error"))
+        errors.append({"source": "batch_summary", "run_id": run_id, "type": error_type, "message": message})
+    return errors
+
+
+def _collect_campaign_log_errors(campaign_entries: list[dict[str, object]]) -> list[dict[str, str]]:
+    errors: list[dict[str, str]] = []
+    for entry in campaign_entries:
+        run_id = str(entry.get("run_id", entry.get("step", "campaign")))
+        for key in ("error", "exception", "message"):
+            if key not in entry:
+                continue
+            error_type, message = _extract_error_payload(entry.get(key))
+            if not message and key == "message":
+                message = str(entry.get("message", "")).strip()
+            if message:
+                errors.append({"source": "campaign_log", "run_id": run_id, "type": error_type, "message": message})
+                break
+    return errors
+
+
+def _collect_run_log_errors(run_logs: list[Path]) -> list[dict[str, str]]:
+    errors: list[dict[str, str]] = []
+    pattern = re.compile(r"\|\s*ERROR\s*\|\s*(.+)$")
+    for log_path in run_logs:
+        run_id = log_path.parent.name
+        try:
+            lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            continue
+        for line in lines:
+            match = pattern.search(line)
+            if match:
+                message = match.group(1).strip()
+                errors.append({"source": "run.log", "run_id": run_id, "type": "RuntimeError", "message": message})
+    return errors
+
+
+def _top_errors(entries: list[dict[str, str]], *, max_items: int = 10) -> list[dict[str, object]]:
+    grouped: dict[tuple[str, str], list[str]] = {}
+    for entry in entries:
+        key = (entry.get("type", "UnknownError"), entry.get("message", ""))
+        grouped.setdefault(key, []).append(entry.get("run_id", "unknown"))
+
+    ordered = sorted(grouped.items(), key=lambda item: len(item[1]), reverse=True)
+    top: list[dict[str, object]] = []
+    for (error_type, message), run_ids in ordered[:max_items]:
+        top.append(
+            {
+                "type": error_type,
+                "message": message,
+                "frequency": len(run_ids),
+                "example_run_ids": sorted(set(run_ids))[:5],
+            }
+        )
+    return top
+
+
+def _suggest_parameter_fixes(top_errors: list[dict[str, object]]) -> list[dict[str, str]]:
+    corpus = " ".join(
+        f"{item.get('type', '')} {item.get('message', '')}".lower()
+        for item in top_errors
+    )
+    suggestions: list[dict[str, str]] = []
+
+    if any(token in corpus for token in ["time_bin_s", "time bin", "tc", "comparabilit"]):
+        suggestions.append(
+            {
+                "parameter": "time_bin_s",
+                "suggested_value": "10",
+                "rationale": "Utiliser 10s améliore la comparabilité de Tc et évite les bins trop fins/grossiers.",
+            }
+        )
+    if any(token in corpus for token in ["duration_s", "walltime", "timeout", "max-walltime"]):
+        suggestions.append(
+            {
+                "parameter": "duration_s",
+                "suggested_value": "augmenter (ex: 3600)",
+                "rationale": "Des erreurs de timeout/interruption suggèrent une durée de simulation trop courte.",
+            }
+        )
+    if any(token in corpus for token in ["sf", "spreading", "sf-range"]):
+        suggestions.append(
+            {
+                "parameter": "sf_range",
+                "suggested_value": "7-12",
+                "rationale": "Les erreurs SF peuvent venir d'une plage hors bornes LoRa standard.",
+            }
+        )
+    if any(token in corpus for token in ["seed", "random", "negative"]):
+        suggestions.append(
+            {
+                "parameter": "seed",
+                "suggested_value": ">= 0",
+                "rationale": "Utiliser un seed non négatif et stable améliore la reproductibilité.",
+            }
+        )
+
+    if not suggestions and top_errors:
+        most_common_type = Counter(str(item.get("type", "UnknownError")) for item in top_errors).most_common(1)[0][0]
+        suggestions.append(
+            {
+                "parameter": "grid/params",
+                "suggested_value": "valider la configuration",
+                "rationale": f"Ajuster la grille autour des erreurs dominantes de type {most_common_type}.",
+            }
+        )
+    return suggestions
+
+
+def cmd_diagnose(args: argparse.Namespace) -> int:
+    results_dir: Path = args.results
+    batch_summary_path = results_dir / "batch_summary.json"
+    campaign_log_path = results_dir / "campaign_log.jsonl"
+    run_logs = sorted((results_dir / "results").glob("*/run.log"))
+
+    if not batch_summary_path.is_file():
+        print(f"Erreur: batch_summary.json introuvable dans {results_dir}")
+        return 2
+    if not campaign_log_path.is_file():
+        print(f"Erreur: campaign_log.jsonl introuvable dans {results_dir}")
+        return 2
+
+    batch_summary = json.loads(batch_summary_path.read_text(encoding="utf-8"))
+    campaign_entries = [
+        json.loads(line)
+        for line in campaign_log_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+    error_entries = []
+    error_entries.extend(_collect_batch_summary_errors(batch_summary))
+    error_entries.extend(_collect_campaign_log_errors(campaign_entries))
+    error_entries.extend(_collect_run_log_errors(run_logs))
+
+    top = _top_errors(error_entries, max_items=args.top)
+    suggestions = _suggest_parameter_fixes(top)
+
+    print("Top erreurs détectées:")
+    if not top:
+        print("- Aucune erreur détectée dans les artefacts analysés.")
+    for item in top:
+        print(
+            f"- [{item['frequency']}x] {item['type']} | {item['message'] or '(message vide)'} "
+            f"| exemples run_id={','.join(item['example_run_ids'])}"
+        )
+
+    print("Corrections de paramètres proposées:")
+    if not suggestions:
+        print("- Aucune recommandation (aucune erreur exploitable).")
+    for suggestion in suggestions:
+        print(
+            f"- {suggestion['parameter']} -> {suggestion['suggested_value']} "
+            f"({suggestion['rationale']})"
+        )
+
+    report = {
+        "results_dir": str(results_dir),
+        "inputs": {
+            "batch_summary": str(batch_summary_path),
+            "campaign_log": str(campaign_log_path),
+            "run_logs": [str(path) for path in run_logs],
+        },
+        "total_error_entries": len(error_entries),
+        "top_errors": top,
+        "parameter_suggestions": suggestions,
+    }
+    report_path = results_dir / "diagnostics_report.json"
+    _dump_json(report_path, report)
+    print(f"Rapport de diagnostic écrit: {report_path}")
+    return 0
 
 
 def cmd_run(args: argparse.Namespace) -> int:
@@ -598,6 +800,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="Active la validation QA stricte des agrégats et figures (échec si résultats suspects).",
     )
     plots_parser.set_defaults(func=cmd_plots)
+
+    diagnose_parser = subparsers.add_parser(
+        "diagnose",
+        help="Diagnostique les erreurs de campagne depuis batch_summary/campaign_log/run.log et propose des corrections.",
+    )
+    diagnose_parser.add_argument(
+        "--results",
+        required=True,
+        type=_existing_path,
+        help="Dossier de campagne contenant batch_summary.json, campaign_log.jsonl et results/*/run.log.",
+    )
+    diagnose_parser.add_argument(
+        "--top",
+        type=lambda value: _positive_int(value, name="--top"),
+        default=10,
+        help="Nombre maximum d'erreurs agrégées à afficher dans le top.",
+    )
+    diagnose_parser.set_defaults(func=cmd_diagnose)
 
     return parser
 

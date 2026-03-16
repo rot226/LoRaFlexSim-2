@@ -447,3 +447,57 @@ def test_cli_e2e_small_grid_run_aggregate_plots_assertions(monkeypatch, tmp_path
     )
     assert distribution_rows
     assert any(float(row.get("count", 0) or 0) > 0 for row in distribution_rows)
+
+def test_cli_diagnose_builds_top_errors_and_report(tmp_path: pathlib.Path) -> None:
+    runs_dir = tmp_path / "campaign"
+    results_dir = runs_dir / "results"
+    run_a_dir = results_dir / "run_a"
+    run_b_dir = results_dir / "run_b"
+    run_a_dir.mkdir(parents=True, exist_ok=True)
+    run_b_dir.mkdir(parents=True, exist_ok=True)
+
+    batch_summary = {
+        "num_failures": 2,
+        "failures": [
+            {
+                "run_id": "run_a",
+                "error": json.dumps({"error_type": "ValueError", "message": "invalid time_bin_s value"}),
+                "run_dir": str(run_a_dir),
+            },
+            {
+                "run_id": "run_b",
+                "error": json.dumps({"error_type": "TimeoutError", "message": "max-walltime reached"}),
+                "run_dir": str(run_b_dir),
+            },
+        ],
+    }
+    (runs_dir / "batch_summary.json").write_text(json.dumps(batch_summary), encoding="utf-8")
+
+    campaign_entries = [
+        {"step": "run", "out_dir": str(runs_dir)},
+        {"step": "aggregate", "message": "aggregate completed"},
+    ]
+    (runs_dir / "campaign_log.jsonl").write_text(
+        "\n".join(json.dumps(entry) for entry in campaign_entries) + "\n",
+        encoding="utf-8",
+    )
+
+    (run_a_dir / "run.log").write_text(
+        "2026-01-01 00:00:00,000 | ERROR | invalid time_bin_s value\n",
+        encoding="utf-8",
+    )
+    (run_b_dir / "run.log").write_text(
+        "2026-01-01 00:00:01,000 | ERROR | max-walltime reached\n",
+        encoding="utf-8",
+    )
+
+    assert cli.main(["diagnose", "--results", str(runs_dir), "--top", "5"]) == 0
+
+    report = json.loads((runs_dir / "diagnostics_report.json").read_text(encoding="utf-8"))
+    assert report["total_error_entries"] >= 4
+    assert report["top_errors"]
+    assert any(item["type"] == "ValueError" for item in report["top_errors"])
+    assert any(item["type"] == "RuntimeError" for item in report["top_errors"])
+    suggested_parameters = {item["parameter"] for item in report["parameter_suggestions"]}
+    assert "time_bin_s" in suggested_parameters
+    assert "duration_s" in suggested_parameters
