@@ -12,6 +12,7 @@ from .scenarios import generate_jobs, parse_grid_spec
 from .plotting.plots import ScenarioFilters, generate_minimal_figures, validate_aggregates_inputs
 from .simulator.engine import GridRunOrchestrator
 from .simulator.io import aggregate_runs
+from .presets import inject_preset_args, list_presets
 
 
 def _existing_file(value: str) -> Path:
@@ -115,9 +116,21 @@ def _read_job_payloads(results: Iterable[Path]) -> list[dict]:
     return payloads
 
 
+
+
+def cmd_presets(args: argparse.Namespace) -> int:
+    if args.list:
+        for preset in list_presets():
+            print(f"- {preset.name}: {preset.description}")
+        return 0
+    print("Aucune action demandée. Utiliser --list.")
+    return 2
+
 def cmd_run(args: argparse.Namespace) -> int:
     out_dir: Path = args.out
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    inject_preset_args(args, project_dir=Path(__file__).resolve().parents[2])
 
     try:
         grid = parse_grid_spec(args.grid)
@@ -140,6 +153,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         "sf_range": list(args.sf_range) if args.sf_range else None,
         "jobs": jobs,
         "num_jobs": len(jobs),
+        "preset": getattr(getattr(args, "_preset", None), "name", None),
     }
     output_file = out_dir / "jobs.json"
     _dump_json(output_file, payload)
@@ -289,6 +303,19 @@ def cmd_plots(args: argparse.Namespace) -> int:
     _print_info(args, f"Résumé de plots écrit dans {output_file}")
     return 0
 
+
+
+def cmd_validate(args: argparse.Namespace) -> int:
+    errors = validate_aggregates_inputs(args.aggregates_dir)
+    if not errors:
+        print("Validation OK: aucun prérequis manquant dans aggregates.")
+        return 0
+
+    print("Validation: problèmes détectés:")
+    for err in errors:
+        print(f"- {err}")
+    return 2 if args.strict else 0
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="mobilesfrdth",
@@ -303,11 +330,12 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     run_parser = subparsers.add_parser("run", help="Génère les jobs puis exécute la campagne.")
-    run_parser.add_argument("--config", required=True, type=_existing_file, help="Fichier de configuration de base.")
+    run_parser.add_argument("--preset", default=None, help="Preset de campagne (ex: paper_core, paper_fast, safe).")
+    run_parser.add_argument("--config", required=False, type=_existing_file, help="Fichier de configuration de base.")
     run_parser.add_argument("--out", required=True, type=Path, help="Répertoire de sortie (jobs.json, results/<run_id>/...).")
     run_parser.add_argument(
         "--grid",
-        required=True,
+        required=False,
         help="Grille de sweep au format clé=v1,v2;clé2=v3,v4 (ex: N=50,100;speed=1,3).",
     )
     run_parser.add_argument(
@@ -362,6 +390,22 @@ def build_parser() -> argparse.ArgumentParser:
     plots_parser.add_argument("--no-bonus", action="store_true", help="Désactive les figures bonus fig11/fig12.")
     plots_parser.set_defaults(func=cmd_plots)
 
+
+    presets_parser = subparsers.add_parser("presets", help="Liste les presets de campagne disponibles.")
+    presets_parser.add_argument("--list", action="store_true", help="Affiche les presets disponibles.")
+    presets_parser.set_defaults(func=cmd_presets)
+
+
+    validate_parser = subparsers.add_parser("validate", help="Valide les entrées aggregates utilisées par le pipeline de plots.")
+    validate_parser.add_argument(
+        "--aggregates-dir",
+        required=True,
+        type=_existing_path,
+        help="Répertoire contenant les CSV d'agrégats à vérifier.",
+    )
+    validate_parser.add_argument("--strict", action="store_true", help="Retourne un code non nul si des erreurs sont détectées.")
+    validate_parser.set_defaults(func=cmd_validate)
+
     return parser
 
 
@@ -371,6 +415,9 @@ def main(argv: list[str] | None = None) -> int:
         args = parser.parse_args(argv)
         if getattr(args, "verbose", False) and getattr(args, "quiet", False):
             raise ValueError("--verbose et --quiet ne peuvent pas être utilisés ensemble.")
+        if getattr(args, "command", None) == "run" and not getattr(args, "preset", None):
+            if getattr(args, "config", None) is None or getattr(args, "grid", None) in (None, ""):
+                raise ValueError("--config et --grid sont obligatoires sans --preset.")
         return args.func(args)
     except ValueError as exc:
         print(f"Erreur: {exc}")

@@ -60,3 +60,43 @@ mobilesfrdth plots `
 ```
 
 > En cas de données manquantes (fichier absent, colonne absente, lignes non numériques), la commande émet un warning explicite et ignore uniquement la/les figure(s) concernée(s).
+
+## Presets de campagne (`experiments/`)
+
+Presets disponibles via CLI :
+
+```powershell
+mobilesfrdth presets --list
+```
+
+Exemples de presets fournis :
+
+- `paper_core` (config: `experiments/paper_core.yaml`)
+- `paper_fast` (config: `experiments/paper_fast.yaml`)
+- `safe` (force `time_bin_s=10` pour un calcul `Tc` stable/compatible protocole)
+
+### Exécution preset en une commande
+
+```powershell
+# injecte automatiquement la grille + paramètres validés du preset
+mobilesfrdth run --preset paper_core --out .\runs\paper_core
+```
+
+## Séquence prête à copier-coller (run → aggregate → plots → validate)
+
+```powershell
+# 1) Lister les presets
+mobilesfrdth presets --list
+
+# 2) Exécuter une campagne (preset principal)
+mobilesfrdth run --preset paper_core --out .\runs\paper_core
+
+# 3) Agréger les sorties
+mobilesfrdth aggregate --results .\runs\paper_core --out .\runs\paper_core\agg
+
+# 4) Générer les figures
+mobilesfrdth plots --aggregates-dir .\runs\paper_core\agg\aggregates --out .\runs\paper_core\plots
+
+# 5) Valider les prérequis agrégats (strict)
+mobilesfrdth validate --aggregates-dir .\runs\paper_core\agg\aggregates --strict
+```
