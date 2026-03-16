@@ -93,8 +93,7 @@ def _dump_json(path: Path, payload: object) -> None:
 
 
 def _dump_partial(path: Path, payload: object) -> None:
-    partial_name = f"{path.stem}_partial{path.suffix}"
-    _dump_json(path.with_name(partial_name), payload)
+    _dump_json(path.with_stem(f"{path.stem}_partial"), payload)
 
 
 def _read_job_payloads(results: Iterable[Path]) -> list[dict]:
