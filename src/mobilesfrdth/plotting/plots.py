@@ -960,33 +960,104 @@ def _find_missing_columns(rows: list[dict[str, str]], *, expected_columns: list[
     return missing
 
 
+def _prepare_adaptation_samples(
+    metric_rows: list[dict[str, str]],
+    tc_rows: list[dict[str, str]],
+) -> tuple[dict[str, dict[float, list[float]]], str | None, dict[str, list[str]]]:
+    if not metric_rows:
+        return {}, "metric_by_factor.csv is empty or missing", {}
+
+    missing_columns: dict[str, list[str]] = {}
+    missing_metric = _find_missing_columns(
+        metric_rows,
+        expected_columns=["algo", "mode", "speed", "switch_count_mean"],
+    )
+    if missing_metric:
+        missing_columns["metric_by_factor"] = missing_metric
+
+    tc_column_metric = _resolve_metric_column(metric_rows, expected="Tc_s_mean")
+    has_tc_in_metric = bool(metric_rows and tc_column_metric in metric_rows[0])
+
+    tc_missing_for_fallback = _find_missing_columns(tc_rows, expected_columns=["algo", "speed", "Tc_s"])
+    has_tc_fallback = bool(tc_rows) and not tc_missing_for_fallback
+
+    if not has_tc_in_metric and not has_tc_fallback:
+        if tc_rows and tc_missing_for_fallback:
+            missing_columns["convergence_tc"] = tc_missing_for_fallback
+        reason = (
+            "missing required Tc source for adaptation cost: expected Tc_s_mean in metric_by_factor.csv "
+            "or Tc_s in convergence_tc.csv"
+        )
+        return {}, reason, missing_columns
+
+    if missing_columns:
+        reason = (
+            "missing required columns for adaptation cost computation: "
+            "adaptation_cost = switch_count_mean + Tc"
+        )
+        return {}, reason, missing_columns
+
+    switch_col = _resolve_metric_column(metric_rows, expected="switch_count_mean")
+
+    switch_by_key: dict[tuple[str, str, str], list[float]] = defaultdict(list)
+    for row in metric_rows:
+        algo = row.get("algo", "unknown")
+        mode = row.get("mode", "")
+        speed_value = _to_float(row.get("speed"))
+        switch_count = _to_float(row.get(switch_col))
+        if speed_value is None or switch_count is None:
+            continue
+        switch_by_key[(algo, str(speed_value), mode)].append(switch_count)
+
+    tc_by_key: dict[tuple[str, str, str], list[float]] = defaultdict(list)
+    if has_tc_in_metric:
+        for row in metric_rows:
+            algo = row.get("algo", "unknown")
+            mode = row.get("mode", "")
+            speed_value = _to_float(row.get("speed"))
+            tc = _to_float(row.get(tc_column_metric))
+            if speed_value is None or tc is None:
+                continue
+            tc_by_key[(algo, str(speed_value), mode)].append(tc)
+    else:
+        for row in tc_rows:
+            algo = row.get("algo", "unknown")
+            speed_value = _to_float(row.get("speed"))
+            tc = _to_float(row.get("Tc_s"))
+            if speed_value is None or tc is None:
+                continue
+            for mode in {key[2] for key in switch_by_key if key[0] == algo and key[1] == str(speed_value)}:
+                tc_by_key[(algo, str(speed_value), mode)].append(tc)
+
+    grouped: dict[str, dict[float, list[float]]] = defaultdict(lambda: defaultdict(list))
+    for key, switch_samples in switch_by_key.items():
+        if key not in tc_by_key:
+            continue
+        algo, speed_token, _ = key
+        speed_value = _to_float(speed_token)
+        if speed_value is None:
+            continue
+        ci_switch = ci95_from_samples(switch_samples)
+        ci_tc = ci95_from_samples(tc_by_key[key])
+        if ci_switch is None or ci_tc is None:
+            continue
+        grouped[algo][speed_value].append(ci_switch.mean + ci_tc.mean)
+
+    if not grouped:
+        tc_source = "metric_by_factor.Tc_s_mean" if has_tc_in_metric else "convergence_tc.Tc_s"
+        return {}, f"no aligned speed/switch_count/Tc pairs using {tc_source}", {}
+
+    return grouped, None, {}
+
+
 def _count_adaptation_points(
     metric_rows: list[dict[str, str]],
     tc_rows: list[dict[str, str]],
 ) -> tuple[int, dict[str, int]]:
-    if not metric_rows:
+    grouped, _, _ = _prepare_adaptation_samples(metric_rows, tc_rows)
+    if not grouped:
         return 0, {}
-
-    missing_metric = _find_missing_columns(
-        metric_rows,
-        expected_columns=["algo", "mode", "speed", "switch_count_mean", "Tc_s_mean"],
-    )
-    if missing_metric:
-        return 0, {}
-
-    switch_col = _resolve_metric_column(metric_rows, expected="switch_count_mean")
-    tc_column = _resolve_metric_column(metric_rows, expected="Tc_s_mean")
-
-    counts_by_curve: dict[str, int] = defaultdict(int)
-    for row in metric_rows:
-        algo = row.get("algo", "unknown")
-        speed = _to_float(row.get("speed"))
-        switch_count = _to_float(row.get(switch_col))
-        tc_value = _to_float(row.get(tc_column))
-        if speed is None or switch_count is None or tc_value is None:
-            continue
-        counts_by_curve[algo] += 1
-
+    counts_by_curve = {algo: sum(len(values) for values in per_speed.values()) for algo, per_speed in grouped.items()}
     return sum(counts_by_curve.values()), dict(sorted(counts_by_curve.items()))
 
 def _resolve_ci95_columns(rows: list[dict[str, str]], *, metric_col: str) -> tuple[str, str, str] | None:
@@ -1655,69 +1726,10 @@ def _plot_adaptation_cost_vs_speed(
     out_path: Path,
 ) -> tuple[bool, str | None, dict[str, list[str]]]:
     fig_name = out_path.name
-    if not metric_rows:
-        reason = "metric_by_factor.csv is empty or missing"
+    grouped, reason, missing_columns = _prepare_adaptation_samples(metric_rows, tc_rows)
+    if reason is not None:
         _warn_skip(fig_name, reason)
-        return False, reason, {}
-
-    missing_metric = _find_missing_columns(
-        metric_rows,
-        expected_columns=["algo", "mode", "speed", "switch_count_mean", "Tc_s_mean"],
-    )
-    missing_columns: dict[str, list[str]] = {}
-    if missing_metric:
-        missing_columns["metric_by_factor"] = missing_metric
-    if missing_columns:
-        reason = (
-            "missing required columns for adaptation cost computation: "
-            "adaptation_cost = switch_count_mean + Tc_s_mean"
-        )
-        _warn_skip(fig_name, f"{reason}; missing={missing_columns}")
         return False, reason, missing_columns
-
-    switch_col = _resolve_metric_column(metric_rows, expected="switch_count_mean")
-    tc_column = _resolve_metric_column(metric_rows, expected="Tc_s_mean")
-
-    switch_by_key: dict[tuple[str, str, str], list[float]] = defaultdict(list)
-    for row in metric_rows:
-        algo = row.get("algo", "unknown")
-        speed = row.get("speed", "")
-        mode = row.get("mode", "")
-        speed_value = _to_float(speed)
-        switch_count = _to_float(row.get(switch_col))
-        if speed_value is None or switch_count is None:
-            continue
-        switch_by_key[(algo, str(speed_value), mode)].append(switch_count)
-
-    tc_by_key: dict[tuple[str, str, str], list[float]] = defaultdict(list)
-    for row in metric_rows:
-        algo = row.get("algo", "unknown")
-        speed = row.get("speed", "")
-        mode = row.get("mode", "")
-        speed_value = _to_float(speed)
-        tc = _to_float(row.get(tc_column))
-        if speed_value is None or tc is None:
-            continue
-        tc_by_key[(algo, str(speed_value), mode)].append(tc)
-
-    grouped: dict[str, dict[float, list[float]]] = defaultdict(lambda: defaultdict(list))
-    for key, switch_samples in switch_by_key.items():
-        if key not in tc_by_key:
-            continue
-        algo, speed_token, _ = key
-        speed_value = _to_float(speed_token)
-        if speed_value is None:
-            continue
-        ci_switch = ci95_from_samples(switch_samples)
-        ci_tc = ci95_from_samples(tc_by_key[key])
-        if ci_switch is None or ci_tc is None:
-            continue
-        grouped[algo][speed_value].append(ci_switch.mean + ci_tc.mean)
-
-    if not grouped:
-        reason = "no aligned speed/switch_count/Tc pairs"
-        _warn_skip(fig_name, reason)
-        return False, reason, {}
 
     plt.figure(figsize=(8, 5))
     plotted = 0
@@ -1743,7 +1755,7 @@ def _plot_adaptation_cost_vs_speed(
 
     plt.grid(alpha=0.3)
     plt.xlabel(_axis_label("speed"))
-    plt.ylabel("Adaptation cost = switch_count_mean + Tc_s_mean")
+    plt.ylabel("Adaptation cost = switch_count_mean + Tc")
     _add_compact_legend(title="Algorithm")
     plt.tight_layout()
     _save_figure_variants(out_path)
@@ -1879,6 +1891,8 @@ def generate_minimal_figures(
                         selected, tc_selected, out_path
                     )
                     adaptation_points, adaptation_points_by_curve = _count_adaptation_points(selected, tc_selected)
+                    if adaptation_points == 0 and adaptation_empty_reason is None:
+                        adaptation_empty_reason = "points=0: no adaptation samples after column mapping and numeric cleanup"
                 else:
                     did_generate = False
                     adaptation_empty_reason = "grouping constraints not satisfied"
