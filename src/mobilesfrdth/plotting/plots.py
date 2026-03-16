@@ -840,6 +840,46 @@ def _prepare_rows_for_grouping(
     )
     summary.update(context_summary)
     if not ok:
+        fixed_columns = tuple(str(column) for column in summary.get("fixed_columns", []))
+        if strict_context:
+            _warn_skip(figure, f"incompatible grouped contexts merged in curves: {summary['mixed_curves']}")
+            return scoped_rows, False, summary
+
+        by_context: dict[tuple[str, ...], list[dict[str, str]]] = defaultdict(list)
+        for row in scoped_rows:
+            key = tuple(str(row.get(column, "")) for column in fixed_columns)
+            by_context[key].append(row)
+
+        if by_context:
+            ranked_contexts = sorted(by_context.items(), key=lambda item: (-len(item[1]), item[0]))
+            chosen_key, chosen_rows = ranked_contexts[0]
+            majority_context = {column: value for column, value in zip(fixed_columns, chosen_key, strict=False)}
+            summary["selected_grouping_context"] = majority_context
+            summary["selected_grouping_context_rows"] = len(chosen_rows)
+            summary["grouping_contexts_available"] = len(ranked_contexts)
+            warnings.warn(
+                f"{figure}: regroupement ambigu détecté ({summary['mixed_curves']}); "
+                f"contexte majoritaire retenu automatiquement: {majority_context}",
+                stacklevel=2,
+            )
+
+            ok_retry, retry_summary = _build_grouping_summary(
+                chosen_rows,
+                figure=figure,
+                curve_column=curve_column,
+                varying_columns=varying_columns,
+            )
+            retry_summary.update(context_summary)
+            retry_summary.update(
+                {
+                    "selected_grouping_context": majority_context,
+                    "selected_grouping_context_rows": len(chosen_rows),
+                    "grouping_contexts_available": len(ranked_contexts),
+                }
+            )
+            if ok_retry:
+                return chosen_rows, True, retry_summary
+
         _warn_skip(figure, f"incompatible grouped contexts merged in curves: {summary['mixed_curves']}")
     return scoped_rows, ok, summary
 
@@ -1964,9 +2004,7 @@ def resolve_profile_behavior(
         raise ValueError(f"Unknown plots profile: {profile}")
     if profile == "publication":
         return True, facet_by
-    if facet_by:
-        return strict_context, facet_by
-    return False, EXPLORATORY_AUTO_FACET_COLUMNS
+    return strict_context, facet_by
 
 
 def validate_publication_context(filters: ScenarioFilters) -> None:
