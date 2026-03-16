@@ -130,6 +130,17 @@ def _error_categories(failures: list[dict[str, object]]) -> dict[str, int]:
     return categories
 
 
+def _top_campaign_errors(failures: list[dict[str, object]], *, limit: int = 3) -> list[tuple[str, int]]:
+    counter: Counter[str] = Counter()
+    for failure in failures:
+        error_type, message = _extract_error_payload(failure.get("error"))
+        label = error_type
+        if message:
+            label = f"{error_type}: {message}"
+        counter[label] += 1
+    return counter.most_common(limit)
+
+
 def _extract_error_payload(raw_error: object) -> tuple[str, str]:
     if isinstance(raw_error, str) and raw_error.strip():
         try:
@@ -372,12 +383,18 @@ def cmd_run(args: argparse.Namespace) -> int:
     orchestrator = GridRunOrchestrator(output_root=out_dir)
     start_s = monotonic()
 
+    progress_line_len = 0
+
     def _on_run_complete(run_report, run_i, total, success_count, failure_count, eta_s):
-        status = "succès" if run_report.success else "échec"
-        print(
-            f"[{run_i}/{total}] {run_report.run_id}: {status} | "
-            f"ETA={_format_eta(eta_s)} | succès={success_count} échec={failure_count}"
+        nonlocal progress_line_len
+        status = "OK" if run_report.success else "KO"
+        line = (
+            f"[{run_i}/{total}] {status} "
+            f"succès={success_count} échecs={failure_count} ETA={_format_eta(eta_s)}"
         )
+        pad = max(progress_line_len - len(line), 0)
+        print("\r" + line + (" " * pad), end="", flush=True)
+        progress_line_len = len(line)
 
     campaign_log_file = _campaign_log_path(out_dir, args.campaign_log)
     print(f"Run: progression des runs ({len(jobs)} au total).")
@@ -389,9 +406,12 @@ def cmd_run(args: argparse.Namespace) -> int:
         max_runs=args.max_runs,
         max_walltime_s=args.max_walltime,
         progress_interval_s=args.progress_interval,
-        verbose=args.verbose,
+        verbosity=args.verbosity,
         on_run_complete=_on_run_complete,
     )
+    if report.reports:
+        print()
+
     failures = [
         {"run_id": item.run_id, "error": item.error, "run_dir": str(item.run_dir)}
         for item in report.failed_reports
@@ -422,6 +442,15 @@ def cmd_run(args: argparse.Namespace) -> int:
     )
     if execution_summary["interrupted"]:
         print("Exécution interrompue (Ctrl+C): bilan partiel écrit.")
+
+    top_errors = _top_campaign_errors(failures, limit=3)
+    print("Top-3 erreurs de la campagne:")
+    if not top_errors:
+        print("- Aucune")
+    else:
+        for label, count in top_errors:
+            print(f"- {count}x | {label}")
+
     print(f"Résumé batch écrit dans {summary_file}")
     _append_campaign_log(
         campaign_log_file,
@@ -714,7 +743,10 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Durée murale max en secondes pour la commande run (arrêt propre au-delà).",
     )
-    run_parser.add_argument("--verbose", action="store_true", help="Affiche des détails de progression supplémentaires.")
+    verbosity_group = run_parser.add_mutually_exclusive_group()
+    verbosity_group.add_argument("--quiet", action="store_true", help="Réduit les logs console au strict minimum.")
+    verbosity_group.add_argument("--verbose", action="store_true", help="Augmente le niveau de logs de campagne.")
+    verbosity_group.add_argument("--debug", action="store_true", help="Active les traces de debug détaillées (fichier run.log).")
     run_parser.add_argument(
         "--campaign-log",
         type=Path,
@@ -896,6 +928,15 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     try:
         args = parser.parse_args(argv)
+        if getattr(args, "command", None) == "run":
+            if args.quiet:
+                args.verbosity = 0
+            elif args.debug:
+                args.verbosity = 3
+            elif args.verbose:
+                args.verbosity = 2
+            else:
+                args.verbosity = 1
         return args.func(args)
     except ValueError as exc:
         print(f"Erreur: {exc}")
