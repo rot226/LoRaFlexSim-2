@@ -575,6 +575,24 @@ class GridRunOrchestrator:
         logger.addHandler(console_handler)
         return logger, [file_handler, console_handler], run_dir
 
+    @staticmethod
+    def _write_run_error_artifact(
+        *,
+        run_dir: Path,
+        run_id: str,
+        success: bool,
+        error_payload: dict[str, Any] | None,
+    ) -> None:
+        payload = {
+            "run_id": run_id,
+            "success": success,
+            "error": error_payload,
+        }
+        (run_dir / "error.json").write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
 
     def _log_sinr_success_diagnostic(
         self,
@@ -665,6 +683,7 @@ class GridRunOrchestrator:
         self,
         jobs: list[dict[str, Any]],
         *,
+        fail_fast: bool = False,
         resume: bool = False,
         max_runs: int | None = None,
         max_walltime_s: float | None = None,
@@ -716,6 +735,7 @@ class GridRunOrchestrator:
             run_started_at_s = monotonic()
             run_success = False
             run_recorded = False
+            run_error_payload: dict[str, Any] | None = None
             try:
                 elapsed_walltime_s = monotonic() - walltime_start_s
                 if max_walltime_s is not None and elapsed_walltime_s >= max_walltime_s:
@@ -799,35 +819,45 @@ class GridRunOrchestrator:
                 run_success = True
                 run_recorded = True
             except KeyboardInterrupt:
+                run_error_payload = {
+                    "error_type": "KeyboardInterrupt",
+                    "message": "Interruption utilisateur (Ctrl+C)",
+                }
                 logger.warning("Interruption utilisateur détectée (Ctrl+C). Arrêt propre après ce run.")
                 reports.append(
                     RunExecutionReport(
                         run_id=run_id,
                         success=False,
                         run_dir=run_dir,
-                        error="Interruption utilisateur (Ctrl+C)",
+                        error=json.dumps(run_error_payload, ensure_ascii=False),
                     )
                 )
                 run_recorded = True
                 interrupted = True
             except Exception as exc:
-                structured_error = {
+                run_error_payload = {
                     "run_id": run_id,
                     "error_type": type(exc).__name__,
                     "message": str(exc),
                     "traceback": traceback.format_exc(),
                 }
-                logger.error("Run en erreur (structuré): %s", json.dumps(structured_error, ensure_ascii=False))
+                logger.error("Run en erreur (structuré): %s", json.dumps(run_error_payload, ensure_ascii=False))
                 reports.append(
                     RunExecutionReport(
                         run_id=run_id,
                         success=False,
                         run_dir=run_dir,
-                        error=json.dumps(structured_error, ensure_ascii=False),
+                        error=json.dumps(run_error_payload, ensure_ascii=False),
                     )
                 )
                 run_recorded = True
             finally:
+                self._write_run_error_artifact(
+                    run_dir=run_dir,
+                    run_id=run_id,
+                    success=run_success,
+                    error_payload=run_error_payload,
+                )
                 if run_recorded:
                     run_duration_s = monotonic() - run_started_at_s
                     run_label = len(reports)
@@ -873,6 +903,8 @@ class GridRunOrchestrator:
             )
 
             if interrupted:
+                break
+            if fail_fast and reports and not reports[-1].success:
                 break
 
         self._write_campaign_progress(
