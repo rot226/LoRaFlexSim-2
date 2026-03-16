@@ -558,26 +558,30 @@ class GridRunOrchestrator:
         self,
         run_id: str,
         *,
-        verbose: bool = False,
+        verbosity: int = 1,
     ) -> tuple[logging.Logger, list[logging.Handler], Path]:
         run_dir = self.output_root / "results" / run_id
         run_dir.mkdir(parents=True, exist_ok=True)
         logger = logging.getLogger(f"mobilesfrdth.run.{run_id}")
-        logger.setLevel(logging.DEBUG if verbose else logging.INFO)
+        logger.setLevel(logging.DEBUG)
         logger.propagate = False
         for handler in list(logger.handlers):
             logger.removeHandler(handler)
             handler.close()
         log_path = run_dir / "run.log"
         file_handler = logging.FileHandler(log_path, mode="w", encoding="utf-8")
-        file_handler.setLevel(logging.DEBUG)
+        if verbosity >= 3:
+            file_level = logging.DEBUG
+        elif verbosity == 2:
+            file_level = logging.INFO
+        elif verbosity == 1:
+            file_level = logging.WARNING
+        else:
+            file_level = logging.ERROR
+        file_handler.setLevel(file_level)
         file_handler.setFormatter(logging.Formatter("%(asctime)s | %(levelname)s | %(message)s"))
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.DEBUG if verbose else logging.INFO)
-        console_handler.setFormatter(logging.Formatter("%(levelname)s | %(message)s"))
         logger.addHandler(file_handler)
-        logger.addHandler(console_handler)
-        return logger, [file_handler, console_handler], run_dir
+        return logger, [file_handler], run_dir
 
     @staticmethod
     def _write_run_error_artifact(
@@ -693,7 +697,7 @@ class GridRunOrchestrator:
         max_walltime_s: float | None = None,
         progress_path: Path | None = None,
         progress_interval_s: float = 30.0,
-        verbose: bool = False,
+        verbosity: int = 1,
         on_run_complete: Callable[[RunExecutionReport, int, int, int, int, float | None], None] | None = None,
     ) -> BatchExecutionReport:
         if max_runs is not None and max_runs < 1:
@@ -735,7 +739,7 @@ class GridRunOrchestrator:
         for job in pending_jobs:
             params = dict(job.get("params", {}))
             run_id = str(params.get("run_id", job.get("job_id", "run")))
-            logger, handlers, run_dir = self._logger_for_run(run_id, verbose=verbose)
+            logger, handlers, run_dir = self._logger_for_run(run_id, verbosity=verbosity)
             run_started_at_s = monotonic()
             run_success = False
             run_recorded = False
@@ -754,7 +758,7 @@ class GridRunOrchestrator:
                 duration_s = float(params.get("duration_s", 3600.0))
                 logger.info("Démarrage run_id=%s seed=%s", run_id, seed)
                 logger.info("Paramètres: %s", params)
-                if verbose:
+                if verbosity >= 3:
                     logger.debug("Contexte exécution: scheduled_runs=%s total_runs=%s skipped=%s", scheduled_runs, total_runs, skipped_runs)
 
                 engine = EventDrivenEngine(seed=seed)
@@ -862,11 +866,6 @@ class GridRunOrchestrator:
                     success=run_success,
                     error_payload=run_error_payload,
                 )
-                if run_recorded:
-                    run_duration_s = monotonic() - run_started_at_s
-                    run_label = len(reports)
-                    run_status = "succès" if run_success else "échec"
-                    print(f"Run {run_label}/{scheduled_runs} | durée={run_duration_s:.2f}s | {run_status}")
                 for handler in handlers:
                     logger.removeHandler(handler)
                     handler.close()
@@ -879,13 +878,6 @@ class GridRunOrchestrator:
                 eta_s = (elapsed_s / run_index) * remaining_runs
             success_reports = [report for report in reports if report.success]
             failed_reports = [report for report in reports if not report.success]
-            if reports:
-                print(
-                    "Progression job: "
-                    f"{run_index}/{scheduled_runs} | succès={len(success_reports)} | "
-                    f"échecs={len(failed_reports)} | ETA campagne={self._format_eta(eta_s)}"
-                )
-
             if on_run_complete is not None:
                 last_report = reports[-1]
                 on_run_complete(
