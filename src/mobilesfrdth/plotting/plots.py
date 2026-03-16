@@ -281,7 +281,44 @@ class FigureTrace:
     points_by_curve: dict[str, int]
     source_rows_read: int
     source_rows_usable: int
+    grouping_summary: dict[str, object]
     generated: bool
+
+
+GROUPING_BASE_COLUMNS = ("mode", "N", "speed", "mobility_model", "gateways", "sigma_shadowing", "algo")
+
+
+def _build_grouping_summary(
+    rows: list[dict[str, str]],
+    *,
+    figure: str,
+    curve_column: str,
+    varying_columns: set[str],
+) -> tuple[bool, dict[str, object]]:
+    available_base_columns = [column for column in GROUPING_BASE_COLUMNS if rows and column in rows[0]]
+    if curve_column not in available_base_columns:
+        available_base_columns.append(curve_column)
+
+    fixed_columns = [
+        column for column in available_base_columns if column != curve_column and column not in varying_columns
+    ]
+
+    contexts_by_curve: dict[str, set[tuple[str, ...]]] = defaultdict(set)
+    for row in rows:
+        curve_name = str(row.get(curve_column, "all") or "all")
+        fixed_key = tuple(str(row.get(column, "")) for column in fixed_columns)
+        contexts_by_curve[curve_name].add(fixed_key)
+
+    mixed_curves = sorted(curve for curve, contexts in contexts_by_curve.items() if len(contexts) > 1)
+    summary: dict[str, object] = {
+        "figure": figure,
+        "curve_column": curve_column,
+        "varying_columns": sorted(varying_columns),
+        "fixed_columns": fixed_columns,
+        "contexts_by_curve": {curve: len(contexts) for curve, contexts in sorted(contexts_by_curve.items())},
+        "mixed_curves": mixed_curves,
+    }
+    return (len(mixed_curves) == 0), summary
 
 
 def _normalize_csv_row(row: dict[str, str]) -> dict[str, str]:
@@ -635,6 +672,24 @@ def _plot_xy_by_algo(
 
     plt.close()
     return True
+
+
+def _validate_curve_grouping_or_skip(
+    rows: list[dict[str, str]],
+    *,
+    figure: str,
+    curve_column: str,
+    varying_columns: set[str],
+) -> tuple[bool, dict[str, object]]:
+    ok, summary = _build_grouping_summary(
+        rows,
+        figure=figure,
+        curve_column=curve_column,
+        varying_columns=varying_columns,
+    )
+    if not ok:
+        _warn_skip(figure, f"incompatible grouped contexts merged in curves: {summary['mixed_curves']}")
+    return ok, summary
 
 
 def _save_figure_variants(out_path: Path) -> None:
@@ -1441,7 +1496,17 @@ def generate_minimal_figures(
         effective_filters = filters.merge(local_filter).merge(_resolve_profile_filter(article_profile, fig_name))
         selected = _apply_filters(payloads[source], effective_filters)
         out_path = out_dir / _stable_figure_name(fig_name)
-        did_generate = _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path, y_scale=y_scale)
+        grouping_ok, grouping_summary = _validate_curve_grouping_or_skip(
+            selected,
+            figure=fig_name,
+            curve_column="algo",
+            varying_columns={"N"},
+        )
+        did_generate = (
+            _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path, y_scale=y_scale)
+            if grouping_ok
+            else False
+        )
         traces.append(
             FigureTrace(
                 figure=out_path.name,
@@ -1452,6 +1517,7 @@ def generate_minimal_figures(
                 points_by_curve=_count_points_by_curve(selected, metric),
                 source_rows_read=source_rows_read.get(source, 0),
                 source_rows_usable=len(selected),
+                grouping_summary=grouping_summary,
                 generated=did_generate,
             )
         )
@@ -1463,7 +1529,13 @@ def generate_minimal_figures(
     sf_filters = filters.merge(_resolve_profile_filter(article_profile, sf_name))
     sf_selected = _apply_filters(payloads["distribution_sf"], sf_filters)
     sf_path = out_dir / _stable_figure_name(sf_name)
-    did_generate = _plot_sf_distribution(sf_selected, sf_path)
+    grouping_ok, grouping_summary = _validate_curve_grouping_or_skip(
+        sf_selected,
+        figure=sf_name,
+        curve_column="algo",
+        varying_columns={"sf"},
+    )
+    did_generate = _plot_sf_distribution(sf_selected, sf_path) if grouping_ok else False
     traces.append(
         FigureTrace(
             figure=sf_path.name,
@@ -1474,6 +1546,7 @@ def generate_minimal_figures(
             points_by_curve=_count_points_by_curve(sf_selected, "ratio"),
             source_rows_read=source_rows_read.get("distribution_sf", 0),
             source_rows_usable=len(sf_selected),
+            grouping_summary=grouping_summary,
             generated=did_generate,
         )
     )
@@ -1486,17 +1559,34 @@ def generate_minimal_figures(
             effective_filters = filters.merge(local_filter).merge(_resolve_profile_filter(article_profile, fig_name))
             selected = _apply_filters(payloads[source], effective_filters)
             out_path = out_dir / _stable_figure_name(fig_name)
-            if fig_name == "fig08_outage_probability_vs_n.png":
-                did_generate = _plot_outage_probability_vs_n(selected, out_path)
-            elif fig_name == "fig09_energy_efficiency_vs_pdr_pareto.png":
-                did_generate = _plot_energy_efficiency_vs_reliability(selected, out_path)
+            varying_columns = {"N"}
+            if fig_name == "fig09_energy_efficiency_vs_pdr_pareto.png":
+                varying_columns = {"pdr_mean"}
             elif fig_name == "fig10_sinr_cdf_fixed_scenario.png":
-                did_generate = _plot_sinr_cdf(selected, out_path)
+                varying_columns = {"quantile"}
+            elif fig_name == "fig11_adaptation_cost_vs_speed.png":
+                varying_columns = {"speed"}
+            grouping_ok, grouping_summary = _validate_curve_grouping_or_skip(
+                selected,
+                figure=fig_name,
+                curve_column="algo",
+                varying_columns=varying_columns,
+            )
+            if fig_name == "fig08_outage_probability_vs_n.png":
+                did_generate = _plot_outage_probability_vs_n(selected, out_path) if grouping_ok else False
+            elif fig_name == "fig09_energy_efficiency_vs_pdr_pareto.png":
+                did_generate = _plot_energy_efficiency_vs_reliability(selected, out_path) if grouping_ok else False
+            elif fig_name == "fig10_sinr_cdf_fixed_scenario.png":
+                did_generate = _plot_sinr_cdf(selected, out_path) if grouping_ok else False
             elif fig_name == "fig11_adaptation_cost_vs_speed.png":
                 tc_selected = _apply_filters(payloads["convergence_tc"], effective_filters)
-                did_generate = _plot_adaptation_cost_vs_speed(selected, tc_selected, out_path)
+                did_generate = _plot_adaptation_cost_vs_speed(selected, tc_selected, out_path) if grouping_ok else False
             else:
-                did_generate = _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path, y_scale=y_scale)
+                did_generate = (
+                    _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path, y_scale=y_scale)
+                    if grouping_ok
+                    else False
+                )
             traces.append(
                 FigureTrace(
                     figure=out_path.name,
@@ -1507,6 +1597,7 @@ def generate_minimal_figures(
                     points_by_curve=_count_points_by_curve(selected, metric),
                     source_rows_read=source_rows_read.get(source, 0),
                     source_rows_usable=len(selected),
+                    grouping_summary=grouping_summary,
                     generated=did_generate,
                 )
             )
@@ -1542,6 +1633,7 @@ def generate_minimal_figures(
                 "points_by_curve": trace.points_by_curve,
                 "source_rows_read": trace.source_rows_read,
                 "source_rows_usable": trace.source_rows_usable,
+                "grouping": trace.grouping_summary,
                 "generated": trace.generated,
             }
             for trace in traces

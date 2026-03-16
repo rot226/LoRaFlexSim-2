@@ -293,12 +293,12 @@ def test_plot_xy_by_algo_full_scale_no_annex(monkeypatch, tmp_path):
 
 def test_plot_sinr_cdf_single_curve_per_algo_sorted_quantiles(monkeypatch, tmp_path):
     rows = [
-        {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "0.666667", "sinr_db": "4.0"},
-        {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "0.333333", "sinr_db": "1.0"},
-        {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "1.0", "sinr_db": "8.0"},
-        {"algo": "ucb", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "0.666667", "sinr_db": "5.0"},
-        {"algo": "ucb", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "0.333333", "sinr_db": "2.0"},
-        {"algo": "ucb", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "1.0", "sinr_db": "9.0"},
+        {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "mobility_model": "rwp", "gateways": "1", "sigma_shadowing": "2", "quantile": "0.666667", "sinr_db": "4.0"},
+        {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "mobility_model": "rwp", "gateways": "1", "sigma_shadowing": "2", "quantile": "0.333333", "sinr_db": "1.0"},
+        {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "mobility_model": "rwp", "gateways": "1", "sigma_shadowing": "2", "quantile": "1.0", "sinr_db": "8.0"},
+        {"algo": "ucb", "mode": "snir_on", "N": "50", "speed": "1", "mobility_model": "rwp", "gateways": "1", "sigma_shadowing": "2", "quantile": "0.666667", "sinr_db": "5.0"},
+        {"algo": "ucb", "mode": "snir_on", "N": "50", "speed": "1", "mobility_model": "rwp", "gateways": "1", "sigma_shadowing": "2", "quantile": "0.333333", "sinr_db": "2.0"},
+        {"algo": "ucb", "mode": "snir_on", "N": "50", "speed": "1", "mobility_model": "rwp", "gateways": "1", "sigma_shadowing": "2", "quantile": "1.0", "sinr_db": "9.0"},
     ]
 
     captured: list[dict[str, object]] = []
@@ -316,15 +316,15 @@ def test_plot_sinr_cdf_single_curve_per_algo_sorted_quantiles(monkeypatch, tmp_p
     assert generated is True
     assert len(captured) == 2
     by_label = {item["label"]: item for item in captured}
-    assert tuple(by_label["adr | snir_on | N=50 | speed=1"]["ys"]) == (0.333333, 0.666667, 1.0)
-    assert tuple(by_label["ucb | snir_on | N=50 | speed=1"]["ys"]) == (0.333333, 0.666667, 1.0)
+    assert tuple(by_label["adr"]["ys"]) == (0.333333, 0.666667, 1.0)
+    assert tuple(by_label["ucb"]["ys"]) == (0.333333, 0.666667, 1.0)
 
 
 def test_plot_sinr_cdf_rejects_constant_sinr_group(tmp_path):
     rows = [
-        {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "0.333333", "sinr_db": "3.0"},
-        {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "0.666667", "sinr_db": "3.0"},
-        {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "quantile": "1.0", "sinr_db": "3.0"},
+        {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "mobility_model": "rwp", "gateways": "1", "sigma_shadowing": "2", "quantile": "0.333333", "sinr_db": "3.0"},
+        {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "mobility_model": "rwp", "gateways": "1", "sigma_shadowing": "2", "quantile": "0.666667", "sinr_db": "3.0"},
+        {"algo": "adr", "mode": "snir_on", "N": "50", "speed": "1", "mobility_model": "rwp", "gateways": "1", "sigma_shadowing": "2", "quantile": "1.0", "sinr_db": "3.0"},
     ]
 
     out_path = tmp_path / "fig10_sinr_cdf.png"
@@ -370,6 +370,124 @@ def test_plot_fig16_energy_efficiency_vs_reliability_uses_dedicated_aggregate(mo
     monkeypatch.setattr(plots.plt, "legend", lambda *args, **kwargs: None)
     out_path = tmp_path / "fig16_energy_efficiency_vs_reliability.png"
     assert plots._plot_energy_efficiency_vs_reliability(rows, out_path) is True
+
+
+def test_validate_curve_grouping_rejects_mixed_contexts_for_single_curve() -> None:
+    rows = [
+        {
+            "algo": "adr",
+            "mode": "snir_off",
+            "N": "50",
+            "speed": "1",
+            "mobility_model": "rwp",
+            "gateways": "1",
+            "sigma_shadowing": "2",
+            "pdr_mean": "0.8",
+        },
+        {
+            "algo": "adr",
+            "mode": "snir_off",
+            "N": "100",
+            "speed": "1",
+            "mobility_model": "rwp",
+            "gateways": "1",
+            "sigma_shadowing": "2",
+            "pdr_mean": "0.82",
+        },
+        {
+            "algo": "adr",
+            "mode": "snir_off",
+            "N": "50",
+            "speed": "3",
+            "mobility_model": "rwp",
+            "gateways": "1",
+            "sigma_shadowing": "2",
+            "pdr_mean": "0.79",
+        },
+    ]
+
+    ok, summary = plots._validate_curve_grouping_or_skip(
+        rows,
+        figure="fig01_pdr_vs_n_snir_off.png",
+        curve_column="algo",
+        varying_columns={"N"},
+    )
+
+    assert ok is False
+    assert summary["mixed_curves"] == ["adr"]
+
+
+def test_generate_minimal_figures_writes_grouping_summary_and_skips_mixed_curve(tmp_path) -> None:
+    aggregates_dir = tmp_path / "aggregates"
+    figures_dir = tmp_path / "figures"
+    aggregates_dir.mkdir(parents=True, exist_ok=True)
+
+    metric_headers = [
+        "N",
+        "algo",
+        "mode",
+        "speed",
+        "mobility_model",
+        "gateways",
+        "sigma_shadowing",
+        "pdr_mean",
+        "der_mean",
+        "throughput_bps_mean",
+        "jain_fairness_mean",
+        "airtime_total_s_mean",
+        "switch_count_mean",
+    ]
+    metric_rows = [
+        {
+            "N": "50",
+            "algo": "adr",
+            "mode": "snir_off",
+            "speed": "1",
+            "mobility_model": "rwp",
+            "gateways": "1",
+            "sigma_shadowing": "2",
+            "pdr_mean": "0.80",
+            "der_mean": "0.75",
+            "throughput_bps_mean": "1000",
+            "jain_fairness_mean": "0.91",
+            "airtime_total_s_mean": "10",
+            "switch_count_mean": "2",
+        },
+        {
+            "N": "100",
+            "algo": "adr",
+            "mode": "snir_off",
+            "speed": "3",
+            "mobility_model": "rwp",
+            "gateways": "1",
+            "sigma_shadowing": "2",
+            "pdr_mean": "0.78",
+            "der_mean": "0.73",
+            "throughput_bps_mean": "980",
+            "jain_fairness_mean": "0.90",
+            "airtime_total_s_mean": "11",
+            "switch_count_mean": "2",
+        },
+    ]
+    _write_csv(aggregates_dir / "metric_by_factor.csv", metric_headers, metric_rows)
+    _write_csv(aggregates_dir / "distribution_sf.csv", ["algo", "sf", "ratio"], [{"algo": "adr", "sf": "7", "ratio": "1.0"}])
+
+    _, traces = plots.generate_minimal_figures(
+        aggregates_dir=aggregates_dir,
+        out_dir=figures_dir,
+        filters=plots.ScenarioFilters.from_tokens([]),
+        include_bonus=False,
+    )
+
+    by_figure = {trace.figure: trace for trace in traces}
+    assert by_figure["fig01_pdr_vs_n_snir_off.png"].generated is False
+    assert by_figure["fig01_pdr_vs_n_snir_off.png"].grouping_summary["mixed_curves"] == ["adr"]
+
+    import json
+
+    payload = json.loads((figures_dir / "plots_summary.json").read_text(encoding="utf-8"))
+    fig01 = next(item for item in payload["figures"] if item["figure"] == "fig01_pdr_vs_n_snir_off.png")
+    assert fig01["grouping"]["mixed_curves"] == ["adr"]
 
 
 def test_plot_xy_by_algo_applies_algo_style_colors(monkeypatch, tmp_path):
