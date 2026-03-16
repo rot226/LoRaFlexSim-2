@@ -176,8 +176,17 @@ ce qui est tracé et interprété.
   - **Protocole fixe (pipeline)** : calcul via `metrics.convergence_tc` sur la
     série temporelle de performance **PDR binaire par bin** (`1` si
     `PDR_bin >= 0.9`, sinon `0`).
-  - Paramètres figés : `dt_s=10`, `tolerance=0.1` (donc seuil `0.9`) et
-    `stable_bins=5`.
+  - **Rôle de `time_bin_s` (critique pour `Tc`)** : `time_bin_s` définit la
+    largeur temporelle d'un bin de la série `PDR_bin`. Comme `Tc_s` est calculé
+    en nombre de bins puis converti en secondes, toute variation de
+    `time_bin_s` modifie directement la valeur numérique de `Tc_s`.
+    - Convention article/pipeline : **`time_bin_s = 10.0` secondes**, ce qui
+      correspond à `dt_s=10` dans `metrics.convergence_tc`.
+    - En pratique : si `time_bin_s` diffère (ex. 5s ou 20s), les valeurs de
+      `Tc_s` ne sont plus comparables avec les figures et agrégats de
+      référence.
+  - Paramètres figés : `dt_s=10` (donc `time_bin_s=10.0s`), `tolerance=0.1`
+    (seuil `0.9`) et `stable_bins=5`.
   - Si non convergé dans la fenêtre observée, `Tc_s=inf`.
   - Agrégation/plots : les `Tc_s=inf` sont conservés dans les CSV run-level mais
     exclus des moyennes/IC95 et des points tracés (si toutes les répétitions
@@ -514,6 +523,75 @@ Exemple type (adapter les chemins) :
 python -m mobilesfrdth run --config experiments/default.yaml --out runs\paper_core --profile paper_core --resume
 python -m mobilesfrdth aggregate --input runs\paper_core --out runs\paper_core\aggregates
 python -m mobilesfrdth plots --input runs\paper_core\aggregates --out figures\paper_core --profile core
+```
+
+### Commandes PowerShell exactes (Windows 11)
+
+> À exécuter **depuis la racine du dépôt** dans PowerShell.
+
+```powershell
+# 1) Environnement (offline-friendly)
+.\.venv\Scripts\Activate.ps1
+$env:PYTHONPATH = (Resolve-Path .\src).Path
+
+# 2) RUN
+python -m mobilesfrdth run --config experiments/default.yaml --out runs\paper_core --profile paper_core --resume
+
+# 3) AGGREGATE
+python -m mobilesfrdth aggregate --input runs\paper_core --out runs\paper_core\aggregates
+
+# 4) PLOTS
+python -m mobilesfrdth plots --input runs\paper_core\aggregates --out figures\paper_core --profile core
+
+# 5) VALIDATION (recommandé)
+python -m mobilesfrdth validate --aggregates-dir runs\paper_core\aggregates --strict
+```
+
+Alternative wrapper PowerShell (si l'entrypoint installé pose problème) :
+
+```powershell
+.\scripts\mobilesfrdth.ps1 run --config experiments/default.yaml --out runs\paper_core --profile paper_core --resume
+.\scripts\mobilesfrdth.ps1 aggregate --input runs\paper_core --out runs\paper_core\aggregates
+.\scripts\mobilesfrdth.ps1 plots --input runs\paper_core\aggregates --out figures\paper_core --profile core
+```
+
+### Erreurs fréquentes
+
+- `time_bin_s doit être fixé à 10.0s...`
+  - Cause probable : configuration de binning temporel modifiée, ce qui casse
+    la comparabilité de `Tc_s`.
+  - Action : remettre `time_bin_s=10.0` (référence article), puis relancer
+    `run` + `aggregate`.
+
+- `Aucun run valide trouvé (summary.csv introuvable)`
+  - Cause probable : étape `run` incomplète, mauvais chemin `--input`, ou
+    structure de dossier inattendue.
+  - Action : vérifier que les sorties de run existent bien, puis relancer
+    `aggregate` avec le bon dossier source.
+
+- `missing file: ...csv` dans plots
+  - Cause probable : agrégation partielle/échouée (CSV attendus non produits)
+    ou appel `plots` pointant vers le mauvais dossier.
+  - Action : relancer `aggregate`, confirmer la présence des CSV requis dans
+    `runs\...\aggregates`, puis relancer `plots`.
+
+### Arbre de décision rapide (run / aggregate / plots)
+
+```text
+Départ
+ ├─ Le run échoue ?
+ │   ├─ Oui → vérifier environnement (.venv actif, PYTHONPATH=src), config,
+ │   │        permissions d'écriture du dossier --out ; relancer run.
+ │   └─ Non → passer à aggregate.
+ ├─ L'aggregate échoue ?
+ │   ├─ Oui → vérifier que run a produit des résultats complets
+ │   │        (dont summary.csv) et que --input pointe vers le bon dossier ;
+ │   │        corriger puis relancer aggregate.
+ │   └─ Non → passer à plots.
+ └─ Les plots échouent ?
+     ├─ Oui → vérifier les CSV agrégés attendus (erreur "missing file: ...csv"),
+     │        le profil/filtres et le chemin --input ; relancer plots.
+     └─ Non → pipeline OK (optionnel: validate --strict).
 ```
 
 Après génération, vérifiez la présence et la taille non nulle des PNG :
