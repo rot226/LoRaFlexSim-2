@@ -10,7 +10,16 @@ from typing import Any
 
 GRID_KEY_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 REQUIRED_GRID_KEYS = {"N", "mode", "algo", "reps", "seed_base"}
-ALLOWED_GRID_KEYS = REQUIRED_GRID_KEYS | {"model"}
+ALLOWED_GRID_KEYS = REQUIRED_GRID_KEYS | {
+    "model",
+    "speed",
+    "period_s",
+    "duration_s",
+    "payload_size",
+    "gateways",
+    "sigma",
+    "time_bin_s",
+}
 
 MODEL_ALIASES = {
     "RWP": "RWP",
@@ -139,6 +148,36 @@ def _validate_grid_values(grid: dict[str, list[Any]], checks: JobValidationConfi
         for speed in grid["speed"]:
             if not isinstance(speed, (int, float)) or speed < 0:
                 raise ValueError("Toutes les vitesses doivent être numériques et >= 0.")
+
+    if "period_s" in grid:
+        for period in grid["period_s"]:
+            if not isinstance(period, (int, float)) or period <= 0:
+                raise ValueError("Toutes les valeurs period_s doivent être numériques et > 0.")
+
+    if "duration_s" in grid:
+        for duration in grid["duration_s"]:
+            if not isinstance(duration, (int, float)) or duration <= 0:
+                raise ValueError("Toutes les valeurs duration_s doivent être numériques et > 0.")
+
+    if "payload_size" in grid:
+        for payload_size in grid["payload_size"]:
+            if not isinstance(payload_size, int) or payload_size < 1:
+                raise ValueError("Toutes les valeurs payload_size doivent être des entiers >= 1.")
+
+    if "gateways" in grid:
+        for gateways in grid["gateways"]:
+            if not isinstance(gateways, int) or gateways < 1:
+                raise ValueError("Toutes les valeurs gateways doivent être des entiers >= 1.")
+
+    if "sigma" in grid:
+        for sigma in grid["sigma"]:
+            if not isinstance(sigma, (int, float)) or sigma < 0:
+                raise ValueError("Toutes les valeurs sigma doivent être numériques et >= 0.")
+
+    if "time_bin_s" in grid:
+        for time_bin_s in grid["time_bin_s"]:
+            if not isinstance(time_bin_s, (int, float)) or time_bin_s <= 0:
+                raise ValueError("Toutes les valeurs time_bin_s doivent être numériques et > 0.")
 
     if "sf" in grid:
         for sf in grid["sf"]:

@@ -134,3 +134,42 @@ def test_cli_aggregate_supports_paths_with_spaces_and_parentheses(tmp_path: Path
 
     assert plots_result.returncode == 0, plots_result.stderr
     assert (plots_out / "plots_summary.json").is_file()
+
+
+def test_presets_list_returns_zero(capsys):
+    code = main(["presets", "--list"])
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "paper_core" in out
+    assert "paper_fast" in out
+    assert "safe" in out
+
+
+def test_run_with_preset_injects_grid_and_config(tmp_path: Path, monkeypatch):
+    class _FakeOrchestrator:
+        def __init__(self, *, output_root):
+            self.output_root = output_root
+
+        def execute_jobs(self, jobs, progress_callback=None):
+            class _Report:
+                failed_reports = []
+
+            return _Report()
+
+    monkeypatch.setattr(cli, "GridRunOrchestrator", _FakeOrchestrator)
+
+    code = main(["run", "--preset", "paper_fast", "--out", str(tmp_path / "runs")])
+
+    assert code == 0
+    payload = json.loads((tmp_path / "runs" / "jobs.json").read_text(encoding="utf-8"))
+    assert payload["preset"] == "paper_fast"
+    assert "time_bin_s" in payload["grid"]
+
+
+def test_validate_command_strict_mode(tmp_path: Path):
+    aggregates = tmp_path / "aggregates"
+    aggregates.mkdir(parents=True)
+
+    code = main(["validate", "--aggregates-dir", str(aggregates), "--strict"])
+
+    assert code != 0
