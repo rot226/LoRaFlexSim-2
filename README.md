@@ -575,6 +575,15 @@ Alternative wrapper PowerShell (si l'entrypoint installé pose problème) :
   - Action : relancer `aggregate`, confirmer la présence des CSV requis dans
     `runs\...\aggregates`, puis relancer `plots`.
 
+### No figures generated
+
+Si `mobilesfrdth plots` affiche `0 figure(s) écrite(s)`, la CLI propose automatiquement une
+commande de relance avec `--scenario-filter` basé sur le contexte dominant détecté
+dans `plots_diagnostics.json` (dimensions : `mode`, `speed`, `model`, `gateways`, `sigma`).
+
+- Le code retour est non nul (`3`) pour faciliter l’automatisation CI.
+- La commande suggérée peut être rejouée telle quelle pour cibler un scénario cohérent.
+
 ### Arbre de décision rapide (run / aggregate / plots)
 
 ```text

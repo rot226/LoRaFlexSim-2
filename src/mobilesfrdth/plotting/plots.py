@@ -570,6 +570,7 @@ def _write_plots_diagnostics(
                 "source": trace.source,
                 "metric": trace.metric,
                 "filters": trace.filters,
+                "grouping": trace.grouping_summary,
                 "source_rows_read": trace.source_rows_read,
                 "source_rows_usable": trace.source_rows_usable,
                 "num_points": trace.num_points,

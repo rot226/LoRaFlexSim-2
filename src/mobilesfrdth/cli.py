@@ -6,6 +6,7 @@ import argparse
 import csv
 import json
 import re
+import shlex
 import sys
 from collections import Counter
 from pathlib import Path
@@ -25,6 +26,109 @@ PROFILE_PRESETS: dict[str, str] = {
     "core": "N=50,100,160;speed=1,3;mode=SNIR_OFF,SNIR_ON;algo=ADR,ADR_MIXRA,UCB,UCB_FORGET;reps=2;duration_s=1800;seed_base=1234",
     "full": "N=50,100,160,320;speed=0,1,3,6;mode=SNIR_OFF,SNIR_ON;algo=ADR,ADR_MIXRA,UCB,UCB_FORGET;reps=5;duration_s=3600;seed_base=1234",
 }
+
+PLOTS_NO_FIGURES_EXIT_CODE = 3
+PLOTS_NO_FIGURES_README_LINK = "README.md#no-figures-generated"
+
+
+def _dominant_context_from_plots_diagnostics(diagnostics_file: Path) -> dict[str, str]:
+    if not diagnostics_file.is_file():
+        return {}
+    try:
+        payload = json.loads(diagnostics_file.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+    figures = payload.get("figures")
+    if not isinstance(figures, list):
+        return {}
+
+    counts: Counter[tuple[tuple[str, str], ...]] = Counter()
+    dimensions = ("mode", "speed", "mobility_model", "gateways", "sigma_shadowing")
+    for item in figures:
+        if not isinstance(item, dict):
+            continue
+        grouping = item.get("grouping")
+        if not isinstance(grouping, dict):
+            continue
+        selected = grouping.get("selected_context")
+        if not isinstance(selected, dict):
+            continue
+        normalized = {
+            dim: str(selected.get(dim, "")).strip()
+            for dim in dimensions
+            if str(selected.get(dim, "")).strip()
+        }
+        if not normalized:
+            continue
+        key = tuple(sorted(normalized.items()))
+        counts[key] += 1
+
+    if not counts:
+        return {}
+
+    dominant, _ = counts.most_common(1)[0]
+    return dict(dominant)
+
+
+def _scenario_filter_resume_tokens(base_filters: list[str], dominant_context: dict[str, str]) -> list[str]:
+    merged: dict[str, list[str]] = {}
+    for token in base_filters:
+        if "=" not in token:
+            continue
+        key, raw_values = token.split("=", 1)
+        key = key.strip()
+        values = [value.strip() for value in raw_values.split(",") if value.strip()]
+        if key and values:
+            merged[key] = values
+
+    if "mode" in dominant_context:
+        merged["mode"] = [dominant_context["mode"]]
+    if "speed" in dominant_context:
+        merged["speed"] = [dominant_context["speed"]]
+    if "mobility_model" in dominant_context:
+        merged["model"] = [dominant_context["mobility_model"]]
+    if "gateways" in dominant_context:
+        merged["gateways"] = [dominant_context["gateways"]]
+    if "sigma_shadowing" in dominant_context:
+        merged["sigma"] = [dominant_context["sigma_shadowing"]]
+
+    ordered_keys = ["mode", "speed", "model", "gateways", "sigma"]
+    for key in sorted(merged):
+        if key not in ordered_keys:
+            ordered_keys.append(key)
+
+    tokens: list[str] = []
+    for key in ordered_keys:
+        values = merged.get(key)
+        if values:
+            tokens.append(f"{key}={','.join(values)}")
+    return tokens
+
+
+def _build_plots_resume_command(*, aggregates_dir: Path, out_dir: Path, article_profile: str, no_bonus: bool, ieee_ready: bool, y_scale: str, strict: bool, scenario_filter_tokens: list[str]) -> str:
+    cmd_parts = [
+        "mobilesfrdth",
+        "plots",
+        "--aggregates-dir",
+        str(aggregates_dir),
+        "--out",
+        str(out_dir),
+        "--article-profile",
+        article_profile,
+        "--y-scale",
+        y_scale,
+    ]
+    if no_bonus:
+        cmd_parts.append("--no-bonus")
+    if ieee_ready:
+        cmd_parts.append("--ieee-ready")
+    if strict:
+        cmd_parts.append("--strict")
+    for token in scenario_filter_tokens:
+        cmd_parts.extend(["--scenario-filter", token])
+    return " ".join(shlex.quote(part) for part in cmd_parts)
+
 
 
 def _existing_file(value: str) -> Path:
@@ -551,7 +655,7 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
         },
     )
     print(f"Log campagne mis à jour: {campaign_log_file}")
-    return 0
+    return exit_code
 
 
 def cmd_plots(args: argparse.Namespace) -> int:
@@ -629,6 +733,32 @@ def cmd_plots(args: argparse.Namespace) -> int:
     print(f"Résumé de plots écrit dans {output_file}")
     print(f"Diagnostic plots écrit dans {diagnostics_file}")
 
+    exit_code = 0
+    if len(generated) == 0:
+        dominant_context = _dominant_context_from_plots_diagnostics(diagnostics_file)
+        scenario_filter_tokens = _scenario_filter_resume_tokens(args.scenario_filter, dominant_context)
+        resume_cmd = _build_plots_resume_command(
+            aggregates_dir=aggregates_dir,
+            out_dir=out_dir,
+            article_profile=args.article_profile,
+            no_bonus=args.no_bonus,
+            ieee_ready=args.ieee_ready,
+            y_scale=args.y_scale,
+            strict=args.strict,
+            scenario_filter_tokens=scenario_filter_tokens,
+        )
+        print("Aucune figure générée : proposition de relance avec --scenario-filter cohérent.")
+        if dominant_context:
+            print(
+                "Contexte dominant détecté (via plots_diagnostics.json): "
+                + ", ".join(f"{key}={value}" for key, value in dominant_context.items())
+            )
+        else:
+            print("Contexte dominant non détecté dans plots_diagnostics.json (fallback sur filtres actuels).")
+        print(f"Commande suggérée: {resume_cmd}")
+        print(f"Documentation: {PLOTS_NO_FIGURES_README_LINK}")
+        exit_code = PLOTS_NO_FIGURES_EXIT_CODE
+
     if args.strict:
         from .qa.validate_results import validate_strict_plot_outputs
 
@@ -668,7 +798,7 @@ def cmd_plots(args: argparse.Namespace) -> int:
         },
     )
     print(f"Log campagne mis à jour: {campaign_log_file}")
-    return 0
+    return exit_code
 
 
 def build_parser() -> argparse.ArgumentParser:
