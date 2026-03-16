@@ -134,6 +134,12 @@ def cmd_run(args: argparse.Namespace) -> int:
 
     try:
         grid = parse_grid_spec(args.grid)
+        non_standard_bins = [value for value in grid.get("time_bin_s", []) if float(value) != 10.0]
+        if non_standard_bins:
+            print(
+                "Avertissement: time_bin_s != 10 détecté; le calcul de Tc peut être moins stable. "
+                "Exécution maintenue (warning non bloquant)."
+            )
         jobs = generate_jobs(
             config_path=args.config,
             output_root=out_dir,

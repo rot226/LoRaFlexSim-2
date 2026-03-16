@@ -166,6 +166,86 @@ def test_run_with_preset_injects_grid_and_config(tmp_path: Path, monkeypatch):
     assert "time_bin_s" in payload["grid"]
 
 
+
+
+def test_plots_missing_csv_prints_guided_message(tmp_path: Path, capsys):
+    aggregates = tmp_path / "aggregates"
+    aggregates.mkdir(parents=True)
+
+    code = main(["plots", "--aggregates-dir", str(aggregates), "--out", str(tmp_path / "plots")])
+    out = capsys.readouterr().out
+
+    assert code == 2
+    assert "Prérequis manquants pour plotting" in out
+    assert "metric_by_factor.csv" in out
+    assert "sinr_cdf.csv" in out
+
+
+def test_run_with_time_bin_10_succeeds_without_warning(tmp_path: Path, monkeypatch, capsys):
+    class _FakeOrchestrator:
+        def __init__(self, *, output_root):
+            self.output_root = output_root
+
+        def execute_jobs(self, jobs, progress_callback=None):
+            class _Report:
+                failed_reports = []
+
+            return _Report()
+
+    monkeypatch.setattr(cli, "GridRunOrchestrator", _FakeOrchestrator)
+
+    config = tmp_path / "config.yaml"
+    config.write_text("stub: true\n", encoding="utf-8")
+
+    code = main(
+        [
+            "run",
+            "--config",
+            str(config),
+            "--out",
+            str(tmp_path / "runs"),
+            "--grid",
+            "N=50;speed=1;mode=SNIR_OFF;algo=ADR;reps=1;seed_base=123;time_bin_s=10",
+        ]
+    )
+    out = capsys.readouterr().out
+
+    assert code == 0
+    assert "Avertissement: time_bin_s != 10" not in out
+
+
+def test_run_with_time_bin_30_emits_warning_but_no_fatal_exception(tmp_path: Path, monkeypatch, capsys):
+    class _FakeOrchestrator:
+        def __init__(self, *, output_root):
+            self.output_root = output_root
+
+        def execute_jobs(self, jobs, progress_callback=None):
+            class _Report:
+                failed_reports = []
+
+            return _Report()
+
+    monkeypatch.setattr(cli, "GridRunOrchestrator", _FakeOrchestrator)
+
+    config = tmp_path / "config.yaml"
+    config.write_text("stub: true\n", encoding="utf-8")
+
+    code = main(
+        [
+            "run",
+            "--config",
+            str(config),
+            "--out",
+            str(tmp_path / "runs"),
+            "--grid",
+            "N=50;speed=1;mode=SNIR_OFF;algo=ADR;reps=1;seed_base=123;time_bin_s=30",
+        ]
+    )
+    out = capsys.readouterr().out
+
+    assert code == 0
+    assert "Avertissement: time_bin_s != 10" in out
+
 def test_validate_command_strict_mode(tmp_path: Path):
     aggregates = tmp_path / "aggregates"
     aggregates.mkdir(parents=True)

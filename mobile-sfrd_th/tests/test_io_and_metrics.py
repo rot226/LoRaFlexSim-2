@@ -124,3 +124,28 @@ def test_aggregate_ignores_incomplete_run_status(tmp_path: Path):
     assert len(rows) == 2
     assert "run_ok" in rows[1]
     assert "run_partial" not in rows[1]
+
+
+def test_aggregate_succeeds_with_mixed_success_and_failed_runs(tmp_path: Path):
+    write_run_outputs(
+        output_root=tmp_path,
+        run_id="run_ok",
+        run_config=_sample_config(seed=1, rep=0),
+        events=_sample_events(),
+        duration_s=10.0,
+        time_bin_s=5.0,
+    )
+
+    failed_dir = tmp_path / "results" / "run_failed"
+    failed_dir.mkdir(parents=True, exist_ok=True)
+    (failed_dir / "run_status.json").write_text(
+        '{"run_id":"run_failed","status":"failed","error":"synthetic failure"}\n',
+        encoding="utf-8",
+    )
+
+    outputs = aggregate_runs(inputs=[tmp_path], output_root=tmp_path)
+    rows = outputs["convergence_tc"].read_text(encoding="utf-8").strip().splitlines()
+
+    assert len(rows) == 2
+    assert "run_ok" in rows[1]
+    assert "run_failed" not in rows[1]
