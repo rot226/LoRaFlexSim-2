@@ -195,6 +195,10 @@ FILTER_COLUMN_ALIASES = {
     "sigma": "sigma_shadowing",
     "sigma_shadowing": "sigma_shadowing",
 }
+
+PLOT_PROFILES = ("exploratory", "publication")
+EXPLORATORY_AUTO_FACET_COLUMNS = ("speed", "mobility_model", "gateways", "sigma_shadowing")
+PUBLICATION_REQUIRED_CONTEXT_COLUMNS = ("speed", "mobility_model", "gateways", "sigma_shadowing")
 MODE_VALUE_ALIASES = {
     "snir_off": "snir_off",
     "sniroff": "snir_off",
@@ -1719,6 +1723,7 @@ def generate_minimal_figures(
     y_scale: str = "auto",
     strict_context: bool = False,
     facet_by: tuple[str, ...] = (),
+    plot_profile: str = "exploratory",
 ) -> tuple[list[Path], list[FigureTrace]]:
     if article_profile not in ARTICLE_PROFILE_FILTERS:
         raise ValueError(f"Unknown article profile: {article_profile}")
@@ -1881,6 +1886,7 @@ def generate_minimal_figures(
             )
 
     summary_payload = {
+        "plot_profile": plot_profile,
         "article_profile": article_profile,
         "requested_filters": _filters_to_serializable(filters),
         "facet_by": list(facet_by),
@@ -1947,6 +1953,37 @@ def _parse_context_option(context_expr: str | None) -> ScenarioFilters:
     tokens = [item.strip() for item in context_expr.split(",") if item.strip()]
     return ScenarioFilters.from_tokens(tokens)
 
+
+def resolve_profile_behavior(
+    *,
+    profile: str,
+    strict_context: bool,
+    facet_by: tuple[str, ...],
+) -> tuple[bool, tuple[str, ...]]:
+    if profile not in PLOT_PROFILES:
+        raise ValueError(f"Unknown plots profile: {profile}")
+    if profile == "publication":
+        return True, facet_by
+    if facet_by:
+        return strict_context, facet_by
+    return False, EXPLORATORY_AUTO_FACET_COLUMNS
+
+
+def validate_publication_context(filters: ScenarioFilters) -> None:
+    missing = [
+        column
+        for column in PUBLICATION_REQUIRED_CONTEXT_COLUMNS
+        if len(filters.by_column.get(column, set())) != 1
+    ]
+    if missing:
+        expected = ", ".join(f"{column}=<valeur_unique>" for column in PUBLICATION_REQUIRED_CONTEXT_COLUMNS)
+        raise ValueError(
+            "Le profil publication exige un contexte strict explicite. "
+            f"Filtres manquants/ambigus: {', '.join(missing)}. "
+            f"Fournir par exemple: --scenario-filter {expected}"
+        )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Generate core and contribution figures from aggregates/*.csv")
     parser.add_argument("--aggregates-dir", required=True, type=Path, help="Directory containing aggregated CSV files.")
@@ -1959,6 +1996,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--no-bonus", action="store_true", help="Do not generate contribution figures fig08..fig11.")
     parser.add_argument("--ieee-ready", action="store_true", help="Enable IEEE style (colorblind-friendly palette, linewidths, PDF+PNG export).")
+    parser.add_argument(
+        "--profile",
+        choices=PLOT_PROFILES,
+        default="exploratory",
+        help="Profil plotting: exploratory (auto contexte + facettes) ou publication (contexte strict requis).",
+    )
     parser.add_argument(
         "--article-profile",
         choices=sorted(ARTICLE_PROFILE_FILTERS),
@@ -1983,16 +2026,25 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+    requested_filters = ScenarioFilters.from_tokens(args.scenario_filter).merge(_parse_context_option(args.context).by_column)
+    strict_context, facet_by = resolve_profile_behavior(
+        profile=args.profile,
+        strict_context=args.strict_context,
+        facet_by=_parse_facet_by_option(args.facet_by),
+    )
+    if args.profile == "publication":
+        validate_publication_context(requested_filters)
     generated, _ = generate_minimal_figures(
         aggregates_dir=args.aggregates_dir,
         out_dir=args.out,
-        filters=ScenarioFilters.from_tokens(args.scenario_filter).merge(_parse_context_option(args.context).by_column),
+        filters=requested_filters,
         article_profile=args.article_profile,
         include_bonus=not args.no_bonus,
         ieee_ready=args.ieee_ready,
         y_scale=args.y_scale,
-        strict_context=args.strict_context,
-        facet_by=_parse_facet_by_option(args.facet_by),
+        strict_context=strict_context,
+        facet_by=facet_by,
+        plot_profile=args.profile,
     )
     print(f"{len(generated)} figure(s) generated(s).")
     for path in generated:
