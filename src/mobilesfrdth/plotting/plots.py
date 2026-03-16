@@ -87,6 +87,7 @@ REQUIRED_COLUMNS = {
         "N",
         "algo",
         "mode",
+        "Tc_s_mean",
         "pdr_mean",
         "der_mean",
         "throughput_bps_mean",
@@ -250,6 +251,7 @@ METRIC_COLUMN_ALIASES = {
     "jain_fairness_mean": ("jain_fairness_mean", "jain_fairness"),
     "airtime_total_s_mean": ("airtime_total_s_mean", "airtime_total_s"),
     "switch_count_mean": ("switch_count_mean", "switch_count"),
+    "Tc_s_mean": ("Tc_s_mean", "Tc_s"),
 }
 
 CI95_COLUMN_ALIASES = {
@@ -308,6 +310,8 @@ class FigureTrace:
     source_rows_usable: int
     grouping_summary: dict[str, object]
     generated: bool
+    empty_reason: str | None = None
+    missing_columns: dict[str, list[str]] | None = None
 
 
 GROUPING_BASE_COLUMNS = ("mode", "N", "speed", "mobility_model", "gateways", "sigma_shadowing", "algo")
@@ -571,7 +575,11 @@ def _write_plots_diagnostics(
                 "num_points": trace.num_points,
                 "points_by_curve": trace.points_by_curve,
                 "generated": trace.generated,
-                "empty_reason": ("no usable rows after filters" if (not trace.generated and trace.source_rows_usable == 0) else None),
+                "empty_reason": (
+                    trace.empty_reason
+                    or ("no usable rows after filters" if (not trace.generated and trace.source_rows_usable == 0) else None)
+                ),
+                "missing_columns": trace.missing_columns or {},
             }
             for trace in traces
         ],
@@ -841,6 +849,48 @@ def _resolve_metric_column(rows: list[dict[str, str]], *, expected: str) -> str:
             return candidate
     return expected
 
+
+
+
+def _find_missing_columns(rows: list[dict[str, str]], *, expected_columns: list[str]) -> list[str]:
+    if not rows:
+        return list(expected_columns)
+    missing: list[str] = []
+    for expected in expected_columns:
+        aliases = METRIC_COLUMN_ALIASES.get(expected, (expected,))
+        if not any(alias in rows[0] for alias in aliases):
+            missing.append(expected)
+    return missing
+
+
+def _count_adaptation_points(
+    metric_rows: list[dict[str, str]],
+    tc_rows: list[dict[str, str]],
+) -> tuple[int, dict[str, int]]:
+    if not metric_rows:
+        return 0, {}
+
+    missing_metric = _find_missing_columns(
+        metric_rows,
+        expected_columns=["algo", "mode", "speed", "switch_count_mean", "Tc_s_mean"],
+    )
+    if missing_metric:
+        return 0, {}
+
+    switch_col = _resolve_metric_column(metric_rows, expected="switch_count_mean")
+    tc_column = _resolve_metric_column(metric_rows, expected="Tc_s_mean")
+
+    counts_by_curve: dict[str, int] = defaultdict(int)
+    for row in metric_rows:
+        algo = row.get("algo", "unknown")
+        speed = _to_float(row.get("speed"))
+        switch_count = _to_float(row.get(switch_col))
+        tc_value = _to_float(row.get(tc_column))
+        if speed is None or switch_count is None or tc_value is None:
+            continue
+        counts_by_curve[algo] += 1
+
+    return sum(counts_by_curve.values()), dict(sorted(counts_by_curve.items()))
 
 def _resolve_ci95_columns(rows: list[dict[str, str]], *, metric_col: str) -> tuple[str, str, str] | None:
     if not rows:
@@ -1476,14 +1526,30 @@ def _plot_adaptation_cost_vs_speed(
     metric_rows: list[dict[str, str]],
     tc_rows: list[dict[str, str]],
     out_path: Path,
-) -> bool:
+) -> tuple[bool, str | None, dict[str, list[str]]]:
     fig_name = out_path.name
-    if not metric_rows or not tc_rows:
-        _warn_skip(fig_name, "metric_by_factor.csv or convergence_tc.csv is empty or missing")
-        return False
+    if not metric_rows:
+        reason = "metric_by_factor.csv is empty or missing"
+        _warn_skip(fig_name, reason)
+        return False, reason, {}
+
+    missing_metric = _find_missing_columns(
+        metric_rows,
+        expected_columns=["algo", "mode", "speed", "switch_count_mean", "Tc_s_mean"],
+    )
+    missing_columns: dict[str, list[str]] = {}
+    if missing_metric:
+        missing_columns["metric_by_factor"] = missing_metric
+    if missing_columns:
+        reason = (
+            "missing required columns for adaptation cost computation: "
+            "adaptation_cost = switch_count_mean + Tc_s_mean"
+        )
+        _warn_skip(fig_name, f"{reason}; missing={missing_columns}")
+        return False, reason, missing_columns
 
     switch_col = _resolve_metric_column(metric_rows, expected="switch_count_mean")
-    tc_column = "Tc_s_mean" if tc_rows and "Tc_s_mean" in tc_rows[0] else "Tc_s"
+    tc_column = _resolve_metric_column(metric_rows, expected="Tc_s_mean")
 
     switch_by_key: dict[tuple[str, str, str], list[float]] = defaultdict(list)
     for row in metric_rows:
@@ -1497,7 +1563,7 @@ def _plot_adaptation_cost_vs_speed(
         switch_by_key[(algo, str(speed_value), mode)].append(switch_count)
 
     tc_by_key: dict[tuple[str, str, str], list[float]] = defaultdict(list)
-    for row in tc_rows:
+    for row in metric_rows:
         algo = row.get("algo", "unknown")
         speed = row.get("speed", "")
         mode = row.get("mode", "")
@@ -1522,8 +1588,9 @@ def _plot_adaptation_cost_vs_speed(
         grouped[algo][speed_value].append(ci_switch.mean + ci_tc.mean)
 
     if not grouped:
-        _warn_skip(fig_name, "no aligned speed/switch_count/Tc pairs")
-        return False
+        reason = "no aligned speed/switch_count/Tc pairs"
+        _warn_skip(fig_name, reason)
+        return False, reason, {}
 
     plt.figure(figsize=(8, 5))
     plotted = 0
@@ -1543,17 +1610,18 @@ def _plot_adaptation_cost_vs_speed(
 
     if plotted == 0:
         plt.close()
-        _warn_skip(fig_name, "no plottable adaptation cost curve")
-        return False
+        reason = "no plottable adaptation cost curve"
+        _warn_skip(fig_name, reason)
+        return False, reason, {}
 
     plt.grid(alpha=0.3)
     plt.xlabel(_axis_label("speed"))
-    plt.ylabel(_axis_label("adaptation_cost"))
+    plt.ylabel("Adaptation cost = switch_count_mean + Tc_s_mean")
     _add_compact_legend(title="Algorithm")
     plt.tight_layout()
     _save_figure_variants(out_path)
     plt.close()
-    return True
+    return True, None, {}
 
 
 def generate_minimal_figures(
@@ -1671,7 +1739,16 @@ def generate_minimal_figures(
                 did_generate = _plot_sinr_cdf(selected, out_path) if grouping_ok else False
             elif fig_name == "fig11_adaptation_cost_vs_speed.png":
                 tc_selected = _apply_filters(payloads["convergence_tc"], effective_filters)
-                did_generate = _plot_adaptation_cost_vs_speed(selected, tc_selected, out_path) if grouping_ok else False
+                if grouping_ok:
+                    did_generate, adaptation_empty_reason, adaptation_missing_columns = _plot_adaptation_cost_vs_speed(
+                        selected, tc_selected, out_path
+                    )
+                    adaptation_points, adaptation_points_by_curve = _count_adaptation_points(selected, tc_selected)
+                else:
+                    did_generate = False
+                    adaptation_empty_reason = "grouping constraints not satisfied"
+                    adaptation_missing_columns = {}
+                    adaptation_points, adaptation_points_by_curve = 0, {}
             else:
                 did_generate = (
                     _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path, y_scale=y_scale)
@@ -1684,12 +1761,14 @@ def generate_minimal_figures(
                     source=source,
                     metric=metric,
                     filters=_filters_to_serializable(effective_filters),
-                    num_points=_count_points(selected, metric),
-                    points_by_curve=_count_points_by_curve(selected, metric),
+                    num_points=(adaptation_points if fig_name == "fig11_adaptation_cost_vs_speed.png" else _count_points(selected, metric)),
+                    points_by_curve=(adaptation_points_by_curve if fig_name == "fig11_adaptation_cost_vs_speed.png" else _count_points_by_curve(selected, metric)),
                     source_rows_read=source_rows_read.get(source, 0),
                     source_rows_usable=len(selected),
                     grouping_summary=grouping_summary,
                     generated=did_generate,
+                    empty_reason=(adaptation_empty_reason if fig_name == "fig11_adaptation_cost_vs_speed.png" else None),
+                    missing_columns=(adaptation_missing_columns if fig_name == "fig11_adaptation_cost_vs_speed.png" else None),
                 )
             )
             _log_figure_result(out_path, did_generate, verbose=verbose)
