@@ -723,9 +723,21 @@ def aggregate_runs(
             }
         )
 
+    def _warning_runs(entries: list[dict[str, str]]) -> list[str]:
+        unique_ids: list[str] = []
+        seen: set[str] = set()
+        for item in entries:
+            run_id = str(item.get("run_id", "") or "").strip()
+            if not run_id or run_id in seen:
+                continue
+            seen.add(run_id)
+            unique_ids.append(run_id)
+        return unique_ids
+
     def _format_warning_summary(category: str, entries: list[dict[str, str]], *, max_examples: int = 3) -> str:
-        count = len(entries)
-        sample_ids = [item["run_id"] for item in entries[:max_examples] if item.get("run_id")]
+        run_ids = _warning_runs(entries)
+        count = len(run_ids)
+        sample_ids = run_ids[:max_examples]
         if sample_ids:
             return f"{count} run(s) {category} (exemples: {', '.join(sample_ids)})."
         return f"{count} run(s) {category}."
@@ -738,10 +750,15 @@ def aggregate_runs(
         incomplete_runs.append(entry)
 
     def _write_diagnostics() -> None:
+        warning_run_counts = {
+            category: len(_warning_runs(entries))
+            for category, entries in warning_groups.items()
+        }
         diagnostics_payload = {
             "complete_runs": complete_runs,
             "incomplete_runs": incomplete_runs,
             "warning_counts": {category: len(entries) for category, entries in warning_groups.items()},
+            "warning_run_counts": warning_run_counts,
             "warning_details": warning_groups,
             "counts": {
                 "discovered_runs": total,
@@ -971,18 +988,11 @@ def aggregate_runs(
             f"Consultez {diagnostics_path} et vérifiez avec: {verification_hint}"
         )
 
-    if skipped:
-        skipped_entries = warning_groups.get("incomplets/corrompus ignorés", [])
+    for category, entries in warning_groups.items():
+        if not entries:
+            continue
         warnings.warn(
-            f"{_format_warning_summary('incomplets/corrompus ignorés', skipped_entries)} Détails: {diagnostics_path}",
-            RuntimeWarning,
-            stacklevel=2,
-        )
-
-    tc_dt_entries = warning_groups.get(f"utilisent tc_dt_s!= {TC_PROTOCOL_DT_S:.1f}s", [])
-    if tc_dt_entries:
-        warnings.warn(
-            f"{_format_warning_summary(f'utilisent tc_dt_s!= {TC_PROTOCOL_DT_S:.1f}s', tc_dt_entries)} Détails: {diagnostics_path}",
+            f"{_format_warning_summary(category, entries)} Détails complets: {diagnostics_path}",
             RuntimeWarning,
             stacklevel=2,
         )
