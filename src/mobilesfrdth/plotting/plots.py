@@ -6,6 +6,7 @@ import argparse
 import csv
 import json
 import random
+import re
 import warnings
 from collections import defaultdict
 from dataclasses import dataclass
@@ -542,6 +543,55 @@ def _format_filters(filters: ScenarioFilters) -> str:
     if not filters.by_column:
         return "<none>"
     return ";".join(f"{key}={','.join(sorted(values))}" for key, values in sorted(filters.by_column.items()))
+
+
+def _parse_facet_by_option(facet_by_expr: str | None) -> tuple[str, ...]:
+    if not facet_by_expr:
+        return ()
+    columns: list[str] = []
+    for token in (item.strip() for item in facet_by_expr.split(",") if item.strip()):
+        canonical = FILTER_COLUMN_ALIASES.get(token, token)
+        if canonical not in columns:
+            columns.append(canonical)
+    return tuple(columns)
+
+
+def _facet_label_name(column: str) -> str:
+    if column == "mobility_model":
+        return "model"
+    if column == "sigma_shadowing":
+        return "sigma"
+    return column
+
+
+def _safe_facet_token(value: str) -> str:
+    token = value.strip() or "na"
+    return re.sub(r"[^a-zA-Z0-9._-]+", "-", token)
+
+
+def _split_rows_by_facets(
+    rows: list[dict[str, str]],
+    *,
+    facet_columns: tuple[str, ...],
+) -> list[tuple[dict[str, str], list[dict[str, str]], str]]:
+    if not facet_columns:
+        return [({}, rows, "")]
+
+    buckets: dict[tuple[str, ...], list[dict[str, str]]] = defaultdict(list)
+    for row in rows:
+        normalized = _normalize_row_for_filtering(row)
+        key = tuple(normalized.get(column, "na") for column in facet_columns)
+        buckets[key].append(row)
+
+    facets: list[tuple[dict[str, str], list[dict[str, str]], str]] = []
+    for key, subset in sorted(buckets.items()):
+        facet_context = {column: value for column, value in zip(facet_columns, key, strict=False)}
+        suffix = "_" + "_".join(
+            f"{_facet_label_name(column)}-{_safe_facet_token(value)}"
+            for column, value in zip(facet_columns, key, strict=False)
+        )
+        facets.append((facet_context, subset, suffix))
+    return facets
 
 
 def _filters_to_serializable(filters: ScenarioFilters) -> dict[str, list[str]]:
@@ -1636,6 +1686,7 @@ def generate_minimal_figures(
     ieee_ready: bool = False,
     y_scale: str = "auto",
     strict_context: bool = False,
+    facet_by: tuple[str, ...] = (),
 ) -> tuple[list[Path], list[FigureTrace]]:
     if article_profile not in ARTICLE_PROFILE_FILTERS:
         raise ValueError(f"Unknown article profile: {article_profile}")
@@ -1651,37 +1702,43 @@ def generate_minimal_figures(
 
     for fig_name, source, metric, local_filter in FIGURE_SPECS:
         effective_filters = filters.merge(local_filter).merge(_resolve_profile_filter(article_profile, fig_name))
-        selected = _apply_filters(payloads[source], effective_filters)
-        out_path = out_dir / _stable_figure_name(fig_name)
-        selected, grouping_ok, grouping_summary = _prepare_rows_for_grouping(
-            selected,
-            figure=fig_name,
-            curve_column="algo",
-            varying_columns={"N"},
-            strict_context=strict_context,
-        )
-        did_generate = (
-            _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path, y_scale=y_scale)
-            if grouping_ok
-            else False
-        )
-        traces.append(
-            FigureTrace(
-                figure=out_path.name,
-                source=source,
-                metric=metric,
-                filters=_filters_to_serializable(effective_filters),
-                num_points=_count_points(selected, metric),
-                points_by_curve=_count_points_by_curve(selected, metric),
-                source_rows_read=source_rows_read.get(source, 0),
-                source_rows_usable=len(selected),
-                grouping_summary=grouping_summary,
-                generated=did_generate,
+        selected_all = _apply_filters(payloads[source], effective_filters)
+        facet_sets = _split_rows_by_facets(selected_all, facet_columns=facet_by)
+        for facet_context, selected_in_facet, facet_suffix in facet_sets:
+            base_name = _stable_figure_name(fig_name)
+            facet_name = f"{Path(base_name).stem}{facet_suffix}{Path(base_name).suffix}" if facet_suffix else base_name
+            out_path = out_dir / facet_name
+            selected, grouping_ok, grouping_summary = _prepare_rows_for_grouping(
+                selected_in_facet,
+                figure=fig_name,
+                curve_column="algo",
+                varying_columns={"N"},
+                strict_context=strict_context,
             )
-        )
-        _log_figure_result(out_path, did_generate, verbose=verbose)
-        if did_generate:
-            generated.append(out_path)
+            grouping_summary.update({"facet": facet_context, "facet_suffix": facet_suffix.lstrip("_")})
+            did_generate = (
+                _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path, y_scale=y_scale)
+                if grouping_ok
+                else False
+            )
+            trace_filters = effective_filters.merge({key: {value} for key, value in facet_context.items()})
+            traces.append(
+                FigureTrace(
+                    figure=out_path.name,
+                    source=source,
+                    metric=metric,
+                    filters=_filters_to_serializable(trace_filters),
+                    num_points=_count_points(selected, metric),
+                    points_by_curve=_count_points_by_curve(selected, metric),
+                    source_rows_read=source_rows_read.get(source, 0),
+                    source_rows_usable=len(selected),
+                    grouping_summary=grouping_summary,
+                    generated=did_generate,
+                )
+            )
+            _log_figure_result(out_path, did_generate, verbose=verbose)
+            if did_generate:
+                generated.append(out_path)
 
     sf_name = "fig07_sf_histogram_by_algo.png"
     sf_filters = filters.merge(_resolve_profile_filter(article_profile, sf_name))
@@ -1794,6 +1851,19 @@ def generate_minimal_figures(
     summary_payload = {
         "article_profile": article_profile,
         "requested_filters": _filters_to_serializable(filters),
+        "facet_by": list(facet_by),
+        "figure_counts": {
+            "by_type": dict(
+                sorted(
+                    {
+                        re.match(r"^(fig\d+)", trace.figure).group(1): 0
+                        for trace in traces
+                        if re.match(r"^(fig\d+)", trace.figure)
+                    }.items()
+                )
+            ),
+            "by_type_and_facet": {},
+        },
         "figures": [
             {
                 "figure": trace.figure,
@@ -1810,6 +1880,20 @@ def generate_minimal_figures(
             for trace in traces
         ],
     }
+
+    by_type: dict[str, int] = defaultdict(int)
+    by_type_facet: dict[str, int] = defaultdict(int)
+    for trace in traces:
+        match = re.match(r"^(fig\d+)", trace.figure)
+        if not match:
+            continue
+        fig_type = match.group(1)
+        by_type[fig_type] += 1
+        facet_suffix = str(trace.grouping_summary.get("facet_suffix", "") or "global")
+        by_type_facet[f"{fig_type}:{facet_suffix}"] += 1
+
+    summary_payload["figure_counts"]["by_type"] = dict(sorted(by_type.items()))
+    summary_payload["figure_counts"]["by_type_and_facet"] = dict(sorted(by_type_facet.items()))
     (out_dir / "plots_summary.json").write_text(
         json.dumps(summary_payload, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
@@ -1852,6 +1936,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--context", default="", help="Contexte fixe explicite au format key=value,key=value (ex: speed=5,mobility_model=smooth,gateways=1,sigma=6).")
     parser.add_argument("--strict-context", action="store_true", help="Active le mode strict: skip si plusieurs contextes fixes coexistent.")
     parser.add_argument(
+        "--facet-by",
+        default="",
+        help="Colonnes de facettage séparées par virgules (ex: mobility_model,speed,sigma).",
+    )
+    parser.add_argument(
         "--y-scale",
         choices=["auto", "full", "zoom"],
         default="auto",
@@ -1871,6 +1960,7 @@ def main(argv: list[str] | None = None) -> int:
         ieee_ready=args.ieee_ready,
         y_scale=args.y_scale,
         strict_context=args.strict_context,
+        facet_by=_parse_facet_by_option(args.facet_by),
     )
     print(f"{len(generated)} figure(s) generated(s).")
     for path in generated:
