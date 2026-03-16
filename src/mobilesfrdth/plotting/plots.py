@@ -55,6 +55,8 @@ ALGO_STYLE: dict[str, AlgoStyle] = {
     "ucb_forget": AlgoStyle(color="#d62728", marker="D", linestyle=":"),
 }
 
+SINR_CDF_MAX_POINTS_PER_ALGO = 500
+
 
 def _algo_style_kwargs(algo: str) -> dict[str, str]:
     style = ALGO_STYLE.get(algo)
@@ -1053,10 +1055,40 @@ def _plot_sinr_cdf(rows: list[dict[str, str]], out_path: Path) -> bool:
         _warn_skip(fig_name, "no usable quantile/sinr points")
         return False
 
+    sorted_quantiles_by_algo: dict[str, list[float]] = {}
+    reference_algo = ""
+    reference_quantiles: list[float] | None = None
+    for algo in sorted(grouped):
+        quantiles = sorted(grouped[algo])
+        if any(curr <= prev for prev, curr in zip(quantiles, quantiles[1:], strict=False)):
+            _warn_skip(fig_name, f"non-monotonic quantile grid for algo={algo}")
+            return False
+        sorted_quantiles_by_algo[algo] = quantiles
+        if reference_quantiles is None:
+            reference_algo = algo
+            reference_quantiles = quantiles
+        elif len(quantiles) != len(reference_quantiles) or any(
+            abs(left - right) > 1e-12
+            for left, right in zip(quantiles, reference_quantiles, strict=False)
+        ):
+            _warn_skip(
+                fig_name,
+                (
+                    "quantile grids differ across algorithms "
+                    f"(baseline={reference_algo}, algo={algo})"
+                ),
+            )
+            return False
+
     plt.figure(figsize=(8, 5))
     plotted = 0
     for algo in sorted(grouped):
-        quantiles = sorted(grouped[algo])
+        quantiles = sorted_quantiles_by_algo[algo]
+        if len(quantiles) > SINR_CDF_MAX_POINTS_PER_ALGO:
+            stride = max(1, len(quantiles) // SINR_CDF_MAX_POINTS_PER_ALGO)
+            quantiles = quantiles[::stride]
+            if quantiles[-1] != sorted_quantiles_by_algo[algo][-1]:
+                quantiles.append(sorted_quantiles_by_algo[algo][-1])
         xs: list[float] = []
         means: list[float] = []
         lows: list[float] = []
