@@ -29,6 +29,8 @@ PROFILE_PRESETS: dict[str, str] = {
 
 PLOTS_NO_FIGURES_EXIT_CODE = 3
 PLOTS_NO_FIGURES_README_LINK = "README.md#no-figures-generated"
+PLOTS_PROFILE_CHOICES = ["exploratory", "publication"]
+
 
 
 def _dominant_context_from_plots_diagnostics(diagnostics_file: Path) -> dict[str, str]:
@@ -106,7 +108,7 @@ def _scenario_filter_resume_tokens(base_filters: list[str], dominant_context: di
     return tokens
 
 
-def _build_plots_resume_command(*, aggregates_dir: Path, out_dir: Path, article_profile: str, no_bonus: bool, ieee_ready: bool, y_scale: str, strict: bool, scenario_filter_tokens: list[str]) -> str:
+def _build_plots_resume_command(*, aggregates_dir: Path, out_dir: Path, profile: str, article_profile: str, no_bonus: bool, ieee_ready: bool, y_scale: str, strict: bool, scenario_filter_tokens: list[str]) -> str:
     cmd_parts = [
         "mobilesfrdth",
         "plots",
@@ -114,6 +116,8 @@ def _build_plots_resume_command(*, aggregates_dir: Path, out_dir: Path, article_
         str(aggregates_dir),
         "--out",
         str(out_dir),
+        "--profile",
+        profile,
         "--article-profile",
         article_profile,
         "--y-scale",
@@ -676,7 +680,9 @@ def cmd_plots(args: argparse.Namespace) -> int:
         ScenarioFilters,
         build_resume_commands,
         generate_minimal_figures,
+        resolve_profile_behavior,
         validate_aggregates_inputs,
+        validate_publication_context,
     )
 
     errors = validate_aggregates_inputs(aggregates_dir)
@@ -692,17 +698,34 @@ def cmd_plots(args: argparse.Namespace) -> int:
         print(f"- Plots     : {resume_cmds['plots']}")
         return 2
 
+    requested_filters = ScenarioFilters.from_tokens(args.scenario_filter)
+    strict_context, facet_by = resolve_profile_behavior(
+        profile=args.profile,
+        strict_context=False,
+        facet_by=(),
+    )
+    if args.profile == "publication":
+        try:
+            validate_publication_context(requested_filters)
+        except ValueError as exc:
+            print(f"Erreur: {exc}")
+            return 2
+
     generated, traces = generate_minimal_figures(
         aggregates_dir=aggregates_dir,
         out_dir=out_dir,
-        filters=ScenarioFilters.from_tokens(args.scenario_filter),
+        filters=requested_filters,
         article_profile=args.article_profile,
         include_bonus=not args.no_bonus,
         verbose=args.verbose,
         ieee_ready=args.ieee_ready,
         y_scale=args.y_scale,
+        strict_context=strict_context,
+        facet_by=facet_by,
+        plot_profile=args.profile,
     )
     report = {
+        "plot_profile": args.profile,
         "article_profile": args.article_profile,
         "aggregates_dir": str(aggregates_dir),
         "out_dir": str(out_dir),
@@ -744,6 +767,7 @@ def cmd_plots(args: argparse.Namespace) -> int:
         resume_cmd = _build_plots_resume_command(
             aggregates_dir=aggregates_dir,
             out_dir=out_dir,
+            profile=args.profile,
             article_profile=args.article_profile,
             no_bonus=args.no_bonus,
             ieee_ready=args.ieee_ready,
@@ -965,6 +989,12 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         default=[],
         help="Filtre clé=val1,val2 (répétable), ex: --scenario-filter algo=ucb --scenario-filter mobility_model=rwp.",
+    )
+    plots_parser.add_argument(
+        "--profile",
+        choices=PLOTS_PROFILE_CHOICES,
+        default="exploratory",
+        help="Profil de plotting: exploratory (auto contexte + facettes) ou publication (contexte strict obligatoire).",
     )
     plots_parser.add_argument(
         "--article-profile",
