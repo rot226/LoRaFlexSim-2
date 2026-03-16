@@ -19,7 +19,7 @@ from ..scenarios import RECOMMENDED_TIME_BIN_S, validate_time_bin_s
 TC_PROTOCOL_DT_S = RECOMMENDED_TIME_BIN_S
 TC_PROTOCOL_TOLERANCE = 0.1
 TC_PROTOCOL_STABLE_BINS = 5
-DEFAULT_SINR_CDF_QUANTILE_STEP = 0.01
+DEFAULT_SINR_CDF_QUANTILE_STEP = 0.05
 STUDENT_T_975_BY_DF: dict[int, float] = {
     1: 12.706,
     2: 4.303,
@@ -583,6 +583,31 @@ def _build_sinr_quantile_grid(*, step: float) -> list[float]:
     return grid
 
 
+def _resolve_sinr_cdf_quantile_step(
+    *,
+    sinr_quantile_step: float,
+    sinr_cdf_granularity: float | None,
+) -> float:
+    """Résout le pas de quantile CDF à utiliser.
+
+    ``sinr_cdf_granularity`` est l'option recommandée (plus explicite côté API).
+    ``sinr_quantile_step`` est conservé pour compatibilité rétro.
+    """
+
+    if sinr_cdf_granularity is None:
+        return sinr_quantile_step
+    if not math.isclose(sinr_cdf_granularity, sinr_quantile_step, rel_tol=0.0, abs_tol=1e-12):
+        warnings.warn(
+            (
+                "sinr_cdf_granularity est prioritaire sur sinr_quantile_step "
+                f"({sinr_cdf_granularity:.6g} vs {sinr_quantile_step:.6g})."
+            ),
+            RuntimeWarning,
+            stacklevel=2,
+        )
+    return sinr_cdf_granularity
+
+
 def _nearest_rank_quantile(sorted_values: list[float], quantile: float) -> float:
     if not sorted_values:
         raise ValueError("quantile demandé sur une série vide")
@@ -628,6 +653,7 @@ def aggregate_runs(
     verbose: bool = False,
     verbose_warnings: bool = False,
     sinr_quantile_step: float = DEFAULT_SINR_CDF_QUANTILE_STEP,
+    sinr_cdf_granularity: float | None = None,
     ignored_runs_report: list[dict[str, str]] | None = None,
     sinr_cdf_metadata: dict[str, Any] | None = None,
 ) -> dict[str, Path]:
@@ -651,8 +677,12 @@ def aggregate_runs(
         skip_sf_distribution = True
 
     sinr_quantile_grid: list[float] = []
+    effective_sinr_quantile_step = _resolve_sinr_cdf_quantile_step(
+        sinr_quantile_step=sinr_quantile_step,
+        sinr_cdf_granularity=sinr_cdf_granularity,
+    )
     if not skip_sinr_cdf:
-        sinr_quantile_grid = _build_sinr_quantile_grid(step=sinr_quantile_step)
+        sinr_quantile_grid = _build_sinr_quantile_grid(step=effective_sinr_quantile_step)
 
     metric_names = [
         "pdr",
@@ -1299,7 +1329,7 @@ def aggregate_runs(
             sinr_cdf_metadata.update(
                 {
                     "enabled": True,
-                    "quantile_step": sinr_quantile_step,
+                    "quantile_step": effective_sinr_quantile_step,
                     "num_quantiles": len(sinr_quantile_grid),
                     "quantile_min": sinr_quantile_grid[0] if sinr_quantile_grid else None,
                     "quantile_max": sinr_quantile_grid[-1] if sinr_quantile_grid else None,
