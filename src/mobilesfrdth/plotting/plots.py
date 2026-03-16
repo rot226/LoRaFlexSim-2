@@ -179,7 +179,18 @@ ARTICLE_PROFILE_FILTERS: dict[str, dict[str, dict[str, set[str]]]] = {
     },
 }
 
-FILTER_COLUMN_ALIASES = {"n": "N", "N": "N", "mode": "mode", "algo": "algo"}
+FILTER_COLUMN_ALIASES = {
+    "n": "N",
+    "N": "N",
+    "mode": "mode",
+    "algo": "algo",
+    "speed": "speed",
+    "mobility_model": "mobility_model",
+    "model": "mobility_model",
+    "gateways": "gateways",
+    "sigma": "sigma_shadowing",
+    "sigma_shadowing": "sigma_shadowing",
+}
 MODE_VALUE_ALIASES = {
     "snir_off": "snir_off",
     "sniroff": "snir_off",
@@ -217,6 +228,20 @@ COLUMN_NAME_ALIASES = {
     "gateways": "gateways",
     "sigma": "sigma_shadowing",
     "sigma_shadowing": "sigma_shadowing",
+}
+
+FIGURE_FIXED_CONTEXT_COLUMNS: dict[str, tuple[str, ...]] = {
+    "fig01_pdr_vs_n_snir_off.png": ("speed", "mobility_model", "gateways", "sigma_shadowing", "mode"),
+    "fig02_pdr_vs_n_snir_on.png": ("speed", "mobility_model", "gateways", "sigma_shadowing", "mode"),
+    "fig03_der_vs_n_snir_off.png": ("speed", "mobility_model", "gateways", "sigma_shadowing", "mode"),
+    "fig04_der_vs_n_snir_on.png": ("speed", "mobility_model", "gateways", "sigma_shadowing", "mode"),
+    "fig05_throughput_vs_n_snir_off.png": ("speed", "mobility_model", "gateways", "sigma_shadowing", "mode"),
+    "fig06_throughput_vs_n_snir_on.png": ("speed", "mobility_model", "gateways", "sigma_shadowing", "mode"),
+    "fig07_sf_histogram_by_algo.png": ("mode", "N", "speed", "mobility_model", "gateways", "sigma_shadowing"),
+    "fig08_outage_probability_vs_n.png": ("speed", "mobility_model", "gateways", "sigma_shadowing", "mode"),
+    "fig09_energy_efficiency_vs_pdr_pareto.png": ("mode", "N", "speed", "mobility_model", "gateways", "sigma_shadowing"),
+    "fig10_sinr_cdf_fixed_scenario.png": ("mode", "N", "speed", "mobility_model", "gateways", "sigma_shadowing"),
+    "fig11_adaptation_cost_vs_speed.png": ("mode", "N", "mobility_model", "gateways", "sigma_shadowing"),
 }
 METRIC_COLUMN_ALIASES = {
     "pdr_mean": ("pdr_mean", "pdr"),
@@ -299,9 +324,13 @@ def _build_grouping_summary(
     if curve_column not in available_base_columns:
         available_base_columns.append(curve_column)
 
-    fixed_columns = [
+    default_fixed_columns = [
         column for column in available_base_columns if column != curve_column and column not in varying_columns
     ]
+    figure_fixed_columns = [
+        column for column in FIGURE_FIXED_CONTEXT_COLUMNS.get(figure, ()) if rows and column in rows[0] and column != curve_column
+    ]
+    fixed_columns = figure_fixed_columns or default_fixed_columns
 
     contexts_by_curve: dict[str, set[tuple[str, ...]]] = defaultdict(set)
     for row in rows:
@@ -319,6 +348,46 @@ def _build_grouping_summary(
         "mixed_curves": mixed_curves,
     }
     return (len(mixed_curves) == 0), summary
+
+
+def _select_reference_context_rows(
+    rows: list[dict[str, str]],
+    *,
+    figure: str,
+    strict_context: bool,
+) -> tuple[list[dict[str, str]], dict[str, object], bool]:
+    fixed_columns = [column for column in FIGURE_FIXED_CONTEXT_COLUMNS.get(figure, ()) if rows and column in rows[0]]
+    if not rows or not fixed_columns:
+        return rows, {"selected_context": {}, "contexts_available": 0}, True
+
+    by_context: dict[tuple[str, ...], list[dict[str, str]]] = defaultdict(list)
+    for row in rows:
+        key = tuple(str(row.get(column, "")) for column in fixed_columns)
+        by_context[key].append(row)
+
+    ranked = sorted(by_context.items(), key=lambda item: (-len(item[1]), item[0]))
+    if not ranked:
+        return rows, {"selected_context": {}, "contexts_available": 0}, True
+
+    selected_key, selected_rows = ranked[0]
+    contexts_available = len(ranked)
+    selected_context = {column: value for column, value in zip(fixed_columns, selected_key, strict=False)}
+    context_summary: dict[str, object] = {
+        "selected_context": selected_context,
+        "selected_context_rows": len(selected_rows),
+        "contexts_available": contexts_available,
+    }
+
+    if contexts_available > 1:
+        if strict_context:
+            _warn_skip(figure, f"incompatible grouped contexts merged in curves: strict mode, {contexts_available} contexts detected")
+            return [], context_summary, False
+        warnings.warn(
+            f"{figure}: {contexts_available} contextes détectés; contexte de référence sélectionné automatiquement: {selected_context}",
+            stacklevel=2,
+        )
+
+    return selected_rows, context_summary, True
 
 
 def _normalize_csv_row(row: dict[str, str]) -> dict[str, str]:
@@ -448,7 +517,7 @@ def _normalize_row_for_filtering(row: dict[str, str]) -> dict[str, str]:
     for raw_key, canonical_key in FILTER_COLUMN_ALIASES.items():
         if raw_key in normalized and canonical_key not in normalized:
             normalized[canonical_key] = normalized[raw_key]
-    for key in ("mode", "algo", "N"):
+    for key in ("mode", "algo", "N", "speed", "mobility_model", "gateways", "sigma_shadowing"):
         if key in normalized:
             normalized[key] = _normalize_filter_value(key, normalized.get(key, ""))
     return normalized
@@ -674,22 +743,40 @@ def _plot_xy_by_algo(
     return True
 
 
-def _validate_curve_grouping_or_skip(
+def _prepare_rows_for_grouping(
     rows: list[dict[str, str]],
     *,
     figure: str,
     curve_column: str,
     varying_columns: set[str],
-) -> tuple[bool, dict[str, object]]:
-    ok, summary = _build_grouping_summary(
+    strict_context: bool,
+) -> tuple[list[dict[str, str]], bool, dict[str, object]]:
+    scoped_rows, context_summary, context_ok = _select_reference_context_rows(
         rows,
+        figure=figure,
+        strict_context=strict_context,
+    )
+    if not context_ok:
+        return [], False, {
+            "figure": figure,
+            "curve_column": curve_column,
+            "varying_columns": sorted(varying_columns),
+            "fixed_columns": list(FIGURE_FIXED_CONTEXT_COLUMNS.get(figure, ())),
+            "contexts_by_curve": {},
+            "mixed_curves": [],
+            **context_summary,
+        }
+
+    ok, summary = _build_grouping_summary(
+        scoped_rows,
         figure=figure,
         curve_column=curve_column,
         varying_columns=varying_columns,
     )
+    summary.update(context_summary)
     if not ok:
         _warn_skip(figure, f"incompatible grouped contexts merged in curves: {summary['mixed_curves']}")
-    return ok, summary
+    return scoped_rows, ok, summary
 
 
 def _save_figure_variants(out_path: Path) -> None:
@@ -1479,6 +1566,7 @@ def generate_minimal_figures(
     verbose: bool = False,
     ieee_ready: bool = False,
     y_scale: str = "auto",
+    strict_context: bool = False,
 ) -> tuple[list[Path], list[FigureTrace]]:
     if article_profile not in ARTICLE_PROFILE_FILTERS:
         raise ValueError(f"Unknown article profile: {article_profile}")
@@ -1496,11 +1584,12 @@ def generate_minimal_figures(
         effective_filters = filters.merge(local_filter).merge(_resolve_profile_filter(article_profile, fig_name))
         selected = _apply_filters(payloads[source], effective_filters)
         out_path = out_dir / _stable_figure_name(fig_name)
-        grouping_ok, grouping_summary = _validate_curve_grouping_or_skip(
+        selected, grouping_ok, grouping_summary = _prepare_rows_for_grouping(
             selected,
             figure=fig_name,
             curve_column="algo",
             varying_columns={"N"},
+            strict_context=strict_context,
         )
         did_generate = (
             _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path, y_scale=y_scale)
@@ -1529,11 +1618,12 @@ def generate_minimal_figures(
     sf_filters = filters.merge(_resolve_profile_filter(article_profile, sf_name))
     sf_selected = _apply_filters(payloads["distribution_sf"], sf_filters)
     sf_path = out_dir / _stable_figure_name(sf_name)
-    grouping_ok, grouping_summary = _validate_curve_grouping_or_skip(
+    sf_selected, grouping_ok, grouping_summary = _prepare_rows_for_grouping(
         sf_selected,
         figure=sf_name,
         curve_column="algo",
         varying_columns={"sf"},
+        strict_context=strict_context,
     )
     did_generate = _plot_sf_distribution(sf_selected, sf_path) if grouping_ok else False
     traces.append(
@@ -1566,11 +1656,12 @@ def generate_minimal_figures(
                 varying_columns = {"quantile"}
             elif fig_name == "fig11_adaptation_cost_vs_speed.png":
                 varying_columns = {"speed"}
-            grouping_ok, grouping_summary = _validate_curve_grouping_or_skip(
+            selected, grouping_ok, grouping_summary = _prepare_rows_for_grouping(
                 selected,
                 figure=fig_name,
                 curve_column="algo",
                 varying_columns=varying_columns,
+                strict_context=strict_context,
             )
             if fig_name == "fig08_outage_probability_vs_n.png":
                 did_generate = _plot_outage_probability_vs_n(selected, out_path) if grouping_ok else False
@@ -1653,6 +1744,13 @@ def generate_minimal_figures(
 
     return generated, traces
 
+
+def _parse_context_option(context_expr: str | None) -> ScenarioFilters:
+    if not context_expr:
+        return ScenarioFilters.from_tokens([])
+    tokens = [item.strip() for item in context_expr.split(",") if item.strip()]
+    return ScenarioFilters.from_tokens(tokens)
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Generate core and contribution figures from aggregates/*.csv")
     parser.add_argument("--aggregates-dir", required=True, type=Path, help="Directory containing aggregated CSV files.")
@@ -1671,6 +1769,8 @@ def build_parser() -> argparse.ArgumentParser:
         default="core",
         help="Fixed article profile to enforce documented per-figure filters (core or full).",
     )
+    parser.add_argument("--context", default="", help="Contexte fixe explicite au format key=value,key=value (ex: speed=5,mobility_model=smooth,gateways=1,sigma=6).")
+    parser.add_argument("--strict-context", action="store_true", help="Active le mode strict: skip si plusieurs contextes fixes coexistent.")
     parser.add_argument(
         "--y-scale",
         choices=["auto", "full", "zoom"],
@@ -1685,11 +1785,12 @@ def main(argv: list[str] | None = None) -> int:
     generated, _ = generate_minimal_figures(
         aggregates_dir=args.aggregates_dir,
         out_dir=args.out,
-        filters=ScenarioFilters.from_tokens(args.scenario_filter),
+        filters=ScenarioFilters.from_tokens(args.scenario_filter).merge(_parse_context_option(args.context).by_column),
         article_profile=args.article_profile,
         include_bonus=not args.no_bonus,
         ieee_ready=args.ieee_ready,
         y_scale=args.y_scale,
+        strict_context=args.strict_context,
     )
     print(f"{len(generated)} figure(s) generated(s).")
     for path in generated:
