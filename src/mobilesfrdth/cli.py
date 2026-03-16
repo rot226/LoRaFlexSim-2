@@ -534,13 +534,24 @@ def cmd_plots(args: argparse.Namespace) -> int:
     if (aggregates_dir / "aggregates").is_dir():
         aggregates_dir = aggregates_dir / "aggregates"
 
-    from .plotting.plots import ScenarioFilters, generate_minimal_figures, validate_aggregates_inputs
+    from .plotting.plots import (
+        ScenarioFilters,
+        build_resume_commands,
+        generate_minimal_figures,
+        validate_aggregates_inputs,
+    )
 
     errors = validate_aggregates_inputs(aggregates_dir)
     if errors:
         print("Prérequis manquants pour plotting:")
         for err in errors:
             print(f"- {err}")
+        print("Cause probable: l'agrégation n'a pas produit tous les CSV car une partie des runs a échoué ou est incomplète.")
+        resume_cmds = build_resume_commands(aggregates_dir=aggregates_dir, out_dir=out_dir)
+        print("Commandes de reprise recommandées:")
+        print(f"- Run       : {resume_cmds['run']}")
+        print(f"- Aggregate : {resume_cmds['aggregate']}")
+        print(f"- Plots     : {resume_cmds['plots']}")
         return 2
 
     generated, traces = generate_minimal_figures(
@@ -567,6 +578,8 @@ def cmd_plots(args: argparse.Namespace) -> int:
                 "filters": trace.filters,
                 "num_points": trace.num_points,
                 "points_by_curve": trace.points_by_curve,
+                "source_rows_read": trace.source_rows_read,
+                "source_rows_usable": trace.source_rows_usable,
                 "generated": trace.generated,
             }
             for trace in traces
@@ -578,10 +591,13 @@ def cmd_plots(args: argparse.Namespace) -> int:
     for trace in traces:
         print(
             f"- {trace.figure} | source={trace.source} | filtres={trace.filters} "
+            f"| lignes_lues={trace.source_rows_read} | lignes_utilisables={trace.source_rows_usable} "
             f"| points={trace.num_points} | points/courbe={trace.points_by_curve}"
         )
     print(f"{len(generated)} figure(s) écrite(s) dans {out_dir}")
+    diagnostics_file = out_dir / "plots_diagnostics.json"
     print(f"Résumé de plots écrit dans {output_file}")
+    print(f"Diagnostic plots écrit dans {diagnostics_file}")
 
     if args.strict:
         from .qa.validate_results import validate_strict_plot_outputs
@@ -604,6 +620,7 @@ def cmd_plots(args: argparse.Namespace) -> int:
             "aggregates_dir": str(aggregates_dir),
             "out_dir": str(out_dir),
             "plots_summary": str(output_file),
+            "plots_diagnostics": str(diagnostics_file),
             "num_figures": len(generated),
             "figures": [
                 {
@@ -612,6 +629,8 @@ def cmd_plots(args: argparse.Namespace) -> int:
                     "filters": trace.filters,
                     "num_points": trace.num_points,
                     "points_by_curve": trace.points_by_curve,
+                    "source_rows_read": trace.source_rows_read,
+                    "source_rows_usable": trace.source_rows_usable,
                     "generated": trace.generated,
                 }
                 for trace in traces
