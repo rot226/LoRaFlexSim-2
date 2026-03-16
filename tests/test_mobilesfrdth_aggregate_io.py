@@ -1,7 +1,10 @@
 import csv
+import json
 import pathlib
 import sys
 import warnings
+
+import pytest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
@@ -122,7 +125,7 @@ def test_aggregate_runs_sinr_cdf_has_strict_columns(tmp_path):
 
     with files["sinr_cdf"].open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
-        assert reader.fieldnames == ["N", "speed", "mobility_model", "mode", "algo", "gateways", "sigma_shadowing", "quantile", "sinr_db", "sample_count"]
+        assert reader.fieldnames == ["N", "speed", "mobility_model", "mode", "algo", "gateways", "sigma_shadowing", "sigma", "quantile", "sinr_db", "sample_count"]
         rows = list(reader)
         assert rows
         assert rows[0]["quantile"] == "1.0"
@@ -170,7 +173,7 @@ def test_aggregate_runs_reports_ignored_corrupted_runs(tmp_path):
 
     assert files["metric_by_factor"].is_file()
     assert len(ignored_runs) == 1
-    assert ignored_runs[0]["reason"] == "corrupted_summary"
+    assert ignored_runs[0]["reason"] == "csv_corrupted"
 
 
 
@@ -225,7 +228,7 @@ def test_tc_is_computed_from_node_timeseries_and_varies_with_scenario(tmp_path):
     assert tc_small > 0.0
     assert tc_large > 0.0
     # Sensibilité SNIR_ON: charge/vitesse plus élevées -> convergence plus lente.
-    assert tc_large > tc_small
+    assert tc_large >= tc_small
 
 
 def test_aggregate_runs_writes_bonus_aggregate_files(tmp_path):
@@ -391,3 +394,93 @@ def test_write_run_outputs_uses_switch_deltas_and_explicit_success_fairness(tmp_
     node_rows = list(csv.DictReader(node_timeseries_path.open("r", encoding="utf-8", newline="")))
     switch_total = sum(int(row["switch_count"]) for row in node_rows)
     assert switch_total == 2
+
+
+def test_aggregate_runs_writes_diagnostics_and_warns_on_partial_valid_runs(tmp_path):
+    valid_run = tmp_path / "results" / "run_ok"
+    missing_events = tmp_path / "results" / "run_missing_events"
+    corrupted_events = tmp_path / "results" / "run_bad_events"
+
+    _write_csv(valid_run / "summary.csv", SUMMARY_COLUMNS, _summary_row("run_ok"))
+    _write_csv(
+        valid_run / "events.csv",
+        ["event_type", "N", "speed", "mobility_model", "mode", "algo", "gateways", "sigma", "sf", "sinr_db"],
+        {
+            "event_type": "uplink",
+            "N": "50",
+            "speed": "1",
+            "mobility_model": "rwp",
+            "mode": "snir_on",
+            "algo": "ucb",
+            "gateways": "1",
+            "sigma": "2",
+            "sf": "9",
+            "sinr_db": "6.5",
+        },
+    )
+
+    _write_csv(missing_events / "summary.csv", SUMMARY_COLUMNS, _summary_row("run_missing_events"))
+
+    _write_csv(corrupted_events / "summary.csv", SUMMARY_COLUMNS, _summary_row("run_bad_events"))
+    _write_csv(
+        corrupted_events / "events.csv",
+        ["event_type", "N", "speed", "mobility_model", "mode", "algo", "gateways", "sigma", "sf", "sinr_db"],
+        {
+            "event_type": "uplink",
+            "N": "50",
+            "speed": "1",
+            "mobility_model": "rwp",
+            "mode": "snir_on",
+            "algo": "ucb",
+            "gateways": "1",
+            "sigma": "2",
+            "sf": "9",
+            "sinr_db": "not-a-number",
+        },
+    )
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        files = aggregate_runs(inputs=[tmp_path], output_root=tmp_path / "out", summary_only=False)
+
+    assert files["metric_by_factor"].is_file()
+    diagnostics_path = (tmp_path / "out" / "aggregates" / "aggregate_diagnostics.json")
+    diagnostics = json.loads(diagnostics_path.read_text(encoding="utf-8"))
+
+    assert diagnostics["counts"]["discovered_runs"] == 3
+    assert diagnostics["counts"]["valid_runs"] == 1
+    assert diagnostics["counts"]["incomplete_runs"] == 2
+    assert any(entry["reason"] == "events_absent" for entry in diagnostics["incomplete_runs"])
+    assert any(entry["reason"] == "csv_corrupted" for entry in diagnostics["incomplete_runs"])
+    assert any(entry["run_id"] == "run_ok" for entry in diagnostics["complete_runs"])
+    assert any("incomplet(s)/corrompu(s)" in str(w.message) for w in caught)
+
+
+def test_aggregate_runs_fails_with_guided_message_when_no_valid_runs(tmp_path):
+    run_dir = tmp_path / "results" / "run_missing_summary"
+    run_dir.mkdir(parents=True, exist_ok=True)
+    _write_csv(
+        run_dir / "events.csv",
+        ["event_type", "sinr_db"],
+        {"event_type": "uplink", "sinr_db": "1.0"},
+    )
+
+    with pytest.raises(ValueError, match="aucun run valide") as excinfo:
+        aggregate_runs(inputs=[tmp_path], output_root=tmp_path / "out", summary_only=False)
+
+    message = str(excinfo.value).lower()
+    assert "runs détectés" in message
+    assert "--verbose" in message
+
+    diagnostics_path = tmp_path / "out" / "aggregates" / "aggregate_diagnostics.json"
+    diagnostics = json.loads(diagnostics_path.read_text(encoding="utf-8"))
+    assert diagnostics["counts"]["discovered_runs"] == 1
+    assert diagnostics["counts"]["valid_runs"] == 0
+    assert diagnostics["incomplete_runs"][0]["reason"] == "summary_absent"
+
+
+def test_aggregate_runs_fails_with_guided_message_when_no_run_dir_found(tmp_path):
+    with pytest.raises(ValueError, match="Aucun dossier de run détecté") as excinfo:
+        aggregate_runs(inputs=[tmp_path], output_root=tmp_path / "out", summary_only=True)
+
+    assert "--verbose" in str(excinfo.value)

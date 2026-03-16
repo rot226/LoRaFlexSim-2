@@ -524,12 +524,12 @@ def _collect_run_dirs(paths: Iterable[Path]) -> list[Path]:
         if path.is_file() and path.name == "summary.csv":
             run_dirs.append(path.parent)
             continue
-        if path.is_dir() and (path / "summary.csv").is_file():
+        if path.is_dir() and ((path / "summary.csv").is_file() or (path / "events.csv").is_file()):
             run_dirs.append(path)
             continue
         if path.is_dir() and (path / "results").is_dir():
             for candidate in sorted((path / "results").iterdir()):
-                if candidate.is_dir() and (candidate / "summary.csv").is_file():
+                if candidate.is_dir():
                     run_dirs.append(candidate)
     unique = []
     seen = set()
@@ -538,8 +538,6 @@ def _collect_run_dirs(paths: Iterable[Path]) -> list[Path]:
         if resolved not in seen:
             seen.add(resolved)
             unique.append(item)
-    if not unique:
-        raise ValueError("Aucun run valide trouvé (summary.csv introuvable).")
     return unique
 
 
@@ -578,6 +576,15 @@ def aggregate_runs(
     run_dirs = _collect_run_dirs(inputs)
     out_dir = output_root / "aggregates"
     out_dir.mkdir(parents=True, exist_ok=True)
+    diagnostics_path = out_dir / "aggregate_diagnostics.json"
+
+    if not run_dirs:
+        verification_hint = "python -m mobilesfrdth.cli aggregate --results <dossier_résultats> --out <dossier_sortie> --verbose"
+        raise ValueError(
+            "Aucun dossier de run détecté dans les entrées. "
+            "Vérifiez que vos runs sont sous <input>/results/<run_id>/. "
+            f"Commande de vérification: {verification_hint}"
+        )
 
     if summary_only:
         skip_sinr_cdf = True
@@ -639,6 +646,27 @@ def aggregate_runs(
     processed = 0
     skipped = 0
     ignored_runs: list[dict[str, str]] = []
+    complete_runs: list[dict[str, str]] = []
+    incomplete_runs: list[dict[str, str]] = []
+
+    def _record_incomplete(*, run_dir: Path, reason: str, details: str) -> None:
+        nonlocal skipped
+        skipped += 1
+        entry = {"run_dir": str(run_dir), "reason": reason, "details": details}
+        ignored_runs.append(entry)
+        incomplete_runs.append(entry)
+
+    def _write_diagnostics() -> None:
+        diagnostics_payload = {
+            "complete_runs": complete_runs,
+            "incomplete_runs": incomplete_runs,
+            "counts": {
+                "discovered_runs": total,
+                "valid_runs": processed,
+                "incomplete_runs": len(incomplete_runs),
+            },
+        }
+        diagnostics_path.write_text(json.dumps(diagnostics_payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     def _coerce_float(value: Any, *, field: str, allow_inf: bool = False) -> float:
         try:
@@ -661,14 +689,14 @@ def aggregate_runs(
             if strict:
                 raise FileNotFoundError(message)
             warnings.warn(message, RuntimeWarning, stacklevel=2)
-            skipped += 1
-            ignored_runs.append(
-                {
-                    "run_dir": str(run_dir),
-                    "reason": "missing_files",
-                    "details": ", ".join(sorted(missing_files)),
-                }
-            )
+            missing_set = set(missing_files)
+            if "summary.csv" in missing_set:
+                reason = "summary_absent"
+            elif "events.csv" in missing_set:
+                reason = "events_absent"
+            else:
+                reason = "missing_files"
+            _record_incomplete(run_dir=run_dir, reason=reason, details=", ".join(sorted(missing_files)))
             continue
 
         summary_rows = list(_iter_csv(run_dir / "summary.csv"))
@@ -677,12 +705,12 @@ def aggregate_runs(
             if strict:
                 raise ValueError(message)
             warnings.warn(message, RuntimeWarning, stacklevel=2)
-            skipped += 1
-            ignored_runs.append({"run_dir": str(run_dir), "reason": "empty_summary", "details": "summary.csv vide"})
+            _record_incomplete(run_dir=run_dir, reason="csv_corrupted", details="summary.csv vide")
             continue
 
         valid_summary_rows: list[Mapping[str, str]] = []
         parsed_summary_values: list[tuple[tuple[str, ...], dict[str, float]]] = []
+        run_rejected = False
         for row in summary_rows:
             try:
                 key = tuple(_factor_value(row, column) for column in factor_columns)
@@ -701,10 +729,7 @@ def aggregate_runs(
                 if strict:
                     raise ValueError(message) from exc
                 warnings.warn(message, RuntimeWarning, stacklevel=2)
-                skipped += 1
-                ignored_runs.append({"run_dir": str(run_dir), "reason": "corrupted_summary", "details": str(exc)})
-                valid_summary_rows = []
-                parsed_summary_values = []
+                _record_incomplete(run_dir=run_dir, reason="csv_corrupted", details=f"summary.csv: {exc}")
                 break
 
             if not math.isclose(tc_dt_s, TC_PROTOCOL_DT_S, rel_tol=0.0, abs_tol=1e-9):
@@ -717,6 +742,39 @@ def aggregate_runs(
                     stacklevel=2,
                 )
 
+            valid_summary_rows.append(row)
+            parsed_summary_values.append((key, parsed_metrics))
+
+        if not valid_summary_rows:
+            continue
+
+        run_sinr_values: dict[tuple[str, ...], list[float]] = defaultdict(list)
+        run_sf_counter: dict[tuple[str, ...], Counter[str]] = defaultdict(Counter)
+        run_uplinks: list[dict[str, str]] = []
+
+        if not summary_only:
+            try:
+                for row in _iter_csv(run_dir / "events.csv"):
+                    if row.get("event_type") != "uplink":
+                        continue
+                    key = tuple(_factor_value(row, column) for column in factor_columns)
+                    if not skip_sf_distribution:
+                        run_sf_counter[key][row.get("sf", "")] += 1
+                    if not skip_sinr_cdf:
+                        run_sinr_values[key].append(_coerce_float(row.get("sinr_db", 0.0), field="sinr_db"))
+                    run_uplinks.append(row)
+            except ValueError as exc:
+                message = f"Run corrompu ignoré: {run_dir} (events.csv: {exc})"
+                if strict:
+                    raise ValueError(message) from exc
+                warnings.warn(message, RuntimeWarning, stacklevel=2)
+                _record_incomplete(run_dir=run_dir, reason="csv_corrupted", details=f"events.csv: {exc}")
+                run_rejected = True
+
+        if run_rejected:
+            continue
+
+        for row in valid_summary_rows:
             convergence_writer.writerow(
                 {
                     **{column: row.get(column, "") for column in SCENARIO_ID_COLUMNS},
@@ -733,11 +791,6 @@ def aggregate_runs(
                     "switch_count": row.get("switch_count", ""),
                 }
             )
-            valid_summary_rows.append(row)
-            parsed_summary_values.append((key, parsed_metrics))
-
-        if not valid_summary_rows:
-            continue
 
         for key, parsed_metrics in parsed_summary_values:
             bucket = metric_accumulators[key]
@@ -745,18 +798,15 @@ def aggregate_runs(
                 bucket[metric_name].append(metric_value)
 
         processed += 1
+        complete_runs.append({"run_dir": str(run_dir), "run_id": str(valid_summary_rows[0].get("run_id", ""))})
 
         if summary_only:
             continue
 
-        for row in _iter_csv(run_dir / "events.csv"):
-            if row.get("event_type") != "uplink":
-                continue
-            key = tuple(_factor_value(row, column) for column in factor_columns)
-            if not skip_sf_distribution:
-                sf_counter[key][row.get("sf", "")] += 1
-            if not skip_sinr_cdf:
-                sinr_values[key].append(float(row.get("sinr_db", 0.0) or 0.0))
+        for key, counts in run_sf_counter.items():
+            sf_counter[key].update(counts)
+        for key, run_values in run_sinr_values.items():
+            sinr_values[key].extend(run_values)
 
         run_summary = valid_summary_rows[0]
         if run_summary is None:
@@ -764,11 +814,7 @@ def aggregate_runs(
         run_algo = str(run_summary.get("algo", "")).lower()
         if run_algo not in {"ucb", "ucb_forget"}:
             continue
-        uplinks = [
-            row
-            for row in _iter_csv(run_dir / "events.csv")
-            if row.get("event_type") == "uplink"
-        ]
+        uplinks = run_uplinks
         if not uplinks:
             continue
         ucb_tracking_rows.append(
@@ -787,8 +833,27 @@ def aggregate_runs(
     convergence_handle.close()
     fairness_handle.close()
 
+    _write_diagnostics()
+
     if processed == 0:
-        raise ValueError("Aucun run complet à agréger.")
+        verification_hint = "python -m mobilesfrdth.cli aggregate --results <dossier_résultats> --out <dossier_sortie> --verbose"
+        if total == 0:
+            raise ValueError(
+                "Aucun run trouvé. "
+                "Vérifiez l'arborescence des entrées et relancez avec: "
+                f"{verification_hint}"
+            )
+        raise ValueError(
+            "Runs détectés mais aucun run valide à agréger (incomplets/corrompus). "
+            f"Consultez {diagnostics_path} et vérifiez avec: {verification_hint}"
+        )
+
+    if skipped:
+        warnings.warn(
+            f"{skipped} run(s) incomplet(s)/corrompu(s) ignoré(s). Détails: {diagnostics_path}",
+            RuntimeWarning,
+            stacklevel=2,
+        )
 
     print(f"Dossiers traités: {processed}/{total}")
     if skipped:
@@ -1147,7 +1212,7 @@ def summarize_run_completeness(inputs: Iterable[Path]) -> dict[str, int | None]:
     """Retourne un état de complétude entre runs trouvés et jobs attendus."""
 
     run_dirs = _collect_run_dirs(inputs)
-    found_runs = len(run_dirs)
+    found_runs = sum(1 for run_dir in run_dirs if (run_dir / "summary.csv").is_file())
 
     expected_runs = 0
     has_jobs_manifest = False
