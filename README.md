@@ -513,16 +513,23 @@ python -m mobilesfrdth run --config experiments/default.yaml --out runs\paper_co
 
 Workflow recommandé :
 
-1. **Run** de la campagne (`mobilesfrdth run ...`),
+1. **Run large** de la campagne (`mobilesfrdth run ...`),
 2. **Aggregate** des résultats (`mobilesfrdth aggregate ...`),
-3. **Plots** (`mobilesfrdth plots ...`) vers un dossier de figures versionné.
+3. **Plots** (`mobilesfrdth plots ...`) avec filtres de scénario de référence
+   (ou une déclinaison par facettes si votre outillage ajoute `--facet-by`).
 
 Exemple type (adapter les chemins) :
 
 ```powershell
-python -m mobilesfrdth run --config experiments/default.yaml --out runs\paper_core --profile paper_core --resume
-python -m mobilesfrdth aggregate --input runs\paper_core --out runs\paper_core\aggregates
-python -m mobilesfrdth plots --input runs\paper_core\aggregates --out figures\paper_core --profile core
+python -m mobilesfrdth run --config experiments/default.yaml --out runs\paper_large --profile paper_extended --resume
+python -m mobilesfrdth aggregate --results runs\paper_large --out runs\paper_large\aggregates
+python -m mobilesfrdth plots --aggregates-dir runs\paper_large\aggregates --out figures\paper_large_ref --scenario-filter mode=snir_on --scenario-filter mobility_model=smooth --scenario-filter speed=5 --scenario-filter gateways=1 --scenario-filter sigma=6
+```
+
+Variante facettée (si votre wrapper expose `--facet-by`) :
+
+```powershell
+python -m mobilesfrdth plots --aggregates-dir runs\paper_large\aggregates --out figures\paper_large_facet --scenario-filter mode=snir_on --scenario-filter mobility_model=smooth --scenario-filter speed=5 --scenario-filter gateways=1 --scenario-filter sigma=6 --facet-by algo
 ```
 
 ### Commandes PowerShell exactes (Windows 11)
@@ -535,24 +542,24 @@ python -m mobilesfrdth plots --input runs\paper_core\aggregates --out figures\pa
 $env:PYTHONPATH = (Resolve-Path .\src).Path
 
 # 2) RUN
-python -m mobilesfrdth run --config experiments/default.yaml --out runs\paper_core --profile paper_core --resume
+python -m mobilesfrdth run --config experiments/default.yaml --out runs\paper_large --profile paper_extended --resume
 
 # 3) AGGREGATE
-python -m mobilesfrdth aggregate --input runs\paper_core --out runs\paper_core\aggregates
+python -m mobilesfrdth aggregate --results runs\paper_large --out runs\paper_large\aggregates
 
 # 4) PLOTS
-python -m mobilesfrdth plots --input runs\paper_core\aggregates --out figures\paper_core --profile core
+python -m mobilesfrdth plots --aggregates-dir runs\paper_large\aggregates --out figures\paper_large_ref --scenario-filter mode=snir_on --scenario-filter mobility_model=smooth --scenario-filter speed=5 --scenario-filter gateways=1 --scenario-filter sigma=6
 
 # 5) VALIDATION (recommandé)
-python -m mobilesfrdth validate --aggregates-dir runs\paper_core\aggregates --strict
+python -m mobilesfrdth validate --aggregates-dir runs\paper_large\aggregates --strict
 ```
 
 Alternative wrapper PowerShell (si l'entrypoint installé pose problème) :
 
 ```powershell
-.\scripts\mobilesfrdth.ps1 run --config experiments/default.yaml --out runs\paper_core --profile paper_core --resume
-.\scripts\mobilesfrdth.ps1 aggregate --input runs\paper_core --out runs\paper_core\aggregates
-.\scripts\mobilesfrdth.ps1 plots --input runs\paper_core\aggregates --out figures\paper_core --profile core
+.\scripts\mobilesfrdth.ps1 run --config experiments/default.yaml --out runs\paper_large --profile paper_extended --resume
+.\scripts\mobilesfrdth.ps1 aggregate --results runs\paper_large --out runs\paper_large\aggregates
+.\scripts\mobilesfrdth.ps1 plots --aggregates-dir runs\paper_large\aggregates --out figures\paper_large_ref --scenario-filter mode=snir_on --scenario-filter mobility_model=smooth --scenario-filter speed=5 --scenario-filter gateways=1 --scenario-filter sigma=6
 ```
 
 ### Erreurs fréquentes

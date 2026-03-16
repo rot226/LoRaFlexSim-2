@@ -378,7 +378,20 @@ def build_parser() -> argparse.ArgumentParser:
     aggregate_parser.set_defaults(func=cmd_aggregate)
 
     plots_parser = subparsers.add_parser(
-        "plots", help="Génère les figures fig01..fig10 (et bonus fig11..fig12) depuis aggregates/*.csv."
+        "plots",
+        help="Génère les figures fig01..fig10 (et bonus fig11..fig12) depuis aggregates/*.csv.",
+        description=(
+            "Étape 3 du pipeline officiel: après un run large puis aggregate, "
+            "produit les figures à partir des agrégats."
+        ),
+        epilog=(
+            "Exemple scénario de référence (PowerShell):\n"
+            "  python -m mobilesfrdth plots --aggregates-dir runs\\paper_large\\aggregates --out figures\\paper_large_ref "
+            "--scenario-filter mode=snir_on --scenario-filter mobility_model=smooth --scenario-filter speed=5 "
+            "--scenario-filter gateways=1 --scenario-filter sigma=6\n"
+            "Astuce: si votre outillage expose un mode facetté (--facet-by), vous pouvez l'utiliser en alternative "
+            "aux filtres pour décliner les figures par dimension."
+        ),
     )
     plots_parser.add_argument(
         "--aggregates-dir",
@@ -391,7 +404,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--scenario-filter",
         action="append",
         default=[],
-        help="Filtre clé=val1,val2 (répétable), ex: --scenario-filter algo=ucb --scenario-filter mobility_model=rwp.",
+        help=(
+            "Filtre clé=val1,val2 (répétable), ex: --scenario-filter mode=snir_on --scenario-filter mobility_model=smooth "
+            "--scenario-filter speed=5 --scenario-filter gateways=1 --scenario-filter sigma=6."
+        ),
     )
     plots_parser.add_argument("--no-bonus", action="store_true", help="Désactive les figures bonus fig11/fig12.")
     plots_parser.set_defaults(func=cmd_plots)
