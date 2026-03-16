@@ -1,3 +1,4 @@
+import json
 import pathlib
 import sys
 from types import SimpleNamespace
@@ -255,3 +256,63 @@ def test_build_parser_run_grid_help_mentions_time_bin_recommendation(capsys):
     assert "comparabilité Tc" in captured.out
     assert "autres valeurs > 0" in captured.out
     assert "autorisées" in captured.out
+
+
+def test_cmd_plots_no_figure_prints_resume_commands_and_non_zero(monkeypatch, tmp_path, capsys):
+    aggregates_dir = tmp_path / "aggregates"
+    aggregates_dir.mkdir()
+    figures_dir = tmp_path / "figures"
+
+    def _fake_validate_aggregates_inputs(_):
+        return []
+
+    def _fake_resolve_profile_behavior(**kwargs):
+        return False, ()
+
+    def _fake_generate_minimal_figures(**kwargs):
+        diagnostics = kwargs["out_dir"] / "plots_diagnostics.json"
+        diagnostics.write_text(
+            json.dumps(
+                {
+                    "figures": [
+                        {
+                            "grouping": {
+                                "selected_context": {
+                                    "mode": "SNIR_ON",
+                                    "speed": "3",
+                                    "mobility_model": "rwp",
+                                }
+                            }
+                        }
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        return [], []
+
+    monkeypatch.setattr("mobilesfrdth.plotting.plots.validate_aggregates_inputs", _fake_validate_aggregates_inputs)
+    monkeypatch.setattr("mobilesfrdth.plotting.plots.resolve_profile_behavior", _fake_resolve_profile_behavior)
+    monkeypatch.setattr("mobilesfrdth.plotting.plots.generate_minimal_figures", _fake_generate_minimal_figures)
+
+    args = cli.build_parser().parse_args(
+        [
+            "plots",
+            "--aggregates-dir",
+            str(aggregates_dir),
+            "--out",
+            str(figures_dir),
+            "--scenario-filter",
+            "algo=UCB",
+        ]
+    )
+
+    exit_code = cli.cmd_plots(args)
+
+    out = capsys.readouterr().out
+    assert exit_code == cli.PLOTS_NO_FIGURES_EXIT_CODE
+    assert "plots_diagnostics.json" in out
+    assert "--scenario-filter mode=SNIR_ON" in out
+    assert "--scenario-filter speed=3" in out
+    assert "--scenario-filter model=rwp" in out
+    assert "Exemple PowerShell direct" in out

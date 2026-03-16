@@ -134,6 +134,36 @@ def _build_plots_resume_command(*, aggregates_dir: Path, out_dir: Path, profile:
     return " ".join(shlex.quote(part) for part in cmd_parts)
 
 
+def _build_plots_resume_command_powershell(*, aggregates_dir: Path, out_dir: Path, profile: str, article_profile: str, no_bonus: bool, ieee_ready: bool, y_scale: str, strict: bool, scenario_filter_tokens: list[str]) -> str:
+    cmd_parts = [
+        "mobilesfrdth",
+        "plots",
+        "--aggregates-dir",
+        str(aggregates_dir),
+        "--out",
+        str(out_dir),
+        "--profile",
+        profile,
+        "--article-profile",
+        article_profile,
+        "--y-scale",
+        y_scale,
+    ]
+    if no_bonus:
+        cmd_parts.append("--no-bonus")
+    if ieee_ready:
+        cmd_parts.append("--ieee-ready")
+    if strict:
+        cmd_parts.append("--strict")
+    for token in scenario_filter_tokens:
+        cmd_parts.extend(["--scenario-filter", token])
+
+    def _quote_for_powershell(value: str) -> str:
+        return '"' + value.replace('"', '`"') + '"'
+
+    return " ".join(_quote_for_powershell(part) for part in cmd_parts)
+
+
 
 def _existing_file(value: str) -> Path:
     path = Path(value)
@@ -775,7 +805,18 @@ def cmd_plots(args: argparse.Namespace) -> int:
             strict=args.strict,
             scenario_filter_tokens=scenario_filter_tokens,
         )
-        print("Aucune figure générée : proposition de relance avec --scenario-filter cohérent.")
+        resume_cmd_powershell = _build_plots_resume_command_powershell(
+            aggregates_dir=aggregates_dir,
+            out_dir=out_dir,
+            profile=args.profile,
+            article_profile=args.article_profile,
+            no_bonus=args.no_bonus,
+            ieee_ready=args.ieee_ready,
+            y_scale=args.y_scale,
+            strict=args.strict,
+            scenario_filter_tokens=scenario_filter_tokens,
+        )
+        print("Aucune figure générée : commandes de relance avec --scenario-filter basées sur le contexte dominant.")
         if dominant_context:
             print(
                 "Contexte dominant détecté (via plots_diagnostics.json): "
@@ -783,7 +824,9 @@ def cmd_plots(args: argparse.Namespace) -> int:
             )
         else:
             print("Contexte dominant non détecté dans plots_diagnostics.json (fallback sur filtres actuels).")
-        print(f"Commande suggérée: {resume_cmd}")
+        print(f"Diagnostic à consulter: {diagnostics_file}")
+        print(f"Commande (bash/zsh): {resume_cmd}")
+        print(f"Exemple PowerShell direct: {resume_cmd_powershell}")
         print(f"Documentation: {PLOTS_NO_FIGURES_README_LINK}")
         exit_code = PLOTS_NO_FIGURES_EXIT_CODE
 
