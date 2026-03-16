@@ -111,6 +111,8 @@ SUMMARY_COLUMNS = [
     "der",
     "throughput_bps",
     "Tc_s",
+    "tc_method",
+    "tc_dt_s",
     "jain_fairness",
     "airtime_total_s",
     "airtime_mean_per_node_s",
@@ -208,8 +210,8 @@ def write_run_outputs(
 ) -> dict[str, Path]:
     """Écrit les artefacts d'un run dans ``results/<run_id>/``.
 
-    Protocole fixe pour le calcul de ``Tc_s`` (convergence) :
-    - ``dt_s = 10`` secondes (binning imposé via ``time_bin_s``)
+    Protocole de référence pour le calcul de ``Tc_s`` (convergence) :
+    - ``dt_s = 10`` secondes comme référence protocolaire
     - ``tolerance = 0.1`` (seuil à ``1 - tolerance = 0.9`` du régime stationnaire)
     - ``stable_bins = 5`` bins de fin de série pour estimer le régime stationnaire
 
@@ -229,9 +231,18 @@ def write_run_outputs(
         raise ValueError("duration_s doit être > 0")
     if time_bin_s <= 0:
         raise ValueError("time_bin_s doit être > 0")
+    tc_method = "protocol_dt"
+    tc_dt_s = TC_PROTOCOL_DT_S
     if not math.isclose(time_bin_s, TC_PROTOCOL_DT_S, rel_tol=0.0, abs_tol=1e-9):
-        raise ValueError(
-            f"time_bin_s doit être fixé à {TC_PROTOCOL_DT_S}s pour respecter le protocole Tc"
+        tc_method = "native_dt"
+        tc_dt_s = time_bin_s
+        warnings.warn(
+            (
+                f"Run {run_id}: time_bin_s={time_bin_s:.6g}s diffère du protocole Tc "
+                f"({TC_PROTOCOL_DT_S:.1f}s). Tc sera calculé avec le pas natif (tc_dt_s={tc_dt_s:.6g}s)."
+            ),
+            RuntimeWarning,
+            stacklevel=2,
         )
 
     run_dir = output_root / "results" / run_id
@@ -460,7 +471,7 @@ def write_run_outputs(
     pdr_binary_series = [1.0 if value >= (1.0 - TC_PROTOCOL_TOLERANCE) else 0.0 for value in pdr_series]
     tc_from_timeseries = convergence_tc(
         pdr_binary_series,
-        dt_s=TC_PROTOCOL_DT_S,
+        dt_s=tc_dt_s,
         stationary_tail_bins=TC_PROTOCOL_STABLE_BINS,
         target_ratio=1.0 - TC_PROTOCOL_TOLERANCE,
     )
@@ -480,6 +491,8 @@ def write_run_outputs(
         "der": der(success_count, generated_packets),
         "throughput_bps": throughput(delivered_bytes, duration_s),
         "Tc_s": tc_from_timeseries,
+        "tc_method": tc_method,
+        "tc_dt_s": tc_dt_s,
         "jain_fairness": jain_fairness(fairness_node_successes),
         "airtime_total_s": airtime_total,
         "airtime_mean_per_node_s": airtime_total / max(len(node_ids), 1),
@@ -673,6 +686,9 @@ def aggregate_runs(
         for row in summary_rows:
             try:
                 key = tuple(_factor_value(row, column) for column in factor_columns)
+                tc_dt_raw = row.get("tc_dt_s", "")
+                tc_dt_s = TC_PROTOCOL_DT_S if tc_dt_raw in ("", None) else _coerce_float(tc_dt_raw, field="tc_dt_s")
+                tc_method = str(row.get("tc_method", "protocol_dt") or "protocol_dt")
                 parsed_metrics: dict[str, float] = {}
                 for metric_name in metric_names:
                     parsed_metrics[metric_name] = _coerce_float(
@@ -690,6 +706,16 @@ def aggregate_runs(
                 valid_summary_rows = []
                 parsed_summary_values = []
                 break
+
+            if not math.isclose(tc_dt_s, TC_PROTOCOL_DT_S, rel_tol=0.0, abs_tol=1e-9):
+                warnings.warn(
+                    (
+                        f"Batch: run {run_dir} utilise tc_dt_s={tc_dt_s:.6g}s (méthode '{tc_method}') "
+                        f"au lieu du protocole {TC_PROTOCOL_DT_S:.1f}s."
+                    ),
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
 
             convergence_writer.writerow(
                 {
