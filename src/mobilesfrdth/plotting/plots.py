@@ -977,6 +977,12 @@ def _find_missing_columns(rows: list[dict[str, str]], *, expected_columns: list[
     return missing
 
 
+def _available_columns(rows: list[dict[str, str]]) -> list[str]:
+    if not rows:
+        return []
+    return sorted(rows[0].keys())
+
+
 def _prepare_adaptation_samples(
     metric_rows: list[dict[str, str]],
     tc_rows: list[dict[str, str]],
@@ -1001,16 +1007,21 @@ def _prepare_adaptation_samples(
     if not has_tc_in_metric and not has_tc_fallback:
         if tc_rows and tc_missing_for_fallback:
             missing_columns["convergence_tc"] = tc_missing_for_fallback
+        available_metric = _available_columns(metric_rows)
+        available_tc = _available_columns(tc_rows)
         reason = (
             "missing required Tc source for adaptation cost: expected Tc_s_mean in metric_by_factor.csv "
             "or Tc_s in convergence_tc.csv"
+            f" (metric_by_factor columns={available_metric}, convergence_tc columns={available_tc})"
         )
         return {}, reason, missing_columns
 
     if missing_columns:
+        available_metric = _available_columns(metric_rows)
         reason = (
             "missing required columns for adaptation cost computation: "
             "adaptation_cost = switch_count_mean + Tc"
+            f" (metric_by_factor columns={available_metric})"
         )
         return {}, reason, missing_columns
 
@@ -1067,14 +1078,38 @@ def _prepare_adaptation_samples(
     return grouped, None, {}
 
 
+def _build_adaptation_plot_points(
+    metric_rows: list[dict[str, str]],
+    tc_rows: list[dict[str, str]],
+) -> tuple[dict[str, list[tuple[float, float, float]]], str | None, dict[str, list[str]]]:
+    grouped, reason, missing_columns = _prepare_adaptation_samples(metric_rows, tc_rows)
+    if reason is not None:
+        return {}, reason, missing_columns
+
+    points_by_algo: dict[str, list[tuple[float, float, float]]] = {}
+    for algo in sorted(grouped):
+        points: list[tuple[float, float, float]] = []
+        for speed in sorted(grouped[algo]):
+            ci = ci95_from_samples(grouped[algo][speed])
+            if ci is None:
+                continue
+            points.append((speed, ci.mean, ci.half_width))
+        if points:
+            points_by_algo[algo] = points
+
+    if not points_by_algo:
+        return {}, "points=0: no plottable adaptation cost point after speed/Tc alignment and CI95 computation", {}
+    return points_by_algo, None, {}
+
+
 def _count_adaptation_points(
     metric_rows: list[dict[str, str]],
     tc_rows: list[dict[str, str]],
 ) -> tuple[int, dict[str, int]]:
-    grouped, _, _ = _prepare_adaptation_samples(metric_rows, tc_rows)
-    if not grouped:
+    points_by_algo, _, _ = _build_adaptation_plot_points(metric_rows, tc_rows)
+    if not points_by_algo:
         return 0, {}
-    counts_by_curve = {algo: sum(len(values) for values in per_speed.values()) for algo, per_speed in grouped.items()}
+    counts_by_curve = {algo: len(points) for algo, points in points_by_algo.items()}
     return sum(counts_by_curve.values()), dict(sorted(counts_by_curve.items()))
 
 def _resolve_ci95_columns(rows: list[dict[str, str]], *, metric_col: str) -> tuple[str, str, str] | None:
@@ -1780,24 +1815,19 @@ def _plot_adaptation_cost_vs_speed(
     out_path: Path,
 ) -> tuple[bool, str | None, dict[str, list[str]]]:
     fig_name = out_path.name
-    grouped, reason, missing_columns = _prepare_adaptation_samples(metric_rows, tc_rows)
+    points_by_algo, reason, missing_columns = _build_adaptation_plot_points(metric_rows, tc_rows)
     if reason is not None:
         _warn_skip(fig_name, reason)
         return False, reason, missing_columns
 
     plt.figure(figsize=(8, 5))
     plotted = 0
-    for algo in sorted(grouped):
-        speeds = sorted(grouped[algo])
-        means: list[float] = []
-        errors: list[float] = []
-        for speed in speeds:
-            ci = ci95_from_samples(grouped[algo][speed])
-            if ci is None:
-                continue
-            means.append(ci.mean)
-            errors.append(ci.half_width)
-        if means:
+    for algo in sorted(points_by_algo):
+        points = points_by_algo[algo]
+        speeds = [point[0] for point in points]
+        means = [point[1] for point in points]
+        errors = [point[2] for point in points]
+        if points:
             plt.errorbar(speeds, means, yerr=errors, capsize=3, label=algo, **_algo_style_kwargs(algo))
             plotted += 1
 
@@ -1960,7 +1990,9 @@ def generate_minimal_figures(
                         )
                         adaptation_points, adaptation_points_by_curve = _count_adaptation_points(selected, tc_selected)
                         if adaptation_points == 0 and adaptation_empty_reason is None:
-                            adaptation_empty_reason = "points=0: no adaptation samples after column mapping and numeric cleanup"
+                            adaptation_empty_reason = (
+                                "points=0: no plottable adaptation cost point after speed/Tc alignment and CI95 computation"
+                            )
                     else:
                         did_generate = False
                         adaptation_empty_reason = "grouping constraints not satisfied"
