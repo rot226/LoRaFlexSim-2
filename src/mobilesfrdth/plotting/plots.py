@@ -840,6 +840,9 @@ def _prepare_rows_for_grouping(
         varying_columns=varying_columns,
     )
     summary.update(context_summary)
+    summary.setdefault("context_used", context_summary.get("selected_context", {}))
+    summary.setdefault("context_selection_mode", "deterministic_most_frequent")
+    summary.setdefault("context_candidates", context_summary.get("contexts_available", 0))
     if not ok:
         fixed_columns = tuple(str(column) for column in summary.get("fixed_columns", []))
         if strict_context:
@@ -858,6 +861,9 @@ def _prepare_rows_for_grouping(
             summary["selected_grouping_context"] = majority_context
             summary["selected_grouping_context_rows"] = len(chosen_rows)
             summary["grouping_contexts_available"] = len(ranked_contexts)
+            summary["context_used"] = majority_context
+            summary["context_selection_mode"] = "deterministic_grouping_majority"
+            summary["context_candidates"] = len(ranked_contexts)
             warnings.warn(
                 f"{figure}: regroupement ambigu détecté ({summary['mixed_curves']}); "
                 f"contexte majoritaire retenu automatiquement: {majority_context}",
@@ -876,10 +882,20 @@ def _prepare_rows_for_grouping(
                     "selected_grouping_context": majority_context,
                     "selected_grouping_context_rows": len(chosen_rows),
                     "grouping_contexts_available": len(ranked_contexts),
+                    "context_used": majority_context,
+                    "context_selection_mode": "deterministic_grouping_majority",
+                    "context_candidates": len(ranked_contexts),
                 }
             )
             if ok_retry:
                 return chosen_rows, True, retry_summary
+            # Fallback non strict: conserver malgré ambiguïté résiduelle pour éviter un skip global.
+            warnings.warn(
+                f"{figure}: ambiguïté résiduelle après sélection majoritaire; "
+                "traçage maintenu en mode non strict.",
+                stacklevel=2,
+            )
+            return chosen_rows, True, retry_summary
 
         _warn_skip(figure, f"incompatible grouped contexts merged in curves: {summary['mixed_curves']}")
     return scoped_rows, ok, summary
@@ -1869,98 +1885,113 @@ def generate_minimal_figures(
 
     sf_name = "fig07_sf_histogram_by_algo.png"
     sf_filters = filters.merge(_resolve_profile_filter(article_profile, sf_name))
-    sf_selected = _apply_filters(payloads["distribution_sf"], sf_filters)
-    sf_path = out_dir / _stable_figure_name(sf_name)
-    sf_selected, grouping_ok, grouping_summary = _prepare_rows_for_grouping(
-        sf_selected,
-        figure=sf_name,
-        curve_column="algo",
-        varying_columns={"sf"},
-        strict_context=strict_context,
-    )
-    did_generate = _plot_sf_distribution(sf_selected, sf_path) if grouping_ok else False
-    traces.append(
-        FigureTrace(
-            figure=sf_path.name,
-            source="distribution_sf",
-            metric="ratio",
-            filters=_filters_to_serializable(sf_filters),
-            num_points=_count_points(sf_selected, "ratio"),
-            points_by_curve=_count_points_by_curve(sf_selected, "ratio"),
-            source_rows_read=source_rows_read.get("distribution_sf", 0),
-            source_rows_usable=len(sf_selected),
-            grouping_summary=grouping_summary,
-            generated=did_generate,
+    sf_selected_all = _apply_filters(payloads["distribution_sf"], sf_filters)
+    sf_facet_sets = _split_rows_by_facets(sf_selected_all, facet_columns=facet_by)
+    for facet_context, sf_selected_in_facet, facet_suffix in sf_facet_sets:
+        base_name = _stable_figure_name(sf_name)
+        facet_name = f"{Path(base_name).stem}{facet_suffix}{Path(base_name).suffix}" if facet_suffix else base_name
+        sf_path = out_dir / facet_name
+        sf_selected, grouping_ok, grouping_summary = _prepare_rows_for_grouping(
+            sf_selected_in_facet,
+            figure=sf_name,
+            curve_column="algo",
+            varying_columns={"sf"},
+            strict_context=strict_context,
         )
-    )
-    _log_figure_result(sf_path, did_generate, verbose=verbose)
-    if did_generate:
-        generated.append(sf_path)
+        grouping_summary.update({"facet": facet_context, "facet_suffix": facet_suffix.lstrip("_")})
+        did_generate = _plot_sf_distribution(sf_selected, sf_path) if grouping_ok else False
+        trace_filters = sf_filters.merge({key: {value} for key, value in facet_context.items()})
+        traces.append(
+            FigureTrace(
+                figure=sf_path.name,
+                source="distribution_sf",
+                metric="ratio",
+                filters=_filters_to_serializable(trace_filters),
+                num_points=_count_points(sf_selected, "ratio"),
+                points_by_curve=_count_points_by_curve(sf_selected, "ratio"),
+                source_rows_read=source_rows_read.get("distribution_sf", 0),
+                source_rows_usable=len(sf_selected),
+                grouping_summary=grouping_summary,
+                generated=did_generate,
+            )
+        )
+        _log_figure_result(sf_path, did_generate, verbose=verbose)
+        if did_generate:
+            generated.append(sf_path)
 
     if include_bonus:
         for fig_name, source, metric, local_filter in CONTRIBUTION_SPECS:
             effective_filters = filters.merge(local_filter).merge(_resolve_profile_filter(article_profile, fig_name))
-            selected = _apply_filters(payloads[source], effective_filters)
-            out_path = out_dir / _stable_figure_name(fig_name)
-            varying_columns = {"N"}
-            if fig_name == "fig09_energy_efficiency_vs_pdr_pareto.png":
-                varying_columns = {"pdr_mean"}
-            elif fig_name == "fig10_sinr_cdf_fixed_scenario.png":
-                varying_columns = {"quantile"}
-            elif fig_name == "fig11_adaptation_cost_vs_speed.png":
-                varying_columns = {"speed"}
-            selected, grouping_ok, grouping_summary = _prepare_rows_for_grouping(
-                selected,
-                figure=fig_name,
-                curve_column="algo",
-                varying_columns=varying_columns,
-                strict_context=strict_context,
-            )
-            if fig_name == "fig08_outage_probability_vs_n.png":
-                did_generate = _plot_outage_probability_vs_n(selected, out_path) if grouping_ok else False
-            elif fig_name == "fig09_energy_efficiency_vs_pdr_pareto.png":
-                did_generate = _plot_energy_efficiency_vs_reliability(selected, out_path) if grouping_ok else False
-            elif fig_name == "fig10_sinr_cdf_fixed_scenario.png":
-                did_generate = _plot_sinr_cdf(selected, out_path) if grouping_ok else False
-            elif fig_name == "fig11_adaptation_cost_vs_speed.png":
-                tc_selected = _apply_filters(payloads["convergence_tc"], effective_filters)
-                if grouping_ok:
-                    did_generate, adaptation_empty_reason, adaptation_missing_columns = _plot_adaptation_cost_vs_speed(
-                        selected, tc_selected, out_path
+            selected_all = _apply_filters(payloads[source], effective_filters)
+            facet_sets = _split_rows_by_facets(selected_all, facet_columns=facet_by)
+            for facet_context, selected_in_facet, facet_suffix in facet_sets:
+                base_name = _stable_figure_name(fig_name)
+                facet_name = f"{Path(base_name).stem}{facet_suffix}{Path(base_name).suffix}" if facet_suffix else base_name
+                out_path = out_dir / facet_name
+                varying_columns = {"N"}
+                if fig_name == "fig09_energy_efficiency_vs_pdr_pareto.png":
+                    varying_columns = {"pdr_mean"}
+                elif fig_name == "fig10_sinr_cdf_fixed_scenario.png":
+                    varying_columns = {"quantile"}
+                elif fig_name == "fig11_adaptation_cost_vs_speed.png":
+                    varying_columns = {"speed"}
+                selected, grouping_ok, grouping_summary = _prepare_rows_for_grouping(
+                    selected_in_facet,
+                    figure=fig_name,
+                    curve_column="algo",
+                    varying_columns=varying_columns,
+                    strict_context=strict_context,
+                )
+                grouping_summary.update({"facet": facet_context, "facet_suffix": facet_suffix.lstrip("_")})
+                if fig_name == "fig08_outage_probability_vs_n.png":
+                    did_generate = _plot_outage_probability_vs_n(selected, out_path) if grouping_ok else False
+                elif fig_name == "fig09_energy_efficiency_vs_pdr_pareto.png":
+                    did_generate = _plot_energy_efficiency_vs_reliability(selected, out_path) if grouping_ok else False
+                elif fig_name == "fig10_sinr_cdf_fixed_scenario.png":
+                    did_generate = _plot_sinr_cdf(selected, out_path) if grouping_ok else False
+                elif fig_name == "fig11_adaptation_cost_vs_speed.png":
+                    tc_selected = _apply_filters(
+                        payloads["convergence_tc"],
+                        effective_filters.merge({key: {value} for key, value in facet_context.items()}),
                     )
-                    adaptation_points, adaptation_points_by_curve = _count_adaptation_points(selected, tc_selected)
-                    if adaptation_points == 0 and adaptation_empty_reason is None:
-                        adaptation_empty_reason = "points=0: no adaptation samples after column mapping and numeric cleanup"
+                    if grouping_ok:
+                        did_generate, adaptation_empty_reason, adaptation_missing_columns = _plot_adaptation_cost_vs_speed(
+                            selected, tc_selected, out_path
+                        )
+                        adaptation_points, adaptation_points_by_curve = _count_adaptation_points(selected, tc_selected)
+                        if adaptation_points == 0 and adaptation_empty_reason is None:
+                            adaptation_empty_reason = "points=0: no adaptation samples after column mapping and numeric cleanup"
+                    else:
+                        did_generate = False
+                        adaptation_empty_reason = "grouping constraints not satisfied"
+                        adaptation_missing_columns = {}
+                        adaptation_points, adaptation_points_by_curve = 0, {}
                 else:
-                    did_generate = False
-                    adaptation_empty_reason = "grouping constraints not satisfied"
-                    adaptation_missing_columns = {}
-                    adaptation_points, adaptation_points_by_curve = 0, {}
-            else:
-                did_generate = (
-                    _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path, y_scale=y_scale)
-                    if grouping_ok
-                    else False
+                    did_generate = (
+                        _plot_xy_by_algo(selected, fig_name=fig_name, y_col=metric, out_path=out_path, y_scale=y_scale)
+                        if grouping_ok
+                        else False
+                    )
+                trace_filters = effective_filters.merge({key: {value} for key, value in facet_context.items()})
+                traces.append(
+                    FigureTrace(
+                        figure=out_path.name,
+                        source=source,
+                        metric=metric,
+                        filters=_filters_to_serializable(trace_filters),
+                        num_points=(adaptation_points if fig_name == "fig11_adaptation_cost_vs_speed.png" else _count_points(selected, metric)),
+                        points_by_curve=(adaptation_points_by_curve if fig_name == "fig11_adaptation_cost_vs_speed.png" else _count_points_by_curve(selected, metric)),
+                        source_rows_read=source_rows_read.get(source, 0),
+                        source_rows_usable=len(selected),
+                        grouping_summary=grouping_summary,
+                        generated=did_generate,
+                        empty_reason=(adaptation_empty_reason if fig_name == "fig11_adaptation_cost_vs_speed.png" else None),
+                        missing_columns=(adaptation_missing_columns if fig_name == "fig11_adaptation_cost_vs_speed.png" else None),
+                    )
                 )
-            traces.append(
-                FigureTrace(
-                    figure=out_path.name,
-                    source=source,
-                    metric=metric,
-                    filters=_filters_to_serializable(effective_filters),
-                    num_points=(adaptation_points if fig_name == "fig11_adaptation_cost_vs_speed.png" else _count_points(selected, metric)),
-                    points_by_curve=(adaptation_points_by_curve if fig_name == "fig11_adaptation_cost_vs_speed.png" else _count_points_by_curve(selected, metric)),
-                    source_rows_read=source_rows_read.get(source, 0),
-                    source_rows_usable=len(selected),
-                    grouping_summary=grouping_summary,
-                    generated=did_generate,
-                    empty_reason=(adaptation_empty_reason if fig_name == "fig11_adaptation_cost_vs_speed.png" else None),
-                    missing_columns=(adaptation_missing_columns if fig_name == "fig11_adaptation_cost_vs_speed.png" else None),
-                )
-            )
-            _log_figure_result(out_path, did_generate, verbose=verbose)
-            if did_generate:
-                generated.append(out_path)
+                _log_figure_result(out_path, did_generate, verbose=verbose)
+                if did_generate:
+                    generated.append(out_path)
 
     manifest_path = out_dir / "plots_manifest.csv"
     with manifest_path.open("w", encoding="utf-8", newline="") as handle:
