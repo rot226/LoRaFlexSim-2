@@ -887,13 +887,17 @@ def aggregate_runs(
                 break
 
             if not math.isclose(tc_dt_s, TC_PROTOCOL_DT_S, rel_tol=0.0, abs_tol=1e-9):
+                tc_warning_category = (
+                    f"utilisent tc_dt_s={tc_dt_s:.6g}s (méthode '{tc_method}') "
+                    f"au lieu du protocole {TC_PROTOCOL_DT_S:.1f}s"
+                )
                 warning_message = (
                     f"Run {run_dir} utilise tc_dt_s={tc_dt_s:.6g}s (méthode '{tc_method}') "
                     f"au lieu du protocole {TC_PROTOCOL_DT_S:.1f}s."
                 )
                 run_id = str(row.get("run_id", run_dir.name))
                 _record_warning(
-                    category=f"utilisent tc_dt_s!= {TC_PROTOCOL_DT_S:.1f}s",
+                    category=tc_warning_category,
                     message=warning_message,
                     run_id=run_id,
                     run_dir=run_dir,
