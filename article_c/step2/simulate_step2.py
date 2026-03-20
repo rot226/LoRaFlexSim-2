@@ -1986,7 +1986,9 @@ def _apply_congestion_and_link_quality(
     successes_by_node: dict[int, int],
     traffic_sent_by_node: dict[int, int],
     congestion_probability: float,
+    clamped_nodes_ratio: float,
     link_success_min_ratio: float,
+    effective_load_adjustment: float,
     rng: random.Random,
     round_id: int,
     snir_mode: str,
@@ -2026,14 +2028,22 @@ def _apply_congestion_and_link_quality(
         snir_threshold_min_db=snir_threshold_min_db,
         snir_threshold_max_db=snir_threshold_max_db,
     )
-    link_quality_snir = _clip(link_quality_weighted * snir_success_factor, 0.0, 1.0)
+    clamp_penalty = max(0.0, 1.0 - 0.75 * _clip(clamped_nodes_ratio, 0.0, 1.0))
+    link_quality_snir = _clip(
+        link_quality_weighted
+        * snir_success_factor
+        * effective_load_adjustment
+        * clamp_penalty,
+        0.0,
+        1.0,
+    )
     successes_after_link_total = sum(
         1
         for _ in range(successes_after_congestion_total)
         if rng.random() < link_quality_snir
     )
-    min_ratio = _clip(link_success_min_ratio, 0.0, 1.0)
-    if successes_after_congestion_total > 0:
+    min_ratio = _clip(link_success_min_ratio * snir_success_factor, 0.0, 1.0)
+    if successes_after_congestion_total > 0 and min_ratio > 0.0:
         min_keep = max(1, int(round(successes_after_congestion_total * min_ratio)))
         if successes_after_link_total < min_keep:
             successes_after_link_total = min_keep
@@ -2181,14 +2191,13 @@ def _snir_success_factor(
     threshold_ratio = (threshold_linear - min_linear) / max(
         max_linear - min_linear, 1e-12
     )
-    snir_db = linear_to_db(threshold_linear)
-    snir_ok = snir_db >= threshold_db
-    if not snir_ok:
-        return 0.0
-    softened_ratio = threshold_ratio**1.2
+    # Plus le seuil demandé se rapproche de la borne haute, plus la réussite doit
+    # décroître jusqu'à tendre vers zéro. La conversion dB↔linéaire a déjà été
+    # vérifiée ci-dessus; il ne faut pas réinjecter un test tautologique basé sur
+    # le même seuil, sinon le facteur SNIR ne peut jamais annuler la réussite.
+    softened_ratio = _clip(threshold_ratio, 0.0, 1.0) ** 1.2
     attenuation = 1.0 - softened_ratio
-    min_factor = 0.15
-    return _clip(max(attenuation, min_factor), 0.0, 1.0)
+    return _clip(attenuation, 0.0, 1.0)
 
 
 def _select_adr_arm(
@@ -3136,6 +3145,7 @@ def run_simulation(
                     traffic_sent_by_node=traffic_sent_by_node,
                     congestion_probability=congestion_probability_effective,
                     link_success_min_ratio=link_success_min_ratio_value,
+                    effective_load_adjustment=effective_load_adjustment,
                     rng=rng,
                     round_id=round_id,
                     snir_mode=snir_mode,
@@ -3273,7 +3283,11 @@ def run_simulation(
                         traffic_sent,
                     )
                 successes = min(successes, traffic_sent)
-                success_flag = 1 if successes > 0 else 0
+                # Une fenêtre n'est considérée comme réussie que si la majorité
+                # des transmissions prévues passe effectivement. Un simple paquet
+                # isolé ne doit pas masquer une forte dégradation quand la charge
+                # réseau augmente.
+                success_flag = 1 if traffic_sent > 0 and (successes / traffic_sent) >= 0.5 else 0
                 failure_flag = 1 - success_flag
                 airtime_norm = energy_norm_by_sf[sf_value]
                 airtime_s = airtime_by_sf[sf_value]
@@ -3947,7 +3961,9 @@ def run_simulation(
                     successes_by_node=successes_by_node,
                     traffic_sent_by_node=traffic_sent_by_node,
                     congestion_probability=congestion_probability,
+                    clamped_nodes_ratio=clamped_nodes_ratio,
                     link_success_min_ratio=link_success_min_ratio_value,
+                    effective_load_adjustment=effective_load_adjustment,
                     rng=rng,
                     round_id=round_id,
                     snir_mode=snir_mode,
@@ -4071,7 +4087,11 @@ def run_simulation(
                         traffic_sent,
                     )
                 successes = min(successes, traffic_sent)
-                success_flag = 1 if successes > 0 else 0
+                # Une fenêtre n'est considérée comme réussie que si la majorité
+                # des transmissions prévues passe effectivement. Un simple paquet
+                # isolé ne doit pas masquer une forte dégradation quand la charge
+                # réseau augmente.
+                success_flag = 1 if traffic_sent > 0 and (successes / traffic_sent) >= 0.5 else 0
                 failure_flag = 1 - success_flag
                 airtime_norm = energy_norm_by_sf[sf_value]
                 airtime_s = airtime_by_sf[sf_value]

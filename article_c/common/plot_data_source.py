@@ -22,7 +22,7 @@ def load_aggregated_rows_for_source(
 ) -> list[dict[str, object]]:
     """Charge les lignes agrégées selon la source contractuelle demandée.
 
-    - aggregates: lit `results/aggregates/<csv_name>`
+    - aggregates: lit `results/<csv_name>` puis `results/aggregates/<csv_name>`
     - by_size: concatène `results/by_size/size_*/<csv_name>`
     """
     normalized_source = str(source).strip().lower()
@@ -38,23 +38,33 @@ def load_aggregated_rows_for_source(
 
     results_dir = step_dir / "results"
     if normalized_source == "aggregates":
-        path = results_dir / "aggregates" / csv_name
-        if not path.exists():
-            warnings.warn(
-                f"CSV {step_label} introuvable ({normalized_source}): {path}",
-                stacklevel=2,
-            )
-            return []
-        try:
-            return loader(path, allow_sample=allow_sample)
-        except (OSError, ValueError) as exc:
-            warnings.warn(
-                f"CSV {step_label} illisible ({path}): {exc}",
-                stacklevel=2,
-            )
-            return []
+        candidate_paths = [
+            results_dir / csv_name,
+            results_dir / "aggregates" / csv_name,
+        ]
+        for path in candidate_paths:
+            if not path.exists():
+                continue
+            try:
+                return loader(path, allow_sample=allow_sample)
+            except (OSError, ValueError) as exc:
+                warnings.warn(
+                    f"CSV {step_label} illisible ({path}): {exc}",
+                    stacklevel=2,
+                )
+                return []
+        warnings.warn(
+            (
+                f"CSV {step_label} introuvable ({normalized_source}): "
+                f"{candidate_paths[0]} ou {candidate_paths[1]}"
+            ),
+            stacklevel=2,
+        )
+        return []
 
     by_size_paths = sorted(results_dir.glob(f"by_size/size_*/{csv_name}"))
+    if not by_size_paths:
+        by_size_paths = sorted(results_dir.glob(f"by_size/size_*/rep_*/{csv_name}"))
     if not by_size_paths:
         warnings.warn(
             (

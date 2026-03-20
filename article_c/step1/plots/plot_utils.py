@@ -35,9 +35,9 @@ def _load_step1_rows_from_by_size(
     *,
     allow_sample: bool,
 ) -> list[dict[str, object]]:
-    by_size_paths = sorted(
-        (step_dir / "results").glob(f"by_size/size_*/{_STEP1_AGGREGATED_NAME}")
-    )
+    by_size_paths = sorted((step_dir / "results").glob(f"by_size/size_*/{_STEP1_AGGREGATED_NAME}"))
+    if not by_size_paths:
+        by_size_paths = sorted((step_dir / "results").glob(f"by_size/size_*/rep_*/{_STEP1_AGGREGATED_NAME}"))
     if not by_size_paths:
         expected_pattern = (
             step_dir / "results" / "by_size" / "size_*" / _STEP1_AGGREGATED_NAME
@@ -68,14 +68,17 @@ def load_step1_rows_with_fallback(
     if normalized_source == "by_size":
         return _load_step1_rows_from_by_size(step_dir, allow_sample=allow_sample)
 
-    primary_path = (
-        step_dir / "results" / "aggregates" / _STEP1_AGGREGATED_NAME
-    )
-    if primary_path.is_file():
-        return load_step1_aggregated(primary_path, allow_sample=allow_sample)
+    candidate_paths = [
+        step_dir / "results" / "aggregated_results.csv",
+        step_dir / "results" / "aggregates" / _STEP1_AGGREGATED_NAME,
+    ]
+    for primary_path in candidate_paths:
+        if primary_path.is_file():
+            return load_step1_aggregated(primary_path, allow_sample=allow_sample)
 
+    primary_path = candidate_paths[-1]
     missing_aggregate_message = (
-        f"CSV introuvable: {primary_path}. {_STEP1_MISSING_HINT}"
+        f"CSV introuvable: {candidate_paths[0]} ou {primary_path}. {_STEP1_MISSING_HINT}"
     )
     if allow_by_size_fallback:
         warnings.warn(
