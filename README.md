@@ -2,9 +2,53 @@
 
 LoRaFlexSim est un simulateur LoRa/LoRaWAN en Python pour explorer des scénarios radio, de mobilité et d'ADR, via un dashboard interactif ou une CLI reproductible.
 
+## Politique d’installation et d’exécution
+
+### Plateforme documentée en priorité
+
+- **OS officiellement documenté en priorité : Windows 11**.
+- Les commandes ci-dessous sont **rédigées et maintenues pour Windows 11 avec PowerShell**, en partant de la **racine du dépôt**.
+- **`cmd.exe` n’est pas la cible documentaire principale** : certaines commandes peuvent fonctionner, mais elles ne sont pas harmonisées ici.
+
+### Version Python
+
+- **Version recommandée : Python 3.11**.
+- **Versions prises en charge par le packaging : Python 3.11 à 3.12**.
+- Si plusieurs versions sont installées sous Windows, utilisez de préférence **`py -3.11`** pour éviter les ambiguïtés.
+
+### Méthode d’installation recommandée
+
+Depuis la **racine du dépôt** dans **PowerShell** :
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e . --no-build-isolation
+```
+
+Cette méthode est la référence pour toute la documentation de ce dépôt.
+
+### Méthode offline / fallback
+
+> [!IMPORTANT]
+> **Mode fallback à utiliser seulement si l’installation editable échoue**.
+
+Le mode fallback ne remplace pas la méthode standard. Il sert uniquement aux environnements Windows 11 où `pip install -e . --no-build-isolation` ne peut pas être finalisé.
+
+Depuis la **racine du dépôt** dans **PowerShell** :
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+powershell -ExecutionPolicy Bypass -File scripts/windows/run_offline.ps1
+```
+
+Dans ce mode seulement, certains scripts positionnent **`PYTHONPATH=src`** automatiquement. **Vous n’avez pas besoin de définir `PYTHONPATH=src` pour l’installation standard.**
+
 ## Démarrage rapide Windows 11
 
-Depuis la racine du dépôt dans **PowerShell** :
+Depuis la **racine du dépôt** dans **PowerShell** :
 
 ```powershell
 py -3.11 -m venv .venv
