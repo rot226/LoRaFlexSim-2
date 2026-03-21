@@ -12,12 +12,19 @@ Depuis la racine du dépôt dans **PowerShell** :
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -e . --no-build-isolation
-python -m mobilesfrdth --help
+mobilesfrdth --help
 panel serve loraflexsim/launcher/dashboard.py --show
-python -m loraflexsim.run --nodes 30 --gateways 1 --mode random --interval 10 --steps 100 --output results/quickstart.csv
 ```
 
-Si l'entrypoint installé n'est pas disponible immédiatement, vous pouvez aussi vérifier l'installation avec `mobilesfrdth --help` une fois l'environnement activé.
+> [!IMPORTANT]
+> **Interface officielle**
+> - **CLI officielle pour la communauté** : `mobilesfrdth`
+> - **Commande module Python correspondante** : `python -m mobilesfrdth`
+> - **Wrapper Windows recommandé si nécessaire** : `powershell -ExecutionPolicy Bypass -File scripts/run_step1_matrix_windows.ps1`
+>
+> Les autres interfaces documentées dans le dépôt sont conservées pour des usages spécialisés, avancés ou de reproduction ; elles ne sont plus présentées ici comme des points d’entrée équivalents.
+
+Si l'entrypoint installé n'est pas disponible immédiatement, utilisez `python -m mobilesfrdth --help` une fois l'environnement activé.
 
 ## Guide d’utilisation
 
@@ -92,13 +99,14 @@ mobilesfrdth --help
 - **Plots** : fabrique les figures à partir des agrégats dans `runs/quickstart/plots/`.
 - **Validate** : contrôle la cohérence des agrégats ; cette étape est utile avant de comparer ou partager les résultats.
 
-#### Interfaces secondaires
+#### Interfaces complémentaires / historiques
 
-Les interfaces historiques ou spécialisées restent disponibles, mais elles sont volontairement reléguées dans la documentation secondaire pour garder ce `README.md` simple :
+Les interfaces suivantes restent disponibles, mais avec un statut secondaire par rapport à `mobilesfrdth` :
 
-- `python -m loraflexsim.run` pour des runs unitaires et démonstrations ciblées ;
-- `sfrd/README.md` pour le flux SFRD dédié ;
-- `qos_cli/README.md` et les README des dossiers d’expériences pour les pipelines spécialisés.
+- `qos_cli/README.md` pour le guide spécialisé QoS ;
+- `sfrd/README.md` pour le workflow avancé SFRD ;
+- `final/README.md` pour les scripts de reproduction/export historiques ;
+- `IWCMC/README.md` pour les archives et reproductions IWCMC conservées dans le dépôt.
 
 ### Dashboard vs CLI
 
@@ -161,7 +169,7 @@ panel serve loraflexsim/launcher/dashboard.py --show
 - L'option **Positions manuelles** accepte des entrées `node,id=3,x=120,y=40`
   ou `gw,id=1,x=10,y=80` pour rejouer les coordonnées extraites des INI FLoRa.
 
-### Ligne de commande (`run.py`)
+### Interface complémentaire / historique : `run.py`
 
 ```bash
 python -m loraflexsim.run --nodes 30 --gateways 1 --mode random --interval 10 --steps 100 --output resultats.csv
@@ -178,7 +186,7 @@ python -m loraflexsim.run --long-range-demo flora_hata --seed 3 --output long_ra
 - Ajoutez `--seed` pour répéter exactement un run et `--runs <n>` pour calculer
   automatiquement la moyenne des métriques.【F:loraflexsim/run.py†L352-L735】
 
-### Matrice Step 1 sous Windows
+### Wrapper Windows recommandé pour les workflows Step 1
 
 Depuis la racine du projet, vous pouvez générer la matrice Step 1 utilisée dans
 `scripts/run_step1_matrix.py`. Sous Windows 11, créez/activez votre
