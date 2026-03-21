@@ -1,11 +1,31 @@
 # Dossier `final/`
 
+> [!TIP]
+> **À quoi sert ce dossier ?** Conserver un flux reproductible pour lancer des simulations, stocker les CSV et centraliser les figures générées.
+>
+> **Quand l’utiliser ?** Quand vous avez besoin d’un pipeline simple orienté export CSV/figures, notamment pour reproduction, archivage ou comparaison rapide.
+>
+> **Commande minimale** `python -m loraflexsim.run --nodes 30 --gateways 1 --mode random --interval 10 --steps 100 --output final/data/simulation.csv`
+>
+> **Sorties produites** CSV dans `final/data/`, figures dans `final/figures/`, scénarios dans `final/scenarios/` et plots complémentaires dans `final/plots/`.
+
 > [!WARNING]
 > **Archive / reproduction** : ce dossier conserve un flux historique de génération de CSV et de figures.
 
 Ce dossier regroupe un flux de travail **reproductible** pour générer des scénarios, stocker les CSV et centraliser les figures produites par LoRaFlexSim.
 
-## Politique locale alignée avec le README principal
+## 1. Objectif du dossier
+
+Le dossier `final/` sert de point d’entrée pour :
+
+- exécuter des simulations avec export CSV ;
+- conserver les sorties dans une structure stable ;
+- générer des figures à partir des CSV ;
+- préparer des scénarios personnalisés de reproduction.
+
+## 2. Prérequis
+
+### Politique locale alignée avec le README principal
 
 - **OS documenté en priorité : Windows 11**.
 - **Shell documenté : PowerShell**.
@@ -15,7 +35,7 @@ Ce dossier regroupe un flux de travail **reproductible** pour générer des scé
 - **Installation standard recommandée :** `python -m pip install -e . --no-build-isolation` après activation du venv.
 - **`PYTHONPATH=src` n’est pas requis** pour ce flux standard ; il ne concerne que certains contournements offline/fallback.
 
-## Installation recommandée
+### Installation recommandée
 
 Depuis la **racine du dépôt** dans **PowerShell** :
 
@@ -27,7 +47,7 @@ python -m pip install -e . --no-build-isolation
 
 > Si PowerShell bloque l’activation, utilisez : `powershell -ExecutionPolicy Bypass -File .\.venv\Scripts\Activate.ps1`.
 
-## Méthode offline / fallback
+### Méthode offline / fallback
 
 À utiliser seulement si l’installation editable échoue :
 
@@ -40,7 +60,15 @@ powershell -ExecutionPolicy Bypass -File scripts/windows/run_offline.ps1
 
 Dans ce mode seulement, `PYTHONPATH=src` peut être injecté par les scripts de secours.
 
-## Exécuter une simulation en CLI
+## 3. Scénario minimal
+
+Depuis la **racine du dépôt** dans **PowerShell**, lancez une simulation qui écrit un CSV dans `final/data/` :
+
+```powershell
+python -m loraflexsim.run --nodes 30 --gateways 1 --mode random --interval 10 --steps 100 --output final/data/simulation.csv
+```
+
+## 4. Commande de run
 
 Les commandes ci-dessous écrivent les CSV dans `final/data/`.
 
@@ -50,7 +78,11 @@ Depuis la **racine du dépôt** dans **PowerShell** :
 python -m loraflexsim.run --nodes 30 --gateways 1 --mode random --interval 10 --steps 100 --output final/data/simulation.csv
 ```
 
-## Tracer une figure à partir des CSV
+## 5. Agrégation
+
+Il n’y a pas d’étape d’agrégation dédiée documentée dans ce dossier : le flux `final/` repose surtout sur les CSV produits directement par la commande de simulation.
+
+## 6. Plots
 
 L’exemple suivant lit un ou plusieurs CSV et génère une figure de PDR moyenne dans `final/figures/`.
 
@@ -60,7 +92,13 @@ Depuis la **racine du dépôt** dans **PowerShell** :
 python examples/analyse_resultats.py final/data/simulation.csv --output-dir final/figures --basename pdr_by_nodes
 ```
 
-## Format des CSV générés
+## 7. Rapport
+
+Ce dossier ne définit pas de commande de rapport dédiée. Le résultat attendu est principalement un ensemble de CSV et de figures réutilisables pour vos analyses ou documents.
+
+## 8. Figures détaillées et options avancées
+
+### Format des CSV générés
 
 Les fichiers produits par `--output` contiennent l’en-tête suivant :
 
@@ -68,14 +106,14 @@ Les fichiers produits par `--output` contiennent l’en-tête suivant :
 nodes,gateways,channels,mode,interval,steps,delivered,collisions,PDR(%),energy,avg_delay,throughput_bps
 ```
 
-**Emplacement des sorties**
+### Emplacement des sorties
 
 - CSV de simulation : `final/data/`
 - Figures : `final/figures/`
 - Scénarios personnalisés (fichiers d’entrée, INI, etc.) : `final/scenarios/`
 - Graphiques complémentaires (plots intermédiaires) : `final/plots/`
 
-## Ajuster les paramètres clés
+### Ajuster les paramètres clés
 
 - **Période d’émission** : ajustez `--interval` (en secondes). Exemple : `--interval 60`.
 - **Rayon / taille de zone** : pour des scénarios plus larges, privilégiez les presets longue portée (`--long-range-demo`) ou l’auto-calibrage (`--long-range-auto <surface_km2> [distance_km]`). Pour un contrôle fin de la zone (mètres), créez un script Python qui instancie `Simulator(area_size=...)` et placez-le dans `final/scenarios/`.
