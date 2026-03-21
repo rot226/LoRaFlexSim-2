@@ -2,6 +2,8 @@
 
 LoRaFlexSim est un simulateur LoRa/LoRaWAN en Python pour explorer des scénarios radio, de mobilité et d'ADR, via un dashboard interactif ou une CLI reproductible.
 
+Ce dépôt est destiné à la communauté : le simulateur peut être utilisé librement, la documentation privilégie une prise en main rapide, et le parcours de lecture distingue clairement l’usage standard recommandé des workflows avancés, de recherche ou de reproduction.
+
 ## Politique d’installation et d’exécution
 
 ### Plateforme documentée en priorité
@@ -110,6 +112,46 @@ La figure sera alors écrite dans `final/figures/`.
 
 > [!TIP]
 > Si vous voulez simplement valider une première exécution sous Windows 11, ce parcours suffit : créer l'environnement, ouvrir le dashboard, lancer une simulation CLI, puis générer une figure à partir du CSV produit.
+
+## FAQ de démarrage
+
+### Comment installer sous Windows 11 ?
+
+Depuis la racine du dépôt dans **PowerShell**, créez un environnement virtuel puis installez le projet en mode editable :
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e . --no-build-isolation
+```
+
+Cette procédure correspond au parcours standard documenté pour Windows 11.
+
+### Comment lancer le dashboard ?
+
+Activez l’environnement, puis exécutez :
+
+```powershell
+panel serve loraflexsim/launcher/dashboard.py --show
+```
+
+Le dashboard est l’entrée recommandée pour un premier usage interactif.
+
+### Comment lancer une simulation en CLI ?
+
+Pour une première simulation reproductible en ligne de commande :
+
+```powershell
+python -m loraflexsim.run --nodes 30 --gateways 1 --mode random --interval 10 --steps 100 --output final/data/simulation.csv
+```
+
+Cette commande écrit un fichier CSV exploitable immédiatement.
+
+### Où récupérer les CSV et les figures ?
+
+- Les **CSV** d’exemple ou générés lors d’un premier essai sont généralement placés dans `final/data/`.
+- Les **figures** générées sont généralement écrites dans `final/figures/`.
+- Le document `docs/advanced_workflows.md` détaille ensuite les exports, traitements et pipelines avancés.
 
 ## Arborescence documentaire recommandée
 
