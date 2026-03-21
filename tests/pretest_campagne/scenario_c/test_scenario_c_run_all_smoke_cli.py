@@ -22,7 +22,7 @@ def _patch_smoke_startup(monkeypatch, *, expect_step: str) -> dict[str, int]:
             raise _Called("step2 started")
         return None
 
-    monkeypatch.setattr(run_all, "_enforce_scenario_c_branch", lambda *_: None)
+    monkeypatch.setattr(run_all, "_enforce_expected_campaign_branch", lambda *_: None)
     monkeypatch.setattr(run_all, "_remove_global_aggregation_artifacts", lambda *_: None)
     monkeypatch.setattr(run_all, "_read_campaign_state", lambda *_: None)
     monkeypatch.setattr(run_all, "_find_first_missing_rep", lambda *_args, **_kwargs: 1)
@@ -88,7 +88,7 @@ def test_run_all_skip_step2_no_forbidden_global_write_exception(monkeypatch):
     def _fake_assert_no_global(*_args, **_kwargs):
         checks["calls"] += 1
 
-    monkeypatch.setattr(run_all, "_enforce_scenario_c_branch", lambda *_: None)
+    monkeypatch.setattr(run_all, "_enforce_expected_campaign_branch", lambda *_: None)
     monkeypatch.setattr(run_all, "_remove_global_aggregation_artifacts", lambda *_: None)
     monkeypatch.setattr(run_all, "_find_first_missing_rep", lambda *_args, **_kwargs: 1)
     monkeypatch.setattr(run_all, "_assert_cumulative_sizes_nested", lambda *_: None)
@@ -124,7 +124,7 @@ def test_run_all_skip_step1_no_forbidden_global_write_exception(monkeypatch):
     def _fake_assert_no_global(*_args, **_kwargs):
         checks["calls"] += 1
 
-    monkeypatch.setattr(run_all, "_enforce_scenario_c_branch", lambda *_: None)
+    monkeypatch.setattr(run_all, "_enforce_expected_campaign_branch", lambda *_: None)
     monkeypatch.setattr(run_all, "_remove_global_aggregation_artifacts", lambda *_: None)
     monkeypatch.setattr(run_all, "_find_first_missing_rep", lambda *_args, **_kwargs: 1)
     monkeypatch.setattr(run_all, "_assert_cumulative_sizes_nested", lambda *_: None)

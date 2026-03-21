@@ -29,7 +29,7 @@ def _write_rep_csv(rep_dir: Path, network_size: int) -> None:
 def test_run_all_recovery_cycle_triggers_targeted_relaunch(monkeypatch) -> None:
     relaunch_calls: list[tuple[str, dict[int, list[int]]]] = []
 
-    monkeypatch.setattr(run_all, "_enforce_scenario_c_branch", lambda *_: None)
+    monkeypatch.setattr(run_all, "_enforce_expected_campaign_branch", lambda *_: None)
     monkeypatch.setattr(run_all, "_remove_global_aggregation_artifacts", lambda *_: None)
     monkeypatch.setattr(run_all, "_find_first_missing_rep", lambda *_args, **_kwargs: 1)
     monkeypatch.setattr(run_all, "_write_campaign_state", lambda *_args, **_kwargs: None)

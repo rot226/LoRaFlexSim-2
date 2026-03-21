@@ -4,7 +4,7 @@ from pretest_campagne.scenario_c import run_all
 
 
 def _patch_run_all_startup(monkeypatch):
-    monkeypatch.setattr(run_all, "_enforce_scenario_c_branch", lambda *_: None)
+    monkeypatch.setattr(run_all, "_enforce_expected_campaign_branch", lambda *_: None)
     monkeypatch.setattr(run_all, "_remove_global_aggregation_artifacts", lambda *_: None)
     monkeypatch.setattr(run_all, "_read_campaign_state", lambda *_: None)
     monkeypatch.setattr(run_all, "_find_first_missing_rep", lambda *_args, **_kwargs: 1)
