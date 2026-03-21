@@ -65,6 +65,52 @@ panel serve loraflexsim/launcher/dashboard.py --show
 >
 > Les autres interfaces présentes dans le dépôt sont conservées pour des usages avancés, historiques ou de reproduction.
 
+
+## Premier succès en 5 minutes
+
+Depuis la **racine du dépôt** dans **PowerShell** :
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e . --no-build-isolation
+```
+
+### 1. Lancer le dashboard
+
+```powershell
+panel serve loraflexsim/launcher/dashboard.py --show
+```
+
+Le dashboard est la voie la plus simple pour vérifier rapidement que l'environnement est prêt et explorer un premier scénario interactif.
+
+### 2. Lancer une simulation CLI minimale
+
+```powershell
+python -m loraflexsim.run --nodes 30 --gateways 1 --mode random --interval 10 --steps 100 --output final/data/simulation.csv
+```
+
+Cette commande produit un CSV minimal dans : `final/data/simulation.csv`.
+
+### 3. Retrouver le CSV généré
+
+- **CSV produit** : `final/data/simulation.csv`
+- Ce fichier peut ensuite être ouvert dans Excel, importé dans un notebook ou réutilisé pour tracer une figure.
+
+### 4. Trouver ou générer une figure
+
+- **Emplacement habituel des figures** : `final/figures/`
+- Pour générer une figure simple à partir du CSV précédent :
+
+```powershell
+python examples/analyse_resultats.py final/data/simulation.csv --output-dir final/figures --basename pdr_by_nodes
+```
+
+La figure sera alors écrite dans `final/figures/`.
+
+> [!TIP]
+> Si vous voulez simplement valider une première exécution sous Windows 11, ce parcours suffit : créer l'environnement, ouvrir le dashboard, lancer une simulation CLI, puis générer une figure à partir du CSV produit.
+
 ## Arborescence documentaire recommandée
 
 - `README.md` : point d’entrée communauté.
