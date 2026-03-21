@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # -------------------------------------------------------------------------------------------------
 # Objectif :
-#   Orchestrer la campagne pretest_campagne/iwcmc_archive SNIR statique (S1–S8), vérifier la présence
-#   des CSV générés, puis lancer les scripts de tracé associés.
+#   Orchestrer l'archive métier pretest_campagne/iwcmc_archive — variante SNIR statique (S1–S8),
+#   vérifier la présence des CSV générés, puis lancer les scripts de tracé associés.
 #
 # Paramètres :
 #   --python <executable>  Chemin/nom de l'exécutable Python à utiliser (défaut: python).
@@ -51,22 +51,24 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_DIR="$(cd "$BASE_DIR/../../.." && pwd)"
-DATA_DIR="$REPO_DIR/results/pretest_campagne/iwcmc_archive/snir_static"
-FIGURES_DIR="$REPO_DIR/figures/pretest_campagne/iwcmc_archive/snir_static"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+CAMPAIGN_RESULTS_DIR="$REPO_DIR/results/pretest_campagne/iwcmc_archive"
+CAMPAIGN_FIGURES_DIR="$REPO_DIR/figures/pretest_campagne/iwcmc_archive"
+DATA_DIR="$CAMPAIGN_RESULTS_DIR/snir_static"
+FIGURES_DIR="$CAMPAIGN_FIGURES_DIR/snir_static"
 
 mkdir -p "$DATA_DIR" "$FIGURES_DIR"
 
 SCENARIOS=(S1 S2 S3 S4 S5 S6 S7 S8)
 
-echo "=== pretest_campagne/iwcmc_archive SNIR statique : exécution des scénarios ==="
+echo "=== Archive métier pretest_campagne/iwcmc_archive — SNIR statique : exécution des scénarios ==="
 for scenario in "${SCENARIOS[@]}"; do
   echo "-> ${scenario}"
-  "$PYTHON_BIN" "$BASE_DIR/scenarios/${scenario}.py"
+  "$PYTHON_BIN" "$SCRIPT_DIR/scenarios/${scenario}.py"
 done
 
-echo "=== pretest_campagne/iwcmc_archive SNIR statique : collecte des CSV ==="
+echo "=== Archive métier pretest_campagne/iwcmc_archive — SNIR statique : vérification des CSV ==="
 missing_csv=0
 for scenario in "${SCENARIOS[@]}"; do
   csv_path="$DATA_DIR/${scenario}.csv"
@@ -79,14 +81,14 @@ for scenario in "${SCENARIOS[@]}"; do
 done
 
 if [[ $missing_csv -ne 0 ]]; then
-  echo "Attention: certains CSV sont manquants." >&2
+  echo "Attention: certains CSV sont manquants dans $DATA_DIR." >&2
 fi
 
 if [[ $SKIP_PLOTS -eq 0 ]]; then
-  echo "=== pretest_campagne/iwcmc_archive SNIR statique : génération des figures ==="
+  echo "=== Archive métier pretest_campagne/iwcmc_archive — SNIR statique : génération des figures ==="
   for scenario in "${SCENARIOS[@]}"; do
     echo "-> plot_${scenario}"
-    "$PYTHON_BIN" "$BASE_DIR/plots/plot_${scenario}.py"
+    "$PYTHON_BIN" "$SCRIPT_DIR/plots/plot_${scenario}.py"
   done
 else
   echo "=== Génération des figures ignorée (--skip-plots) ==="
