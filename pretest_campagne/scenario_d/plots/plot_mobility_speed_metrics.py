@@ -15,14 +15,15 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, os.fspath(ROOT))
 
+from pretest_campagne.paths import mne3sd_results_file
 from scripts.mne3sd.common import (
     apply_ieee_style,
     prepare_figure_directory,
     save_figure,
 )
 
-ARTICLE = "article_d"
-RESULTS_DIR = ROOT / "results" / "mne3sd" / ARTICLE
+ARTICLE = "scenario_d"
+RESULTS_DIR = mne3sd_results_file(ARTICLE, ".").parent
 RESULTS_PATH = RESULTS_DIR / "mobility_speed_metrics.csv"
 SCENARIO = "mobility_speed"
 

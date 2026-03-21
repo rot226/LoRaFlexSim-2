@@ -9,13 +9,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from pretest_campagne.paths import figures_dir, mne3sd_results_file
 from scripts.mne3sd.common import apply_ieee_style, prepare_figure_directory, save_figure
 from plot_defaults import DEFAULT_FIGSIZE_SIMPLE
 
 ROOT = Path(__file__).resolve().parents[4]
-DEFAULT_INPUT = ROOT / "results" / "mne3sd" / "article_a" / "class_downlink_energy.csv"
-DEFAULT_FIGURES_DIR = ROOT / "figures" / "mne3sd" / "article_a"
-ARTICLE = "article_a"
+DEFAULT_INPUT = mne3sd_results_file("scenario_a", "class_downlink_energy.csv")
+DEFAULT_FIGURES_DIR = figures_dir("scenario_a")
+ARTICLE = "scenario_a"
 SCENARIO = "class_downlink_energy"
 REQUIRED_COLUMNS = {
     "class",

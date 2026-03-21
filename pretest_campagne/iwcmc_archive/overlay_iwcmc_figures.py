@@ -21,11 +21,12 @@ from pretest_campagne.common.plotting_style import (
     legend_bbox_to_anchor,
 )
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
-DEFAULT_SNIR_DATA_DIR = ROOT_DIR / "pretest_campagne/iwcmc_archive" / "snir_static" / "data"
-DEFAULT_RLS_RESULTS_DIR = ROOT_DIR / "results" / "iwcmc" / "rl_static"
-DEFAULT_RLM_RESULTS_DIR = ROOT_DIR / "results" / "iwcmc" / "rl_mobile"
-DEFAULT_OUTPUT_DIR = ROOT_DIR / "pretest_campagne/iwcmc_archive" / "figures" / "overlays"
+from pretest_campagne.paths import iwcmc_figures_dir, iwcmc_results_dir, iwcmc_snir_data_dir
+
+DEFAULT_SNIR_DATA_DIR = iwcmc_snir_data_dir()
+DEFAULT_RLS_RESULTS_DIR = iwcmc_results_dir("rl_static")
+DEFAULT_RLM_RESULTS_DIR = iwcmc_results_dir("rl_mobile")
+DEFAULT_OUTPUT_DIR = iwcmc_figures_dir("overlays")
 
 SCENARIOS_SNIR = [f"S{idx}" for idx in range(1, 9)]
 

@@ -22,6 +22,7 @@ from loraflexsim.launcher.non_orth_delta import DEFAULT_NON_ORTH_DELTA
 from loraflexsim.launcher.qos import QoSManager
 
 from modules import aimi, apra, mixra_h, mixra_opt
+from pretest_campagne.paths import iwcmc_snir_data_file
 
 FREQUENCIES_HZ = (
     868_100_000.0,
@@ -35,6 +36,12 @@ FREQUENCIES_HZ = (
 )
 
 PAYLOAD_BYTES = 20
+
+
+def default_output_path(figure_id: str) -> Path:
+    """Retourne le chemin CSV migré pour une figure SNIR statique."""
+
+    return iwcmc_snir_data_file(figure_id)
 
 
 @dataclass(frozen=True)

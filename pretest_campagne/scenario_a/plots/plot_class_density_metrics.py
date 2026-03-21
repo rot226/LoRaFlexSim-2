@@ -9,12 +9,13 @@ import warnings
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from pretest_campagne.paths import mne3sd_results_file
 from scripts.mne3sd.common import prepare_figure_directory, save_figure
 from plot_defaults import DEFAULT_FIGSIZE_SIMPLE
 
 ROOT = Path(__file__).resolve().parents[4]
-RESULTS_PATH = ROOT / "results" / "mne3sd" / "article_a" / "class_density_metrics.csv"
-ARTICLE = "article_a"
+RESULTS_PATH = mne3sd_results_file("scenario_a", "class_density_metrics.csv")
+ARTICLE = "scenario_a"
 SCENARIO = "class_density"
 
 

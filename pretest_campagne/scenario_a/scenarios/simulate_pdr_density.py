@@ -24,6 +24,7 @@ sys.path.insert(
 )
 
 from loraflexsim.launcher import Simulator  # noqa: E402
+from pretest_campagne.paths import results_dir
 from scripts.mne3sd.common import (  # noqa: E402
     add_execution_profile_argument,
     add_worker_argument,
@@ -38,7 +39,7 @@ from scripts.mne3sd.common import (  # noqa: E402
 
 LOGGER = logging.getLogger("simulate_pdr_density")
 ROOT = Path(__file__).resolve().parents[4]
-RESULTS_DIR = ROOT / "results" / "mne3sd" / "article_a"
+RESULTS_DIR = results_dir("scenario_a")
 DETAIL_CSV = RESULTS_DIR / "pdr_density.csv"
 SUMMARY_CSV = RESULTS_DIR / "pdr_density_summary.csv"
 
