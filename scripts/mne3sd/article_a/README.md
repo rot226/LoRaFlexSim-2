@@ -1,7 +1,7 @@
-# Suite d'expériences Article A
+# Suite d'expériences du scénario A
 
 ## Objectifs
-- Reproduire les simulations nécessaires à l'étude « Article A » de la campagne MNE3SD.
+- Reproduire les simulations nécessaires au scénario A de la campagne MNE3SD.
 - Regrouper en un seul endroit les définitions de scénarios et les utilitaires réutilisables partagés dans l'étude.
 - Collecter les métriques propres à chaque scénario sous forme de fichiers CSV et les post-traiter en figures prêtes pour la publication.
 
@@ -12,12 +12,12 @@ Chaque script de scénario expose un ensemble cohérent d'options en ligne de co
 - `--seed` : graine aléatoire de base appliquée au simulateur. Les scripts peuvent en dériver d'autres graines.
 - `--runs` : nombre de répétitions Monte Carlo à exécuter pour chaque configuration de scénario.
 - `--duration` : durée de la simulation en secondes. Si l'option est absente, chaque script revient à sa valeur par défaut documentée.
-- `--output` : fichier CSV de destination. Par convention il est placé dans `results/mne3sd/article_a/`.
+- `--output` : fichier CSV de destination. Par convention il est placé dans `results/mne3sd/scenario_a/`.
 
 Les scripts de `plots/` suivent la même logique :
 
 - `--input` : un ou plusieurs fichiers CSV produits par les scripts de scénario.
-- `--figures-dir` : dossier où les figures générées seront écrites. Valeur par défaut : `figures/mne3sd/article_a/`.
+- `--figures-dir` : dossier où les figures générées seront écrites. Valeur par défaut : `figures/mne3sd/scenario_a/`.
 - `--format` : format d'image pour les graphiques exportés (par ex. `png`, `pdf`, `svg`).
 
 ### Profils d'exécution
@@ -29,7 +29,7 @@ Tous les lanceurs de scénarios acceptent l'option commune `--profile` (ou la va
 
 ## Arborescence et artefacts
 ```
-scripts/mne3sd/article_a/
+scripts/mne3sd/scenario_a/
 ├── README.md                # Ce guide
 ├── __init__.py              # Marqueur de package pour les utilitaires partagés
 ├── scenarios/               # Points d'entrée pour la génération de données
@@ -39,49 +39,49 @@ scripts/mne3sd/article_a/
 ```
 
 ### Sorties CSV
-Toutes les métriques brutes ou agrégées produites par les expériences doivent être stockées dans `results/mne3sd/article_a/`. Chaque script de scénario devrait créer un sous-dossier dédié lorsqu'il écrit plusieurs fichiers, par exemple `results/mne3sd/article_a/urban/summary.csv`. Les utilitaires de prétraitement partagés peuvent également conserver des CSV intermédiaires dans la même arborescence.
+Toutes les métriques brutes ou agrégées produites par les expériences doivent être stockées dans `results/mne3sd/scenario_a/`. Chaque script de scénario devrait créer un sous-dossier dédié lorsqu'il écrit plusieurs fichiers, par exemple `results/mne3sd/scenario_a/urban/summary.csv`. Les utilitaires de prétraitement partagés peuvent également conserver des CSV intermédiaires dans la même arborescence.
 
 ### Figures
-Utilisez `figures/mne3sd/article_a/` pour stocker toute figure exportée pour l'Article A. Préférez des noms de fichiers explicites correspondant au manuscrit, par exemple `figure_2_packet_delivery.pdf`. Les artefacts intermédiaires (tels que les graphiques de débogage) peuvent être placés dans un sous-dossier dédié ignoré lors de la rédaction finale.
+Utilisez `figures/mne3sd/scenario_a/` pour stocker toute figure exportée pour le scénario A. Préférez des noms de fichiers explicites adaptés à l’export, par exemple `figure_2_packet_delivery.pdf`. Les artefacts intermédiaires (tels que les graphiques de débogage) peuvent être placés dans un sous-dossier dédié ignoré lors de la rédaction finale.
 
 ## Exécution des scripts
 Toutes les commandes ci-dessous doivent être lancées depuis la racine du dépôt. Remplacez les éléments entre chevrons par des valeurs propres au scénario.
 
 ### Générer les données de simulation
 ```
-python -m scripts.mne3sd.article_a.scenarios.<scenario_module> \
+python -m scripts.mne3sd.scenario_a.scenarios.<scenario_module> \
     --runs 10 \
     --duration 3600 \
     --seed 42 \
-    --output results/mne3sd/article_a/<scenario_name>.csv
+    --output results/mne3sd/scenario_a/<scenario_name>.csv
 ```
 
 Chaque module de scénario peut accepter des options supplémentaires (par exemple pour ajuster la topologie, les profils de trafic ou les paramètres PHY). Documentez les options spécifiques directement dans la docstring du script.
 
 ### Générer les figures
 ```
-python -m scripts.mne3sd.article_a.plots.<figure_module> \
-    --input results/mne3sd/article_a/<scenario_name>.csv \
-    --figures-dir figures/mne3sd/article_a/ \
+python -m scripts.mne3sd.scenario_a.plots.<figure_module> \
+    --input results/mne3sd/scenario_a/<scenario_name>.csv \
+    --figures-dir figures/mne3sd/scenario_a/ \
     --format pdf
 ```
 
-Les modules de tracé peuvent agréger plusieurs fichiers CSV en répétant l'option `--input`. Adoptez des noms de module descriptifs tels que `throughput_breakdown` ou `sensitivity_overview` pour rester aligné avec la structure de l'article.
+Les modules de tracé peuvent agréger plusieurs fichiers CSV en répétant l'option `--input`. Adoptez des noms de module descriptifs tels que `throughput_breakdown` ou `sensitivity_overview` pour rester aligné avec la structure du scénario.
 
 ## Rejouer toute la chaîne
 Pour exécuter le flux complet de bout en bout :
 
-1. Lancez tous les modules de scénario requis afin d'alimenter `results/mne3sd/article_a/`.
+1. Lancez tous les modules de scénario requis afin d'alimenter `results/mne3sd/scenario_a/`.
 2. Vérifiez les fichiers CSV générés et, si nécessaire, validez-les dans une branche séparée pour assurer leur traçabilité.
-3. Exécutez chaque module de tracé pour remplir `figures/mne3sd/article_a/`.
-4. Passez en revue les figures localement avant de les exporter vers le dépôt du manuscrit.
+3. Exécutez chaque module de tracé pour remplir `figures/mne3sd/scenario_a/`.
+4. Passez en revue les figures localement avant de les exporter vers le dépôt d’export.
 
 ### Lanceur de batch
 
-Pour réaliser toute la chaîne Article A en une seule étape, utilisez le lanceur partagé `scripts/mne3sd/run_all_article_outputs.py` :
+Pour réaliser toute la chaîne du scénario A en une seule étape, utilisez le lanceur partagé `scripts/mne3sd/run_all_scenario_exports.py` :
 
 ```
-python -m scripts.mne3sd.run_all_article_outputs --article a
+python -m scripts.mne3sd.run_all_scenario_exports --target scenario_a
 ```
 
 Ce script enchaîne toutes les commandes `run_class_*`, puis les modules `plot_*`, et affiche un résumé des CSV et figures générés. Utilisez `--skip-scenarios` ou `--skip-plots` pour limiter l'exécution à une seule étape, par exemple lorsque seules les figures doivent être régénérées à partir de données existantes.

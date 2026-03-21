@@ -1,10 +1,10 @@
-# IWCMC – Organisation des expériences
+# Campagne héritée – Organisation des expériences
 
 > [!WARNING]
-> **Archive / reproduction** : cette documentation sert aux campagnes IWCMC conservées pour reproduction et comparaison.
+> **Archive / reproduction** : cette documentation sert aux campagnes héritées conservées pour reproduction et comparaison.
 
 
-Ce dossier centralise les campagnes IWCMC (SNIR statique, RL statique, RL mobilité),
+Ce dossier centralise les campagnes héritées (SNIR statique, RL statique, RL mobilité),
 ainsi que le matériel complémentaire (MED) et les archives. La structure reprend
 les conventions utilisées dans les runbooks et scénarios existants afin de garder
 une exécution homogène et reproductible.
@@ -50,22 +50,22 @@ bien dans `PYTHONPATH`.
 
 ```bash
 # Exemple générique d’un scénario SNIR statique
-python IWCMC/snir_static/scenarios/run_snir_static.py --seed 1 --replications 5
+python campaigns/legacy/snir_static/scenarios/run_snir_static.py --seed 1 --replications 5
 
 # Exemple de génération de figures
-python IWCMC/snir_static/plots/plot_snir_static.py IWCMC/snir_static/data/der_density_snir.csv \
-  --output-dir IWCMC/snir_static/figures
+python campaigns/legacy/snir_static/plots/plot_snir_static.py campaigns/legacy/snir_static/data/der_density_snir.csv \
+  --output-dir campaigns/legacy/snir_static/figures
 ```
 
 ### PowerShell (Windows 11)
 
 ```powershell
 # Exemple générique d’un scénario RL statique
-python IWCMC/rl_static/scenarios/run_rl_static.py --seed 1 --replications 5
+python campaigns/legacy/rl_static/scenarios/run_rl_static.py --seed 1 --replications 5
 
 # Exemple de génération de figures
-python IWCMC/rl_static/plots/plot_rl_static.py IWCMC/rl_static/data/rl_rewards.csv `
-  --output-dir IWCMC/rl_static/figures
+python campaigns/legacy/rl_static/plots/plot_rl_static.py campaigns/legacy/rl_static/data/rl_rewards.csv `
+  --output-dir campaigns/legacy/rl_static/figures
 ```
 
 > Remarque : adaptez les noms de scripts et chemins de sortie aux fichiers
@@ -76,13 +76,13 @@ python IWCMC/rl_static/plots/plot_rl_static.py IWCMC/rl_static/data/rl_rewards.c
 ### PowerShell (Windows 11)
 
 ```powershell
-python -m pytest IWCMC/tests
+python -m pytest campaigns/legacy/tests
 ```
 
 ### Bash (Linux/macOS/WSL)
 
 ```bash
-python -m pytest IWCMC/tests
+python -m pytest campaigns/legacy/tests
 ```
 
 ## Modèle SNIR κ (snir_model)
@@ -129,7 +129,7 @@ d’utilisation :
    - Vérifier les suffixes de figures (baseline, snir, etc.).
    - Archiver les exports ou documenter la commande de génération.
 
-## Tableau des figures IWCMC
+## Tableau des figures de campagne héritée
 
 Les figures sont organisées par campagne. Le tableau ci‑dessous sert de repère
 pour stocker et référencer les fichiers générés.

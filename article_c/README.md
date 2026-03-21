@@ -1,6 +1,6 @@
-# Article C
+# Scénario C
 
-Ce dossier contient une structure minimale pour les scripts de l'article C.
+Ce dossier contient une structure minimale pour les scripts du scénario C.
 
 ## Organisation
 
@@ -16,8 +16,8 @@ Ce dossier contient une structure minimale pour les scripts de l'article C.
 
 Le layout canonique des sorties brutes est :
 
-- `article_c/step1/results/by_size/size_<N>/rep_<R>/...`
-- `article_c/step2/results/by_size/size_<N>/rep_<R>/...`
+- `scenario_c/step1/results/by_size/size_<N>/rep_<R>/...`
+- `scenario_c/step2/results/by_size/size_<N>/rep_<R>/...`
 
 où :
 
@@ -28,8 +28,8 @@ où :
 
 Les scripts de tracé consomment en priorité les agrégats globaux dans :
 
-- `article_c/step1/results/aggregates/aggregated_results.csv`
-- `article_c/step2/results/aggregates/aggregated_results.csv`
+- `scenario_c/step1/results/aggregates/aggregated_results.csv`
+- `scenario_c/step2/results/aggregates/aggregated_results.csv`
 
 Des variantes existent aussi dans le même dossier `results/aggregates/` :
 
@@ -38,34 +38,34 @@ Des variantes existent aussi dans le même dossier `results/aggregates/` :
 
 ### 3) Scripts qui produisent les agrégats
 
-- Exécution complète : `python -m article_c.run_all` (agrège Step1 + Step2).
+- Exécution complète : `python -m scenario_c.run_all` (agrège Step1 + Step2).
 - Exécution par étape :
-  - `python -m article_c.step1.run_step1 ...`
-  - `python -m article_c.step2.run_step2 ...`
+  - `python -m scenario_c.step1.run_step1 ...`
+  - `python -m scenario_c.step2.run_step2 ...`
 - Agrégation seule (sans relancer la simulation) :
-  - `python -m article_c.tools.aggregate_step1`
-  - `python -m article_c.tools.aggregate_step2`
+  - `python -m scenario_c.tools.aggregate_step1`
+  - `python -m scenario_c.tools.aggregate_step2`
 
 ### 4) Scripts qui consomment ces agrégats
 
-- Orchestrateur figures : `python -m article_c.make_all_plots`
-- Pipeline de comparaison : `python -m article_c.all_plot_compare`
-- Comparaison SNIR : `python -m article_c.compare_with_snir`
-- DER par cluster : `python -m article_c.plot_cluster_der`
-- Modules de tracé Step1/Step2 sous `article_c/step1/plots/` et `article_c/step2/plots/` (appelés notamment par `make_all_plots`).
+- Orchestrateur figures : `python -m scenario_c.make_all_plots`
+- Pipeline de comparaison : `python -m scenario_c.all_plot_compare`
+- Comparaison SNIR : `python -m scenario_c.compare_with_snir`
+- DER par cluster : `python -m scenario_c.plot_cluster_der`
+- Modules de tracé Step1/Step2 sous `scenario_c/step1/plots/` et `scenario_c/step2/plots/` (appelés notamment par `make_all_plots`).
 
 ### 5) Exemple Windows 11 (PowerShell)
 
 ```powershell
 # 1) Simulation + agrégation (layout by_size/size_<N>/rep_<R>)
-python -m article_c.run_all --network-sizes 80 160 320 640 1280 --replications 5 --seeds_base 1
+python -m scenario_c.run_all --network-sizes 80 160 320 640 1280 --replications 5 --seeds_base 1
 
 # 2) (Optionnel) Régénérer uniquement les agrégats à partir de by_size
-python -m article_c.tools.aggregate_step1
-python -m article_c.tools.aggregate_step2
+python -m scenario_c.tools.aggregate_step1
+python -m scenario_c.tools.aggregate_step2
 
 # 3) Générer les plots à partir de results/aggregates/...
-python -m article_c.make_all_plots --formats png,eps,pdf --no-suptitle
+python -m scenario_c.make_all_plots --formats png,eps,pdf --no-suptitle
 ```
 
 ## Modèle radio et SNIR
@@ -98,7 +98,7 @@ python -m article_c.make_all_plots --formats png,eps,pdf --no-suptitle
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r article_c/requirements.txt
+pip install -r scenario_c/requirements.txt
 ```
 
 #### Invite de commandes (cmd)
@@ -106,7 +106,7 @@ pip install -r article_c/requirements.txt
 ```cmd
 python -m venv .venv
 .venv\Scripts\activate.bat
-pip install -r article_c\requirements.txt
+pip install -r scenario_c\requirements.txt
 ```
 
 ### Activation de l'environnement Python
@@ -132,52 +132,52 @@ Exemple **exact** demandé pour les tailles `[80,160,320,640,1280]` et `5` répl
 #### 1) Nettoyage des dossiers résultats/figures
 
 ```powershell
-Remove-Item -Recurse -Force article_c/step1/results, article_c/step2/results, article_c/step1/plots/output, article_c/step2/plots/output, article_c/plots/output -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force scenario_c/step1/results, scenario_c/step2/results, scenario_c/step1/plots/output, scenario_c/step2/plots/output, scenario_c/plots/output -ErrorAction SilentlyContinue
 ```
 
 #### 2) Exécuter Step1 puis verify
 
 ```powershell
-python -m article_c.step1.run_step1 --network-sizes 80 160 320 640 1280 --replications 5 --seeds_base 1 --snir_modes snir_on,snir_off --flat-output
-python -m article_c.validate_results --step1-dir article_c/step1/results --step2-dir article_c/step2/results --skip-step2
+python -m scenario_c.step1.run_step1 --network-sizes 80 160 320 640 1280 --replications 5 --seeds_base 1 --snir_modes snir_on,snir_off --flat-output
+python -m scenario_c.validate_results --step1-dir scenario_c/step1/results --step2-dir scenario_c/step2/results --skip-step2
 ```
 
 #### 3) Exécuter Step2 puis verify
 
 ```powershell
-python -m article_c.step2.run_step2 --network-sizes 80 160 320 640 1280 --replications 5 --seeds_base 1 --flat-output
-python -m article_c.validate_results --step1-dir article_c/step1/results --step2-dir article_c/step2/results
+python -m scenario_c.step2.run_step2 --network-sizes 80 160 320 640 1280 --replications 5 --seeds_base 1 --flat-output
+python -m scenario_c.validate_results --step1-dir scenario_c/step1/results --step2-dir scenario_c/step2/results
 ```
 
 #### 4) Génération des figures
 
 ```powershell
-python -m article_c.make_all_plots --formats png,eps,pdf --no-suptitle
-python -m article_c.all_plot_compare --export-csv --output-dir article_c/plots/output/compare_all
+python -m scenario_c.make_all_plots --formats png,eps,pdf --no-suptitle
+python -m scenario_c.all_plot_compare --export-csv --output-dir scenario_c/plots/output/compare_all
 ```
 
 #### 5) Lecture du manifeste et diagnostics
 
 ```powershell
-Import-Csv article_c/figures_manifest.csv | Select-Object module,format,path,exists | Format-Table -AutoSize
-Import-Csv article_c/step2/results/diagnostics_step2_by_size.csv | Format-Table -AutoSize
-Import-Csv article_c/scientific_qa_report.csv | Format-Table -AutoSize
+Import-Csv scenario_c/figures_manifest.csv | Select-Object module,format,path,exists | Format-Table -AutoSize
+Import-Csv scenario_c/step2/results/diagnostics_step2_by_size.csv | Format-Table -AutoSize
+Import-Csv scenario_c/scientific_qa_report.csv | Format-Table -AutoSize
 ```
 
 Contrôles de présence rapides :
 
 ```powershell
-Test-Path article_c/step1/results/aggregates/aggregated_results.csv
-Test-Path article_c/step2/results/aggregates/aggregated_results.csv
-Test-Path article_c/figures_manifest.csv
-Test-Path article_c/step2/results/diagnostics_step2_by_size.csv
-Test-Path article_c/scientific_qa_report.csv
+Test-Path scenario_c/step1/results/aggregates/aggregated_results.csv
+Test-Path scenario_c/step2/results/aggregates/aggregated_results.csv
+Test-Path scenario_c/figures_manifest.csv
+Test-Path scenario_c/step2/results/diagnostics_step2_by_size.csv
+Test-Path scenario_c/scientific_qa_report.csv
 ```
 
 Exécuter toutes les étapes :
 
 ```powershell
-python -m article_c.run_all
+python -m scenario_c.run_all
 ```
 
 ### Presets documentés (Windows 11)
@@ -185,34 +185,34 @@ python -m article_c.run_all
 Preset d'exécution complet (tailles + réplications + seed + SNIR) :
 
 ```powershell
-python -m article_c.run_all --preset article-c
+python -m scenario_c.run_all --preset community_core
 ```
 
-Preset de génération IEEE-ready **sans titres globaux** :
+Preset de génération d’export **sans titres globaux** :
 
 ```powershell
-python -m article_c.make_all_plots --preset ieee-ready-no-titles
+python -m scenario_c.make_all_plots --preset publication_profile_no_titles
 ```
 
-> `make_all_plots` exécute automatiquement `article_c.qa_scientific_checks`
+> `make_all_plots` exécute automatiquement `scenario_c.qa_scientific_checks`
 > avant le traçage. Les rapports sont écrits dans
-> `article_c/scientific_qa_report.txt` et `article_c/scientific_qa_report.csv`.
+> `scenario_c/scientific_qa_report.txt` et `scenario_c/scientific_qa_report.csv`.
 
 Équivalence exacte avec les **3 commandes** explicites :
 
 ```powershell
-python -m article_c.step1.run_step1 --network-sizes 50 100 150 --replications 5 --seeds_base 1 --snir_modes snir_on,snir_off --snir-threshold-db 5.0 --snir-threshold-min-db 3.0 --snir-threshold-max-db 6.0 --noise-floor-dbm -174.0
-python -m article_c.step2.run_step2 --network-sizes 50 100 150 --replications 5 --seeds_base 1
-python -m article_c.make_all_plots --formats png,eps,pdf --no-suptitle
+python -m scenario_c.step1.run_step1 --network-sizes 50 100 150 --replications 5 --seeds_base 1 --snir_modes snir_on,snir_off --snir-threshold-db 5.0 --snir-threshold-min-db 3.0 --snir-threshold-max-db 6.0 --noise-floor-dbm -174.0
+python -m scenario_c.step2.run_step2 --network-sizes 50 100 150 --replications 5 --seeds_base 1
+python -m scenario_c.make_all_plots --formats png,eps,pdf --no-suptitle
 ```
 
-`python -m article_c.run_all --preset article-c` est strictement équivalent aux deux premières commandes ci-dessus (step1 + step2), et le preset `ieee-ready-no-titles` couvre la troisième commande de génération des figures.
+`python -m scenario_c.run_all --preset community_core` est strictement équivalent aux deux premières commandes ci-dessus (step1 + step2), et le preset `publication_profile_no_titles` couvre la troisième commande de génération des figures.
 
 Exécuter toutes les étapes en sortie **flat** + générer les figures (exemple Windows 11) :
 
 ```powershell
-python -m article_c.run_all --flat-output
-python -m article_c.make_all_plots
+python -m scenario_c.run_all --flat-output
+python -m scenario_c.make_all_plots
 ```
 
 ### Pipeline de comparaison (fig. 4/5/7/8 + SNIR + DER par cluster)
@@ -221,34 +221,34 @@ Pour centraliser les sorties des scripts de comparaison (figures 4/5/7/8,
 comparaison SNIR et DER par cluster), utilisez :
 
 ```powershell
-python -m article_c.all_plot_compare --output-dir article_c/plots/output/compare_all
+python -m scenario_c.all_plot_compare --output-dir scenario_c/plots/output/compare_all
 ```
 
 Exporter également des **CSV structurés** (points des figures 4/5/7/8) :
 
 ```powershell
-python -m article_c.all_plot_compare --export-csv --output-dir article_c/plots/output/compare_all
+python -m scenario_c.all_plot_compare --export-csv --output-dir scenario_c/plots/output/compare_all
 ```
 
-Les CSV sont écrits dans `article_c/plots/output/compare_all/csv` et peuvent être
+Les CSV sont écrits dans `scenario_c/plots/output/compare_all/csv` et peuvent être
 chargés dans Excel/Power BI pour vérification ou post-traitement.
 
 Exécuter toutes les étapes en sautant l'étape 1 :
 
 ```powershell
-python -m article_c.run_all --skip-step1
+python -m scenario_c.run_all --skip-step1
 ```
 
 Exécuter toutes les étapes en sautant l'étape 2 :
 
 ```powershell
-python -m article_c.run_all --skip-step2
+python -m scenario_c.run_all --skip-step2
 ```
 
 Exécuter toutes les étapes en ajustant collisions/congestion :
 
 ```powershell
-python -m article_c.run_all --capture-probability 0.28 --congestion-coeff 1.0 --collision-size-factor 1.1
+python -m scenario_c.run_all --capture-probability 0.28 --congestion-coeff 1.0 --collision-size-factor 1.1
 ```
 
 > Si l'étape 1 bloque, tester `--skip-step1` pour lancer directement l'étape 2.
@@ -257,19 +257,19 @@ python -m article_c.run_all --capture-probability 0.28 --congestion-coeff 1.0 --
 Désactiver le fallback d'optimisation MixRA (option CLI de `run_all`) :
 
 ```powershell
-python -m article_c.run_all --mixra-opt-no-fallback
+python -m scenario_c.run_all --mixra-opt-no-fallback
 ```
 
 Exécuter uniquement l'étape 1 :
 
 ```powershell
-python article_c/step1/run_step1.py --network-sizes 50 100 150 --replications 5 --seeds_base 1000 --snir_modes snir_on,snir_off
+python scenario_c/step1/run_step1.py --network-sizes 50 100 150 --replications 5 --seeds_base 1000 --snir_modes snir_on,snir_off
 ```
 
 Exécuter uniquement l'étape 2 :
 
 ```powershell
-python article_c/step2/run_step2.py --network-sizes 50 100 150 --replications 5 --seeds_base 1000
+python scenario_c/step2/run_step2.py --network-sizes 50 100 150 --replications 5 --seeds_base 1000
 ```
 
 ### Autonomie de l'étape 2
@@ -285,7 +285,7 @@ Les paramètres utilisés par Step2 sont uniquement des entrées explicites :
 - paramètres de trafic (`--traffic-mode`, coefficients de charge),
 - paramètres de canal radio (`--snir-threshold-*`, `--noise-floor-dbm`, etc.).
 
-Conséquence pratique : `python -m article_c.run_all --skip-step1` exécute Step2 avec
+Conséquence pratique : `python -m scenario_c.run_all --skip-step1` exécute Step2 avec
 la même logique de paramétrage explicite, sans dépendance implicite à des sorties Step1.
 
 ### Profil standard adouci (par défaut)
@@ -336,7 +336,7 @@ Exemple de tendance observée (moyenne agrégée rapide, 6 rounds, seed fixe) :
 Commande type (Windows 11) :
 
 ```powershell
-python article_c/step2/run_step2.py --network-sizes 80 160 320 640 960 1280 --replications 1 --seeds_base 123 --allow-low-success-rate --workers 1
+python scenario_c/step2/run_step2.py --network-sizes 80 160 320 640 960 1280 --replications 1 --seeds_base 123 --allow-low-success-rate --workers 1
 ```
 
 ### Mode sécurisé (--safe-profile)
@@ -353,8 +353,8 @@ automatiquement des valeurs plus douces :
 Exemples :
 
 ```powershell
-python article_c/step2/run_step2.py --safe-profile --network-sizes 50 100 150 --replications 5 --seeds_base 1000
-python -m article_c.run_all --safe-profile
+python scenario_c/step2/run_step2.py --safe-profile --network-sizes 50 100 150 --replications 5 --seeds_base 1000
+python -m scenario_c.run_all --safe-profile
 ```
 
 ### Auto-safe-profile
@@ -370,16 +370,16 @@ L'alerte "reward uniforme" peut être émise fréquemment selon les scénarios. 
 `--reward-alert-level` pour la basculer en `INFO` et réduire la verbosité.
 
 ```powershell
-python article_c/step2/run_step2.py --network-sizes 50 100 150 --replications 5 --seeds_base 1000 --reward-alert-level INFO
+python scenario_c/step2/run_step2.py --network-sizes 50 100 150 --replications 5 --seeds_base 1000 --reward-alert-level INFO
 ```
 
-### Diagnostic d'import (package `article_c`)
+### Diagnostic d'import (package `scenario_c`)
 
-Si vous avez un doute sur la résolution du package `article_c`, vous pouvez lancer
+Si vous avez un doute sur la résolution du package `scenario_c`, vous pouvez lancer
 le script de diagnostic suivant pour vérifier l'import et afficher le chemin résolu :
 
 ```powershell
-python article_c/diagnose_import.py
+python scenario_c/diagnose_import.py
 ```
 
 Le script affiche également un extrait de `sys.path` pour aider à comprendre
@@ -392,7 +392,7 @@ Le **jitter** ajoute un décalage aléatoire (uniforme) à chaque instant de tra
 Exemple CLI avec un jitter explicite :
 
 ```powershell
-python article_c/step2/run_step2.py --network-sizes 50 100 150 --replications 5 --seeds_base 1000 --jitter-range-s 30
+python scenario_c/step2/run_step2.py --network-sizes 50 100 150 --replications 5 --seeds_base 1000 --jitter-range-s 30
 ```
 
 ### Paramètres avancés de collisions et congestion (étape 2)
@@ -408,12 +408,12 @@ Ces options permettent d'ajuster finement les pertes dues aux collisions/congest
 - `--collision-size-min` / `--collision-size-under-max` / `--collision-size-over-max` : bornes du facteur de taille des collisions.
 - `--collision-size-factor` : facteur de taille appliqué aux collisions (si non défini, calcul automatique). Valeur conseillée **0.8–1.6** selon la densité.
 
-Ces options sont disponibles via `article_c/step2/run_step2.py` et `article_c/run_all.py`.
+Ces options sont disponibles via `scenario_c/step2/run_step2.py` et `scenario_c/run_all.py`.
 
 Exemple CLI avec ajustement des coefficients :
 
 ```powershell
-python article_c/step2/run_step2.py --network-sizes 50 100 150 --replications 5 --seeds_base 1000 --capture-probability 0.28 --congestion-coeff 1.0 --congestion-coeff-base 0.28 --congestion-coeff-growth 0.30 --congestion-coeff-max 0.30 --collision-size-factor 1.1
+python scenario_c/step2/run_step2.py --network-sizes 50 100 150 --replications 5 --seeds_base 1000 --capture-probability 0.28 --congestion-coeff 1.0 --congestion-coeff-base 0.28 --congestion-coeff-growth 0.30 --congestion-coeff-max 0.30 --collision-size-factor 1.1
 ```
 
 ### Causes fréquentes d’un `success_rate` faible et valeurs de départ recommandées
@@ -469,32 +469,32 @@ Quand les conditions sont extrêmes (ex. congestion forte), `success_rate` peut 
 Exemple CLI :
 
 ```powershell
-python article_c/step2/run_step2.py --network-sizes 50 100 150 --replications 5 --seeds_base 1000 --floor-on-zero-success
+python scenario_c/step2/run_step2.py --network-sizes 50 100 150 --replications 5 --seeds_base 1000 --floor-on-zero-success
 ```
 
 Générer toutes les figures :
 
 ```powershell
-python -m article_c.make_all_plots
+python -m scenario_c.make_all_plots
 ```
 
 Contrôler les formats d'export (PNG/EPS, PDF optionnel) :
 
 ```powershell
-python -m article_c.make_all_plots --formats png,eps
+python -m scenario_c.make_all_plots --formats png,eps
 ```
 
 Régénérer toutes les figures (Windows 11) :
 
 ```powershell
-Remove-Item -Recurse -Force article_c/step1/plots/output, article_c/step2/plots/output
-python -m article_c.make_all_plots
+Remove-Item -Recurse -Force scenario_c/step1/plots/output, scenario_c/step2/plots/output
+python -m scenario_c.make_all_plots
 ```
 
-> **Windows (py -m recommandé)** : si `article_c` n’est **pas** reconnu comme un package
+> **Windows (py -m recommandé)** : si `scenario_c` n’est **pas** reconnu comme un package
 > (absence de `__init__.py` ou appel depuis un répertoire inadéquat), la commande
-> `python article_c/run_all.py` peut échouer. Préférez toujours l’appel en module
-> `python -m article_c.run_all` pour garantir la résolution correcte des imports.
+> `python scenario_c/run_all.py` peut échouer. Préférez toujours l’appel en module
+> `python -m scenario_c.run_all` pour garantir la résolution correcte des imports.
 
 ## Seeds et réplications
 
@@ -504,16 +504,16 @@ python -m article_c.make_all_plots
 
 > **Network size = number of nodes (integer)**.
 
-Les résultats sont écrits dans `article_c/step*/results/` et les figures dans `article_c/step*/plots/output/`.
+Les résultats sont écrits dans `scenario_c/step*/results/` et les figures dans `scenario_c/step*/plots/output/`.
 
 ### Chemins de sortie (résumé pratique)
 
-- **Étape 1 (CSV)** : `article_c/step1/results/`
-- **Étape 2 (CSV)** : `article_c/step2/results/`
-- **Plots étape 1** : `article_c/step1/plots/output/`
-- **Plots étape 2** : `article_c/step2/plots/output/`
-- **Plots comparaison papier** : `article_c/plots/output/`
-- **Pipeline compare all** : `article_c/plots/output/compare_all/`
+- **Étape 1 (CSV)** : `scenario_c/step1/results/`
+- **Étape 2 (CSV)** : `scenario_c/step2/results/`
+- **Plots étape 1** : `scenario_c/step1/plots/output/`
+- **Plots étape 2** : `scenario_c/step2/plots/output/`
+- **Plots comparaison export** : `scenario_c/plots/output/`
+- **Pipeline compare all** : `scenario_c/plots/output/compare_all/`
 
 > Sous Windows, vous pouvez utiliser indifféremment `\` et `/` dans la plupart des commandes Python ; dans ce README, les chemins sont majoritairement indiqués avec `/` pour rester cohérents entre OS.
 
@@ -522,69 +522,69 @@ Les résultats sont écrits dans `article_c/step*/results/` et les figures dans 
 Le mode officiel est le format imbriqué **by_size** :
 
 - **Étape 1 (obligatoire par réplication)** :
-  - `article_c/step1/results/by_size/size_<N>/rep_<R>/raw_packets.csv`
-  - `article_c/step1/results/by_size/size_<N>/rep_<R>/raw_metrics.csv`
-  - `article_c/step1/results/by_size/size_<N>/rep_<R>/aggregated_results.csv`
+  - `scenario_c/step1/results/by_size/size_<N>/rep_<R>/raw_packets.csv`
+  - `scenario_c/step1/results/by_size/size_<N>/rep_<R>/raw_metrics.csv`
+  - `scenario_c/step1/results/by_size/size_<N>/rep_<R>/aggregated_results.csv`
 - **Étape 1 (obligatoire après agrégation globale)** :
-  `article_c/step1/results/aggregates/aggregated_results.csv`
+  `scenario_c/step1/results/aggregates/aggregated_results.csv`
 
 Dans ce mode officiel, `validate_results.py` et `report_integrity.py` ne
-requièrent plus la présence de `article_c/step1/results/raw_metrics.csv` ni de
-`article_c/step*/results/raw_results.csv` à la racine de `results/`.
+requièrent plus la présence de `scenario_c/step1/results/raw_metrics.csv` ni de
+`scenario_c/step*/results/raw_results.csv` à la racine de `results/`.
 
-## End-to-end paper campaign (Windows 11)
+## End-to-end campagne d’export (Windows 11)
 
 Objectif : enchaîner une campagne complète « simulation + figures papier + contrôles ».
 
-### 1) Exécution complète (preset article-c)
+### 1) Exécution complète (preset community_core)
 
 ```powershell
-python -m article_c.run_all --preset article-c
+python -m scenario_c.run_all --preset community_core
 ```
 
-### 2) Génération des figures IEEE-ready
+### 2) Génération des figures prêtes à l’export
 
 ```powershell
-python -m article_c.make_all_plots --preset ieee-ready-no-titles
-python -m article_c.all_plot_compare --export-csv --output-dir article_c/plots/output/compare_all
+python -m scenario_c.make_all_plots --preset publication_profile_no_titles
+python -m scenario_c.all_plot_compare --export-csv --output-dir scenario_c/plots/output/compare_all
 ```
 
 ### 3) Checks attendus après exécution
 
 - Présence des agrégats :
-  - `article_c/step1/results/aggregates/aggregated_results.csv`
-  - `article_c/step2/results/aggregates/aggregated_results.csv`
+  - `scenario_c/step1/results/aggregates/aggregated_results.csv`
+  - `scenario_c/step2/results/aggregates/aggregated_results.csv`
 - Présence des figures clés :
-  - `article_c/plots/output/fig4_der_by_cluster.png`
-  - `article_c/plots/output/fig5_der_by_load.png`
-  - `article_c/plots/output/fig7_traffic_sacrifice.png`
-  - `article_c/plots/output/fig8_throughput_clusters.png`
+  - `scenario_c/plots/output/fig4_der_by_cluster.png`
+  - `scenario_c/plots/output/fig5_der_by_load.png`
+  - `scenario_c/plots/output/fig7_traffic_sacrifice.png`
+  - `scenario_c/plots/output/fig8_throughput_clusters.png`
 - Présence de la comparaison SNIR :
-  - `article_c/plots/output/compare_with_snir/compare_pdr_snir.png`
-  - `article_c/plots/output/compare_with_snir/compare_der_snir.png`
-  - `article_c/plots/output/compare_with_snir/compare_throughput_snir.png`
-- Export CSV comparaison : dossier `article_c/plots/output/compare_all/csv/` non vide.
+  - `scenario_c/plots/output/compare_with_snir/compare_pdr_snir.png`
+  - `scenario_c/plots/output/compare_with_snir/compare_der_snir.png`
+  - `scenario_c/plots/output/compare_with_snir/compare_throughput_snir.png`
+- Export CSV comparaison : dossier `scenario_c/plots/output/compare_all/csv/` non vide.
 
 ### 4) Vérifications rapides (PowerShell)
 
 ```powershell
-Test-Path article_c/step1/results/aggregates/aggregated_results.csv
-Test-Path article_c/step2/results/aggregates/aggregated_results.csv
-Get-ChildItem article_c/plots/output -Filter "fig*.png"
-Get-ChildItem article_c/plots/output/compare_with_snir -Filter "*.png"
-Get-ChildItem article_c/plots/output/compare_all/csv -Filter "*.csv"
+Test-Path scenario_c/step1/results/aggregates/aggregated_results.csv
+Test-Path scenario_c/step2/results/aggregates/aggregated_results.csv
+Get-ChildItem scenario_c/plots/output -Filter "fig*.png"
+Get-ChildItem scenario_c/plots/output/compare_with_snir -Filter "*.png"
+Get-ChildItem scenario_c/plots/output/compare_all/csv -Filter "*.csv"
 ```
 
 ## Troubleshooting courant (Windows 11)
 
-- **`ModuleNotFoundError: No module named 'article_c'`**
+- **`ModuleNotFoundError: No module named 'scenario_c'`**
   - Exécuter depuis la racine du dépôt.
-  - Préférer `python -m article_c.<module>` au lieu d'un chemin de script direct.
+  - Préférer `python -m scenario_c.<module>` au lieu d'un chemin de script direct.
 - **Activation venv impossible en PowerShell**
   - Utiliser `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` puis réactiver.
 - **Aucun plot généré**
   - Vérifier la présence des CSV agrégés (`aggregates/aggregated_results.csv`) dans `step1/results` et `step2/results`.
-  - Relancer l'agrégation (`python -m article_c.tools.aggregate_step1` et `python -m article_c.tools.aggregate_step2`).
+  - Relancer l'agrégation (`python -m scenario_c.tools.aggregate_step1` et `python -m scenario_c.tools.aggregate_step2`).
 - **Erreur d'encodage / caractères accentués illisibles**
   - Forcer UTF-8 dans le terminal avant exécution :
     - PowerShell : `$OutputEncoding = [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)`
@@ -599,18 +599,18 @@ Get-ChildItem article_c/plots/output/compare_all/csv -Filter "*.csv"
 - En cas d'export CSV destiné à Excel, conserver l'encodage UTF-8 (idéalement UTF-8 avec BOM si votre workflow Excel l'exige explicitement).
 - Pour les noms de fichiers et dossiers, éviter les caractères exotiques si les artefacts doivent transiter entre plusieurs outils Windows/Linux.
 
-## Reproduction article QoS / Comparaison SNIR
+## Reproduction du scénario QoS / Comparaison SNIR
 
 Cette section documente les scripts dédiés à la reproduction des figures QoS et
 à la comparaison SNIR. Ils reposent **exclusivement** sur des CSV agrégés en
-format **flat** dans `article_c/step*/results/`.
+format **flat** dans `scenario_c/step*/results/`.
 
 ### Entrées attendues (CSV agrégés flat)
 
-- `article_c/step1/results/aggregated_results.csv`
-- `article_c/step2/results/aggregated_results.csv`
-- (optionnel) `article_c/common/data/author_curves.csv` pour les courbes auteurs QoS.
-- (optionnel) `article_c/common/data/author_curves_snir.csv` pour la comparaison SNIR.
+- `scenario_c/step1/results/aggregated_results.csv`
+- `scenario_c/step2/results/aggregated_results.csv`
+- (optionnel) `scenario_c/common/data/author_curves.csv` pour les courbes auteurs QoS.
+- (optionnel) `scenario_c/common/data/author_curves_snir.csv` pour la comparaison SNIR.
 
 ### Sorties générées (PNG/EPS, PDF optionnel)
 
@@ -618,16 +618,16 @@ Les scripts produisent des fichiers dans les répertoires ci‑dessous, avec les
 extensions demandées (par défaut PNG/EPS). Pour inclure le PDF, ajouter
 `--formats png,eps,pdf`.
 
-- `article_c/plots/output/` :
+- `scenario_c/plots/output/` :
   - `fig4_der_by_cluster.*`
   - `fig5_der_by_load.*`
   - `fig7_traffic_sacrifice.*`
   - `fig8_throughput_clusters.*`
-- `article_c/plots/output/compare_with_snir/` :
+- `scenario_c/plots/output/compare_with_snir/` :
   - `compare_pdr_snir.*`
   - `compare_der_snir.*`
   - `compare_throughput_snir.*`
-- `article_c/plots/output/` :
+- `scenario_c/plots/output/` :
   - `plot_cluster_der.*`
 
 ### Commandes Windows 11
@@ -638,24 +638,24 @@ extensions demandées (par défaut PNG/EPS). Pour inclure le PDF, ajouter
 Reproduire les figures QoS (figures 4/5/7/8) :
 
 ```powershell
-python -m article_c.reproduce_author_results --formats png,eps
+python -m scenario_c.reproduce_author_results --formats png,eps
 ```
 
 Comparer SNIR ON/OFF (PDR/DER/Throughput) :
 
 ```powershell
-python -m article_c.compare_with_snir --formats png,eps
+python -m scenario_c.compare_with_snir --formats png,eps
 ```
 
 Tracer le DER par cluster :
 
 ```powershell
-python -m article_c.plot_cluster_der --formats png,eps
+python -m scenario_c.plot_cluster_der --formats png,eps
 ```
 
-### Style IEEE et option `--formats`
+### Style export et option `--formats`
 
-- **Taille/Légende** : les scripts appliquent les recommandations IEEE
+- **Taille/Légende** : les scripts appliquent les recommandations export
   (dimensions et légende en haut) via les helpers de style.
 - **Export PDF** : pour inclure le PDF en plus du PNG/EPS, ajouter
   `--formats png,eps,pdf`.
@@ -667,15 +667,15 @@ python -m article_c.plot_cluster_der --formats png,eps
 Si un script d'orchestration est ajouté (ex. `all_plot_compare.py`), documentez
 ici :
 
-- **Commande Windows 11** (ex. `python -m article_c.all_plot_compare --formats png,eps`).
-- **Entrées attendues** (CSV agrégés flat dans `article_c/step*/results/`).
+- **Commande Windows 11** (ex. `python -m scenario_c.all_plot_compare --formats png,eps`).
+- **Entrées attendues** (CSV agrégés flat dans `scenario_c/step*/results/`).
 - **Sorties** (liste des fichiers générés et répertoires de sortie).
 
-## Légendes IEEE‑ready
+## Légendes export‑ready
 
-### Tailles recommandées (IEEE)
+### Tailles recommandées (export)
 
-Pour éviter tout redimensionnement destructif lors de la mise en page IEEE, privilégier des tailles de figure proches des largeurs finales :
+Pour éviter tout redimensionnement destructif lors de la mise en page export, privilégier des tailles de figure proches des largeurs finales :
 
 - **Colonne simple** : ~**3.5 in** (≈ 8.9 cm) de large.
 - **Double colonne** : ~**7.16 in** (≈ 18.2 cm) de large.
@@ -692,7 +692,7 @@ Ces tailles permettent de conserver des polices lisibles et des épaisseurs de t
 
 ### Export EPS
 
-- **Format EPS** : activer l'export EPS pour les soumissions IEEE qui exigent des figures vectorielles.
+- **Format EPS** : activer l'export EPS pour les exports export qui exigent des figures vectorielles.
 - **CLI** : ajouter `pdf` à `--formats` si nécessaire (ex. `png,eps,pdf`).
 
 ## Figures disponibles
