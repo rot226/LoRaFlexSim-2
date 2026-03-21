@@ -1,5 +1,9 @@
 # sfrd
 
+> [!WARNING]
+> **Workflow avancé** : cette documentation décrit un pipeline SFRD spécialisé, distinct de l’interface officielle `mobilesfrdth`.
+
+
 Structure initiale pour les scripts CLI et les parseurs SFRD.
 
 ## Prérequis

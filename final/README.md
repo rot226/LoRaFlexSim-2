@@ -1,5 +1,9 @@
 # Dossier `final/`
 
+> [!WARNING]
+> **Archive / reproduction** : ce dossier conserve un flux historique de génération de CSV et de figures.
+
+
 Ce dossier regroupe un flux de travail **reproductible** pour générer des scénarios, stocker les CSV et centraliser les figures produites par LoRaFlexSim.
 
 ## Pré requis

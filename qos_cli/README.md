@@ -1,5 +1,9 @@
 # Interface CLI QoS
 
+> [!WARNING]
+> **Guide spécialisé** : cette interface complète la CLI officielle `mobilesfrdth` pour les scénarios QoS avancés.
+
+
 Ce répertoire centralise les fichiers nécessaires pour piloter les scénarios QoS via la future CLI.
 Les scripts fournis (préfixés `lfs_`) orchestrent la préparation des données et l'analyse des résultats.
 La commande `python -m qos_cli.lfs_run` exécute directement une simulation LoRaFlexSim pour un scénario donné.

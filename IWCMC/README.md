@@ -1,5 +1,9 @@
 # IWCMC – Organisation des expériences
 
+> [!WARNING]
+> **Archive / reproduction** : cette documentation sert aux campagnes IWCMC conservées pour reproduction et comparaison.
+
+
 Ce dossier centralise les campagnes IWCMC (SNIR statique, RL statique, RL mobilité),
 ainsi que le matériel complémentaire (MED) et les archives. La structure reprend
 les conventions utilisées dans les runbooks et scénarios existants afin de garder
