@@ -6,7 +6,7 @@ import warnings
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from article_c.common.plotting_style import apply_base_rcparams
+from pretest_campagne.common.plotting_style import apply_base_rcparams
 
 
 def main(

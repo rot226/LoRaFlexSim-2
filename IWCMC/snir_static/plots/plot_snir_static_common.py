@@ -9,7 +9,7 @@ from typing import Iterable
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from article_c.common.plot_helpers import warn_metric_checks
+from pretest_campagne.common.plot_helpers import warn_metric_checks
 
 def _ensure_output_dir(output_dir: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)

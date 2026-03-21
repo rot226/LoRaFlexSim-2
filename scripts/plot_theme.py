@@ -6,7 +6,7 @@ import warnings
 from typing import Any, Mapping
 
 try:
-    from article_c.common.plotting_style import apply_base_rcparams
+    from pretest_campagne.common.plotting_style import apply_base_rcparams
 
     _ARTICLE_C_STYLE_AVAILABLE = True
 except Exception:  # pragma: no cover - dépend de l'environnement d'exécution

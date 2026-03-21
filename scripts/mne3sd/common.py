@@ -75,7 +75,7 @@ def resolve_worker_count(workers: WorkerCount, task_count: int) -> int:
 
 import matplotlib.pyplot as plt
 
-from article_c.common.plotting_style import apply_base_rcparams
+from pretest_campagne.common.plotting_style import apply_base_rcparams
 
 PROFILE_CHOICES = ("full", "fast", "ci")
 PROFILE_ENV_VAR = "MNE3SD_PROFILE"

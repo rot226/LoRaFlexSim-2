@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 # Allow running the script from a clone without installation
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from article_c.common.plotting_style import apply_base_rcparams
+from pretest_campagne.common.plotting_style import apply_base_rcparams
 from plot_defaults import DEFAULT_FIGSIZE_SIMPLE
 
 RESULTS_DIR = Path(__file__).resolve().parent.parent / "results"

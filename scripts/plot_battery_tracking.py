@@ -27,7 +27,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 try:  # pandas and matplotlib are optional but required for plotting
     import pandas as pd
     import matplotlib.pyplot as plt
-    from article_c.common.plotting_style import apply_base_rcparams
+    from pretest_campagne.common.plotting_style import apply_base_rcparams
 except Exception as exc:  # pragma: no cover - handled at runtime
     raise SystemExit(f"Required plotting libraries missing: {exc}")
 

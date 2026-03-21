@@ -9,7 +9,7 @@ from typing import Dict, Iterable, List, Mapping, Sequence, Tuple
 
 import matplotlib.pyplot as plt
 
-from article_c.common.plot_helpers import (
+from pretest_campagne.common.plot_helpers import (
     apply_figure_layout,
     apply_plot_style,
     resolve_algo_color,

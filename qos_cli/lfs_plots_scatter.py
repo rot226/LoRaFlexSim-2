@@ -11,8 +11,8 @@ from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 
-from article_c.common.plotting_style import apply_base_rcparams
-from article_c.common.plot_helpers import apply_figure_layout
+from pretest_campagne.common.plotting_style import apply_base_rcparams
+from pretest_campagne.common.plot_helpers import apply_figure_layout
 try:  # pragma: no cover - dépend du mode d'exécution
     from .lfs_metrics import (
         MethodScenarioMetrics,
