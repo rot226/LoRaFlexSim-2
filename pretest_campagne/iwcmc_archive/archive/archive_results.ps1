@@ -1,33 +1,41 @@
 param(
-    [string]$RepoRoot = $(Resolve-Path (Join-Path $PSScriptRoot ".." ".."))
+    [string]$RepoRoot = $(Resolve-Path (Join-Path $PSScriptRoot ".." ".." ".."))
 )
 
-$iwcmcDir = Join-Path $RepoRoot "pretest_campagne/iwcmc_archive"
-$archiveDir = Join-Path $iwcmcDir "archive"
-New-Item -ItemType Directory -Force -Path $archiveDir | Out-Null
+$CampaignRoot = Join-Path (Join-Path $RepoRoot "pretest_campagne") "iwcmc_archive"
+$ArchiveDir = Join-Path $CampaignRoot "archive"
+$ResultsRoot = Join-Path (Join-Path (Join-Path $RepoRoot "results") "pretest_campagne") "iwcmc_archive"
+$FiguresRoot = Join-Path (Join-Path (Join-Path $RepoRoot "figures") "pretest_campagne") "iwcmc_archive"
+New-Item -ItemType Directory -Force -Path $ArchiveDir | Out-Null
 
 $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$archivePath = Join-Path $archiveDir "pretest_campagne_archive_results_$stamp.tar.gz"
+$ArchivePath = Join-Path $ArchiveDir "pretest_campagne_archive_results_$stamp.tar.gz"
 
 $targets = @(
-    "results/pretest_campagne/iwcmc_archive/snir_static",
-    "figures/pretest_campagne/iwcmc_archive/snir_static",
-    "figures/pretest_campagne/iwcmc_archive/rl_static",
-    "figures/pretest_campagne/iwcmc_archive/rl_mobile",
-    "results/pretest_campagne/iwcmc_archive"
-) | Where-Object { Test-Path (Join-Path $RepoRoot $_) }
+    (Join-Path $ResultsRoot "snir_static"),
+    (Join-Path $ResultsRoot "rl_static"),
+    (Join-Path $ResultsRoot "rl_mobile"),
+    (Join-Path $FiguresRoot "snir_static"),
+    (Join-Path $FiguresRoot "rl_static"),
+    (Join-Path $FiguresRoot "rl_mobile"),
+    $ResultsRoot
+) | Where-Object { Test-Path $_ } | ForEach-Object {
+    [System.IO.Path]::GetRelativePath($RepoRoot, $_)
+}
 
 if ($targets.Count -eq 0) {
-    Write-Error "Aucun dossier de résultats à archiver."
+    Write-Error "Aucun dossier de résultats ou de figures pretest_campagne à archiver."
     exit 1
 }
 
-$targetArgs = $targets -join " "
 Push-Location $RepoRoot
 try {
-    tar -czf $archivePath $targetArgs
+    tar -czf $ArchivePath @targets
+    if ($LASTEXITCODE -ne 0) {
+        exit $LASTEXITCODE
+    }
 } finally {
     Pop-Location
 }
 
-Write-Host "Archive créée : $archivePath"
+Write-Host "Archive pretest_campagne créée : $ArchivePath"
