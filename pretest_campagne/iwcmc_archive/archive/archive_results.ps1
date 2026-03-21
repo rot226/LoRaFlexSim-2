@@ -7,12 +7,12 @@ $archiveDir = Join-Path $iwcmcDir "archive"
 New-Item -ItemType Directory -Force -Path $archiveDir | Out-Null
 
 $stamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$archivePath = Join-Path $archiveDir "iwcmc_results_$stamp.tar.gz"
+$archivePath = Join-Path $archiveDir "pretest_campagne_archive_results_$stamp.tar.gz"
 
 $targets = @(
-    "pretest_campagne/iwcmc_archive/snir_static/data",
+    "results/pretest_campagne/iwcmc_archive/snir_static",
     "figures/pretest_campagne/iwcmc_archive/snir_static",
-    "pretest_campagne/iwcmc_archive/rl_static/figures",
+    "figures/pretest_campagne/iwcmc_archive/rl_static",
     "figures/pretest_campagne/iwcmc_archive/rl_mobile",
     "results/pretest_campagne/iwcmc_archive"
 ) | Where-Object { Test-Path (Join-Path $RepoRoot $_) }

@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from pretest_campagne.common.plot_helpers import warn_metric_checks
+from pretest_campagne.paths import iwcmc_figures_dir, iwcmc_snir_data_file
 
 def _ensure_output_dir(output_dir: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -169,11 +170,11 @@ def build_argument_parser(figure_id: str) -> argparse.ArgumentParser:
 
 
 def _default_output_dir() -> Path:
-    return Path(__file__).resolve().parents[1] / "figures"
+    return iwcmc_figures_dir("snir_static")
 
 
 def _default_csv_path(figure_id: str) -> Path:
-    return Path(__file__).resolve().parents[1] / "data" / f"{figure_id}.csv"
+    return iwcmc_snir_data_file(figure_id)
 
 
 def main_for_figure(figure_id: str) -> None:

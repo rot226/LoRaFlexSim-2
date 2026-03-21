@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from snir_static_common import ScenarioConfig, default_output_path, run_scenario
 
-from snir_static_common import ScenarioConfig, run_scenario
-
-OUTPUT_PATH = Path(__file__).resolve().parents[1] / "data" / "S8.csv"
+OUTPUT_PATH = default_output_path("S8")
 
 CONFIG = ScenarioConfig(
     figure_id="S8",

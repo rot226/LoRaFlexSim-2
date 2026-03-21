@@ -13,6 +13,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, os.fspath(ROOT))
 
+from pretest_campagne.paths import mne3sd_results_file
 from scripts.mne3sd.common import (
     apply_ieee_style,
     prepare_figure_directory,
@@ -20,8 +21,8 @@ from scripts.mne3sd.common import (
 )
 from plot_defaults import DEFAULT_FIGSIZE_SIMPLE
 
-RESULTS_PATH = ROOT / "results" / "mne3sd" / "article_a" / "class_load_metrics.csv"
-ARTICLE = "article_a"
+RESULTS_PATH = mne3sd_results_file("scenario_a", "class_load_metrics.csv")
+ARTICLE = "scenario_a"
 SCENARIO = "class_load"
 
 

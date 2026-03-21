@@ -23,9 +23,10 @@ from pretest_campagne.common.plotting_style import (
     legend_bbox_to_anchor,
 )
 
-ROOT_DIR = Path(__file__).resolve().parents[2]
-DEFAULT_RESULTS_DIR = ROOT_DIR / "results" / "iwcmc" / "rl_mobile"
-DEFAULT_OUTPUT_DIR = ROOT_DIR / "pretest_campagne/iwcmc_archive" / "rl_mobile" / "figures"
+from pretest_campagne.paths import iwcmc_figures_dir, iwcmc_results_dir
+
+DEFAULT_RESULTS_DIR = iwcmc_results_dir("rl_mobile")
+DEFAULT_OUTPUT_DIR = iwcmc_figures_dir("rl_mobile")
 
 
 @dataclass(frozen=True)

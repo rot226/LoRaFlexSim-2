@@ -42,6 +42,7 @@ sys.path.insert(
 )
 
 from loraflexsim.launcher import RandomWaypoint, Simulator, SmoothMobility  # noqa: E402
+from pretest_campagne.paths import mne3sd_results_file
 from scripts.mne3sd.common import (
     add_execution_profile_argument,
     add_worker_argument,
@@ -69,7 +70,7 @@ FAST_PACKETS = 25
 FAST_REPLICATES = 3
 
 ROOT = Path(__file__).resolve().parents[4]
-RESULTS_PATH = ROOT / "results" / "mne3sd" / "article_b" / "mobility_speed_metrics.csv"
+RESULTS_PATH = mne3sd_results_file("scenario_b", "mobility_speed_metrics.csv")
 
 LOGGER = logging.getLogger("mobility_speed_sweep")
 

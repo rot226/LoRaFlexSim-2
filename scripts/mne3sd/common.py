@@ -76,6 +76,7 @@ def resolve_worker_count(workers: WorkerCount, task_count: int) -> int:
 import matplotlib.pyplot as plt
 
 from pretest_campagne.common.plotting_style import apply_base_rcparams
+from pretest_campagne.paths import mne3sd_figure_dir
 
 PROFILE_CHOICES = ("full", "fast", "ci")
 PROFILE_ENV_VAR = "MNE3SD_PROFILE"
@@ -117,11 +118,10 @@ def prepare_figure_directory(
         raise ValueError(f"Missing figure directory component(s): {joined}")
 
     if base_dir is None:
-        base_path = Path(__file__).resolve().parents[2] / "figures" / "mne3sd"
-    else:
-        base_path = Path(base_dir)
+        return ensure_directory(mne3sd_figure_dir(article, scenario, metric))
 
-    return ensure_directory(base_path / article / scenario / metric)
+    base_path = Path(base_dir)
+    return ensure_directory(base_path / scenario / metric)
 
 
 def apply_ieee_style(figsize: tuple[float, float] = (3.5, 2.2)) -> None:

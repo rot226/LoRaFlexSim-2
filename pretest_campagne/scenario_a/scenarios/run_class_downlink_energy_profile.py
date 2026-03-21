@@ -30,6 +30,7 @@ sys.path.insert(
 )
 
 from loraflexsim.launcher import Simulator  # noqa: E402
+from pretest_campagne.paths import mne3sd_results_file
 from scripts.mne3sd.common import (
     add_execution_profile_argument,
     add_worker_argument,
@@ -44,9 +45,7 @@ from scripts.mne3sd.common import (
 
 LOGGER = logging.getLogger("class_downlink_energy")
 ROOT = Path(__file__).resolve().parents[4]
-RESULTS_PATH = (
-    ROOT / "results" / "mne3sd" / "article_a" / "class_downlink_energy.csv"
-)
+RESULTS_PATH = mne3sd_results_file("scenario_a", "class_downlink_energy.csv")
 CI_RUNS = 1
 CI_DURATION_S = 900.0
 CI_NODES = 25

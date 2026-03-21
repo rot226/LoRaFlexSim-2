@@ -15,6 +15,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, os.fspath(ROOT))
 
+from pretest_campagne.paths import mne3sd_results_file
 from scripts.mne3sd.common import (  # noqa: E402
     apply_ieee_style,
     prepare_figure_directory,
@@ -22,14 +23,8 @@ from scripts.mne3sd.common import (  # noqa: E402
 )
 from plot_defaults import DEFAULT_FIGSIZE_SIMPLE
 
-RESULTS_PATH = (
-    ROOT
-    / "results"
-    / "mne3sd"
-    / "article_b"
-    / "mobility_gateway_metrics.csv"
-)
-ARTICLE = "article_b"
+RESULTS_PATH = mne3sd_results_file("scenario_b", "mobility_gateway_metrics.csv")
+ARTICLE = "scenario_b"
 SCENARIO = "mobility_gateway"
 
 

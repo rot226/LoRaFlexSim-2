@@ -47,6 +47,7 @@ from loraflexsim.launcher import (  # noqa: E402
     Simulator,
     SmoothMobility,
 )
+from pretest_campagne.paths import mne3sd_results_file
 from scripts.mne3sd.common import (
     add_execution_profile_argument,
     add_worker_argument,
@@ -64,7 +65,7 @@ DEFAULT_CHANNELS = [
 ]
 DEFAULT_GATEWAYS = [1, 2, 4]
 ROOT = Path(__file__).resolve().parents[4]
-RESULTS_PATH = ROOT / "results" / "mne3sd" / "article_b" / "mobility_gateway_metrics.csv"
+RESULTS_PATH = mne3sd_results_file("scenario_b", "mobility_gateway_metrics.csv")
 CI_GATEWAYS = [1]
 CI_NODES = 40
 CI_PACKETS = 10

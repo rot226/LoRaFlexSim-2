@@ -13,6 +13,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, os.fspath(ROOT))
 
+from pretest_campagne.paths import mne3sd_results_file
 from scripts.mne3sd.common import (
     apply_ieee_style,
     prepare_figure_directory,
@@ -20,8 +21,8 @@ from scripts.mne3sd.common import (
 )
 from plot_defaults import DEFAULT_FIGSIZE_SIMPLE
 
-ARTICLE = "article_d"
-RESULTS_DIR = ROOT / "results" / "mne3sd" / ARTICLE
+ARTICLE = "scenario_d"
+RESULTS_DIR = mne3sd_results_file(ARTICLE, ".").parent
 RESULTS_PATH = RESULTS_DIR / "mobility_range_metrics.csv"
 SCENARIO = "mobility_range"
 

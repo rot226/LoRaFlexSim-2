@@ -10,7 +10,7 @@
 #   -h, --help             Afficher l'aide.
 #
 # Sorties :
-#   - pretest_campagne/iwcmc_archive/snir_static/data/S1.csv ... S8.csv
+#   - results/pretest_campagne/iwcmc_archive/snir_static/S1.csv ... S8.csv
 #   - figures/pretest_campagne/iwcmc_archive/snir_static/S1.png/.pdf ... S8.png/.pdf (sauf --skip-plots)
 # -------------------------------------------------------------------------------------------------
 set -euo pipefail
@@ -52,8 +52,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DATA_DIR="$BASE_DIR/data"
-FIGURES_DIR="$BASE_DIR/figures"
+REPO_DIR="$(cd "$BASE_DIR/../../.." && pwd)"
+DATA_DIR="$REPO_DIR/results/pretest_campagne/iwcmc_archive/snir_static"
+FIGURES_DIR="$REPO_DIR/figures/pretest_campagne/iwcmc_archive/snir_static"
 
 mkdir -p "$DATA_DIR" "$FIGURES_DIR"
 

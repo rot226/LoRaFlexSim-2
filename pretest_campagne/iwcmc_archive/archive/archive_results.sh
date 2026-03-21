@@ -8,10 +8,10 @@ ARCHIVE_DIR="$pretest_campagne/iwcmc_archive_DIR/archive"
 mkdir -p "$ARCHIVE_DIR"
 
 stamp=$(date +"%Y%m%d_%H%M%S")
-archive_path="$ARCHIVE_DIR/iwcmc_results_${stamp}.tar.gz"
+archive_path="$ARCHIVE_DIR/pretest_campagne_archive_results_${stamp}.tar.gz"
 
 targets=()
-for rel in "pretest_campagne/iwcmc_archive/snir_static/data" "figures/pretest_campagne/iwcmc_archive/snir_static" "pretest_campagne/iwcmc_archive/rl_static/figures" "figures/pretest_campagne/iwcmc_archive/rl_mobile" "results/pretest_campagne/iwcmc_archive"; do
+for rel in "results/pretest_campagne/iwcmc_archive/snir_static" "figures/pretest_campagne/iwcmc_archive/snir_static" "figures/pretest_campagne/iwcmc_archive/rl_static" "figures/pretest_campagne/iwcmc_archive/rl_mobile" "results/pretest_campagne/iwcmc_archive"; do
   if [ -d "$REPO_DIR/$rel" ]; then
     targets+=("$rel")
   fi

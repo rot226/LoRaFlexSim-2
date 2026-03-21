@@ -9,7 +9,7 @@ Paramètres :
   -SkipPlots         Ne pas lancer la génération des figures.
 
 Sorties :
-  - pretest_campagne/iwcmc_archive/snir_static/data/S1.csv ... S8.csv
+  - results/pretest_campagne/iwcmc_archive/snir_static/S1.csv ... S8.csv
   - figures/pretest_campagne/iwcmc_archive/snir_static/S1.png/.pdf ... S8.png/.pdf (sauf -SkipPlots)
 ---------------------------------------------------------------------------------------------------
 #>
@@ -20,8 +20,9 @@ param(
 )
 
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$DataDir = Join-Path $ScriptDir "data"
-$FiguresDir = Join-Path $ScriptDir "figures"
+$RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $ScriptDir))
+$DataDir = Join-Path $RepoRoot "results/pretest_campagne/iwcmc_archive/snir_static"
+$FiguresDir = Join-Path $RepoRoot "figures/pretest_campagne/iwcmc_archive/snir_static"
 
 New-Item -ItemType Directory -Force -Path $DataDir, $FiguresDir | Out-Null
 
