@@ -4,12 +4,14 @@ Ce document regroupe les pipelines complets utiles après la prise en main initi
 
 ## 1. Génération et export avancés de figures
 
-Le guide détaillé de génération des figures issues du scénario C a été déplacé depuis `README_FIGURES.md`.
+Le guide détaillé de génération des figures du pipeline scénario C a été déplacé depuis `README_FIGURES.md`.
 
 ### Emplacements de résultats attendus
 
-- `pretest_campagne.scenario_c/step1/results`
-- `pretest_campagne.scenario_c/step2/results`
+Depuis Windows 11, lancez les commandes depuis la racine du dépôt et vérifiez les sorties suivantes :
+
+- `results/pretest_campagne/scenario_c/step1/`
+- `results/pretest_campagne/scenario_c/step2/`
 
 Ces sorties servent de base aux scripts de génération de figures et d’exports consolidés.
 
@@ -21,31 +23,31 @@ Ces sorties servent de base aux scripts de génération de figures et d’export
 
 ### Exports typiques
 
-- `figures/step1/step1_pdr_der_comparison.png`
-- `figures/step1/step1_pdr_der_comparison.pdf`
-- `figures/step1/step1_jain_comparison.png`
-- `figures/step1/step1_jain_comparison.pdf`
-- `figures/step1/step1_throughput_comparison.png`
-- `figures/step1/step1_throughput_comparison.pdf`
+- `figures/pretest_campagne/scenario_c/step1/step1_pdr_der_comparison.png`
+- `figures/pretest_campagne/scenario_c/step1/step1_pdr_der_comparison.pdf`
+- `figures/pretest_campagne/scenario_c/step1/step1_jain_comparison.png`
+- `figures/pretest_campagne/scenario_c/step1/step1_jain_comparison.pdf`
+- `figures/pretest_campagne/scenario_c/step1/step1_throughput_comparison.png`
+- `figures/pretest_campagne/scenario_c/step1/step1_throughput_comparison.pdf`
 
 ## 2. Pipeline avancé du scénario C
 
-Le scénario C fournit un pipeline de reproduction plus riche que le flux communauté.
+Le pipeline scénario C fournit un flux de reproduction plus riche que le parcours communauté.
 
 ### Organisation
 
-- `pretest_campagne.scenario_c/common/` : utilitaires partagés ;
-- `pretest_campagne.scenario_c/step1/` : première étape ;
-- `pretest_campagne.scenario_c/step2/` : seconde étape ;
-- `pretest_campagne.scenario_c/run_all.py` : orchestration globale ;
-- `pretest_campagne.scenario_c/make_all_plots.py` : génération complète des graphes.
+- `pretest_campagne/scenario_c/common/` : utilitaires partagés ;
+- `pretest_campagne/scenario_c/step1/` : première étape ;
+- `pretest_campagne/scenario_c/step2/` : seconde étape ;
+- `pretest_campagne/scenario_c/run_all.py` : orchestration globale ;
+- `pretest_campagne/scenario_c/make_all_plots.py` : génération complète des graphes.
 
 ### Workflow Windows 11 recommandé
 
 ```powershell
 python -m pretest_campagne.scenario_c.run_all --network-sizes 80 160 320 640 1280 --replications 5 --seeds_base 1
 python -m pretest_campagne.scenario_c.make_all_plots --formats png,eps,pdf --no-suptitle
-python -m pretest_campagne.scenario_c.all_plot_compare --export-csv --output-dir pretest_campagne.scenario_c/plots/output/compare_all
+python -m pretest_campagne.scenario_c.all_plot_compare --export-csv --output-dir figures/pretest_campagne/scenario_c/compare_all
 ```
 
 ### Usage conseillé
@@ -62,7 +64,7 @@ Le dossier `sfrd/` correspond à une CLI spécialisée, distincte de l’interfa
 
 ### Workflow standard
 
-```bash
+```powershell
 python -m sfrd.cli.run_campaign --network-sizes 80 160 320 640 1280 --replications 5 --seeds-base 1 --snir OFF,ON --algos UCB ADR MixRA-H MixRA-Opt --warmup-s 0
 python -m sfrd.cli.validate_outputs --output-root sfrd/logs/<campaign_id>/output
 python -m sfrd.cli.plot_campaign --campaign-id <campaign_id>

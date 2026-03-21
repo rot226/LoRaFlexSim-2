@@ -41,7 +41,7 @@ contenant :
 
 Exemple d'utilisation :
 
-```bash
+```powershell
 python scripts/benchmark_energy_classes.py --nodes 20 --packets 5 --output results/energy_classes.csv
 ```
 
@@ -50,11 +50,11 @@ afin de documenter et comparer les profils de consommation.
 
 ## Visualisation du cycle d'activité énergétique
 
-Pour analyser la consommation issue des scénarios de l'article A, le module
+Pour analyser la consommation issue des simulations du scénario A, le module
 [`pretest_campagne.scenario_a.plots.plot_energy_duty_cycle`](../pretest_campagne/scenario_a/plots/plot_energy_duty_cycle.py)
 propose une commande prête à l'emploi :
 
-```bash
+```powershell
 python -m pretest_campagne.scenario_a.plots.plot_energy_duty_cycle --results results/pretest_campagne/scenario_a
 ```
 
@@ -74,6 +74,4 @@ Les options principales permettent de :
   classes (rapport max/min ≥ 20) et applique automatiquement une échelle
   logarithmique afin de mettre en évidence les courbes de faible consommation.
 
-La commande fonctionne également sous Windows 11 (fenêtre **cmd**) en adaptant
-les chemins (`python -m ...`).  Elle facilite ainsi la traçabilité des
-consommations mesurées dans l'étude.
+La commande fonctionne également sous Windows 11, en priorité sous **PowerShell**, avec les mêmes chemins relatifs depuis la racine du dépôt. Elle facilite ainsi la traçabilité des consommations mesurées dans l'étude.

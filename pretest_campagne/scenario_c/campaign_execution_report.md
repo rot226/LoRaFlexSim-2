@@ -1,10 +1,10 @@
-# Rapport d'exécution campagne (SNIR OFF/ON + tailles 80..1280)
+# Rapport d'exécution du pipeline scénario C (SNIR OFF/ON + tailles 80..1280)
 
 ## 1) Test rapide
 
-Commande lancée :
+Commande lancée depuis la racine du dépôt sous Windows 11 / PowerShell :
 
-```bash
+```powershell
 python -m pretest_campagne.scenario_c.run_all --allow-non-scenario-c --clean-hard --network-sizes 80 --replications 1 --seeds_base 1 --snir_modes snir_off,snir_on
 ```
 
@@ -14,31 +14,32 @@ Résultat : exécution terminée, sorties Step1+Step2 produites, puis validation
 
 ### Step1 (SNIR OFF+ON)
 
-```bash
+```powershell
 python -m pretest_campagne.scenario_c.step1.run_step1 --network-sizes 80 160 320 640 1280 --replications 5 --seeds_base 1 --snir_modes snir_off,snir_on --workers 1
 ```
 
 ### Step2 (algorithmes ADR, MixRA-H, MixRA-Opt, UCB1-SF)
 
-```bash
+```powershell
 python -m pretest_campagne.scenario_c.step2.run_step2 --network-sizes 80 160 320 640 1280 --replications 5 --seeds_base 1 --workers 1
 ```
 
 ### Agrégation finale
 
-```bash
-python - <<'PY'
+```powershell
+@'
 from pathlib import Path
 import pandas as pd
-for step in ['step1','step2']:
-    base=Path('pretest_campagne/scenario_c')/step/'results'
-    out=base/'aggregates'
-    out.mkdir(parents=True,exist_ok=True)
-    files=sorted((base/'by_size').glob('size_*/aggregated_results.csv'))
-    df=pd.concat([pd.read_csv(f) for f in files],ignore_index=True)
-    df.to_csv(out/'aggregated_results.csv',index=False)
-    print(step,'rows',len(df))
-PY
+
+for step in ["step1", "step2"]:
+    base = Path("results/pretest_campagne/scenario_c") / step
+    out = base / "aggregates"
+    out.mkdir(parents=True, exist_ok=True)
+    files = sorted((base / "by_size").glob("size_*/aggregated_results.csv"))
+    df = pd.concat([pd.read_csv(f) for f in files], ignore_index=True)
+    df.to_csv(out / "aggregated_results.csv", index=False)
+    print(step, "rows", len(df))
+'@ | python -
 ```
 
 Résultat agrégats :
@@ -49,8 +50,8 @@ Résultat agrégats :
 
 Commande de validation principale :
 
-```bash
-python -m pretest_campagne.scenario_c.validate_results --step1-dir pretest_campagne/scenario_c/step1/results --step2-dir pretest_campagne/scenario_c/step2/results
+```powershell
+python -m pretest_campagne.scenario_c.validate_results --step1-dir results/pretest_campagne/scenario_c/step1 --step2-dir results/pretest_campagne/scenario_c/step2
 ```
 
 Résultat : `Aucune anomalie résultats détectée.`
