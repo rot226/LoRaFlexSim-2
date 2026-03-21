@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # -------------------------------------------------------------------------------------------------
 # Objectif :
-#   Enchaîner les scénarios pretest_campagne/iwcmc_archive SNIR statique (S1–S8), vérifier la présence
+#   Orchestrer la campagne pretest_campagne/iwcmc_archive SNIR statique (S1–S8), vérifier la présence
 #   des CSV générés, puis lancer les scripts de tracé associés.
 #
 # Paramètres :
@@ -17,7 +17,7 @@ set -euo pipefail
 
 usage() {
   cat <<'USAGE'
-Usage: ./run_all.sh [--python <executable>] [--skip-plots]
+Usage: ./run_campaign.sh [--python <executable>] [--skip-plots]
 
 Options:
   --python <executable>  Chemin/nom de l'exécutable Python à utiliser.

@@ -3,7 +3,7 @@ set -euo pipefail
 
 # End-to-end helper executing the recommended CI workflow:
 #  1. Run the Python test-suite.
-#  2. Regenerate key Article A/B datasets and plots.
+#  2. Regenerate key Scenario A/B campaign datasets and plots.
 #  3. Execute targeted node-population sweeps (including ADR sensitivity runs).
 #  4. Export summary tables in CSV/LaTeX format.
 #  5. Cross-check the simulator against the FLoRa validation matrix.
@@ -20,7 +20,7 @@ log() {
 
 run_density_sweep() {
   local nodes=$1
-  log "Article A – class density sweep (${nodes} nodes, profile ${PROFILE})"
+  log "Scenario A – class density sweep (${nodes} nodes, profile ${PROFILE})"
   "${PYTHON_BIN}" -m pretest_campagne.scenario_a.scenarios.run_class_density_sweep \
     --nodes-list "${nodes}" \
     --profile "${PROFILE}" \
@@ -36,7 +36,7 @@ run_density_sweep() {
 
 run_density_sweep_adr() {
   local nodes=$1
-  log "Article A – ADR sensitivity (${nodes} nodes)"
+  log "Scenario A – ADR sensitivity (${nodes} nodes)"
   "${PYTHON_BIN}" -m pretest_campagne.scenario_a.scenarios.run_class_density_sweep \
     --nodes-list "${nodes}" \
     --profile "${PROFILE}" \
@@ -54,7 +54,7 @@ run_density_sweep_adr() {
 
 run_range_sweep() {
   local nodes=$1
-  log "Article B – mobility range sweep (${nodes} nodes, profile ${PROFILE})"
+  log "Scenario B – mobility range sweep (${nodes} nodes, profile ${PROFILE})"
   local target="${ROOT_DIR}/results/pretest_campagne/scenario_b/mobility_range_metrics_nodes_${nodes}.csv"
   "${PYTHON_BIN}" -m pretest_campagne.scenario_b.scenarios.run_mobility_range_sweep \
     --nodes "${nodes}" \
@@ -68,7 +68,7 @@ run_range_sweep() {
 
 run_range_sweep_adr() {
   local nodes=$1
-  log "Article B – ADR sensitivity (${nodes} nodes)"
+  log "Scenario B – ADR sensitivity (${nodes} nodes)"
   local target="${ROOT_DIR}/results/pretest_campagne/scenario_b/mobility_range_metrics_adr_nodes_${nodes}.csv"
   "${PYTHON_BIN}" -m pretest_campagne.scenario_b.scenarios.run_mobility_range_sweep \
     --nodes "${nodes}" \
@@ -89,16 +89,16 @@ export_tables() {
     --group-columns class \
     --output-csv "results/pretest_campagne/scenario_a/tables/class_density_summary.csv" \
     --output-tex "results/pretest_campagne/scenario_a/tables/class_density_summary.tex" \
-    --tex-caption "Article A node population sweep (classes A/B/C)." \
-    --tex-label "tab:article_a_node_summary"
+    --tex-caption "Scenario A node population sweep (classes A/B/C)." \
+    --tex-label "tab:scenario_a_node_summary"
 
   "${PYTHON_BIN}" -m scripts.mne3sd.export_node_summaries \
     --inputs "results/pretest_campagne/scenario_b/mobility_range_metrics_nodes_*.csv" \
     --group-columns model range_km \
     --output-csv "results/pretest_campagne/scenario_b/tables/mobility_range_summary.csv" \
     --output-tex "results/pretest_campagne/scenario_b/tables/mobility_range_summary.tex" \
-    --tex-caption "Article B mobility range sweep across node populations." \
-    --tex-label "tab:article_b_node_summary"
+    --tex-caption "Scenario B mobility range sweep across node populations." \
+    --tex-label "tab:scenario_b_node_summary"
 }
 
 cd "${ROOT_DIR}"
@@ -106,8 +106,8 @@ cd "${ROOT_DIR}"
 log "Running unit tests"
 pytest -q
 
-log "Executing article pipelines (profile ${PROFILE})"
-"${PYTHON_BIN}" -m scripts.mne3sd.run_all_article_outputs --article both --profile "${PROFILE}"
+log "Executing campaign pipelines (profile ${PROFILE})"
+"${PYTHON_BIN}" -m scripts.mne3sd.run_all_campaign_outputs --campaign both --profile "${PROFILE}"
 
 for nodes in "${NODE_SERIES[@]}"; do
   run_density_sweep "${nodes}"

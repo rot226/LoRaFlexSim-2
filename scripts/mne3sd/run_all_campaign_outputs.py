@@ -1,4 +1,4 @@
-"""Run all MNE3SD article scenarios and plots in a single command."""
+"""Run the MNE3SD campaign scenarios and plots in a single command."""
 
 from __future__ import annotations
 
@@ -14,6 +14,9 @@ from scripts.mne3sd.common import add_execution_profile_argument, resolve_execut
 
 ROOT = Path(__file__).resolve().parents[2]
 PYTHON = sys.executable
+DEFAULT_CAMPAIGN = "both"
+SCENARIO_A_CAMPAIGN = "scenario_a"
+SCENARIO_B_CAMPAIGN = "scenario_b"
 
 
 @dataclass(frozen=True)
@@ -25,8 +28,14 @@ class Task:
     outputs: tuple[Path, ...]
 
 
-ARTICLE_SCENARIOS: dict[str, tuple[Task, ...]] = {
-    "a": (
+CAMPAIGN_LABELS = {
+    SCENARIO_A_CAMPAIGN: "Scenario A",
+    SCENARIO_B_CAMPAIGN: "Scenario B",
+}
+
+
+CAMPAIGN_SCENARIOS: dict[str, tuple[Task, ...]] = {
+    SCENARIO_A_CAMPAIGN: (
         Task(
             module="pretest_campagne.scenario_a.scenarios.run_class_density_sweep",
             description="Class density sweep",
@@ -51,7 +60,7 @@ ARTICLE_SCENARIOS: dict[str, tuple[Task, ...]] = {
             outputs=(mne3sd_results_file("scenario_a", "class_load_metrics.csv"),),
         ),
     ),
-    "b": (
+    SCENARIO_B_CAMPAIGN: (
         Task(
             module="pretest_campagne.scenario_b.scenarios.run_mobility_range_sweep",
             description="Mobility range sweep",
@@ -71,8 +80,8 @@ ARTICLE_SCENARIOS: dict[str, tuple[Task, ...]] = {
 }
 
 
-ARTICLE_PLOTS: dict[str, tuple[Task, ...]] = {
-    "a": (
+CAMPAIGN_PLOTS: dict[str, tuple[Task, ...]] = {
+    SCENARIO_A_CAMPAIGN: (
         Task(
             module="pretest_campagne.scenario_a.plots.plot_class_load_results",
             description="Class load plots",
@@ -120,7 +129,7 @@ ARTICLE_PLOTS: dict[str, tuple[Task, ...]] = {
             ),
         ),
     ),
-    "b": (
+    SCENARIO_B_CAMPAIGN: (
         Task(
             module="pretest_campagne.scenario_b.plots.plot_mobility_range_metrics",
             description="Mobility range plots",
@@ -183,22 +192,22 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
     parser = argparse.ArgumentParser(
         description=(
-            "Execute all MNE3SD article scenarios and/or plotting scripts. "
+            "Execute all MNE3SD campaign scenarios and/or plotting scripts. "
             "Use '--profile fast' for quicker local iterations (recommended on "
             "Windows 11)."
         ),
     )
     add_execution_profile_argument(parser)
     parser.add_argument(
-        "--article",
-        choices=("a", "b", "both"),
-        default="both",
-        help="Select which article pipeline to run (defaults to both).",
+        "--campaign",
+        choices=(SCENARIO_A_CAMPAIGN, SCENARIO_B_CAMPAIGN, DEFAULT_CAMPAIGN),
+        default=DEFAULT_CAMPAIGN,
+        help="Select which campaign pipeline to run (defaults to both).",
     )
     parser.add_argument(
         "--skip-plots",
         action="store_true",
-        help="Skip the plotting stage for the selected articles.",
+        help="Skip the plotting stage for the selected campaigns.",
     )
     parser.add_argument(
         "--reuse",
@@ -211,7 +220,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--skip-scenarios",
         action="store_true",
-        help="Skip the scenario stage for the selected articles.",
+        help="Skip the scenario stage for the selected campaigns.",
     )
     parser.add_argument(
         "--scenario-workers",
@@ -333,7 +342,7 @@ def summarise_outputs(paths: Iterable[Path]) -> None:
         mne3sd_results_file("scenario_a", "energy_consumption.csv"),
         mne3sd_results_file("scenario_a", "energy_consumption_summary.csv"),
     )
-    print("\nEnergy consumption files (Article A):")
+    print("\nEnergy consumption files (Scenario A):")
     for path in required_energy_files:
         exists = (ROOT / path).exists()
         status = "✓" if exists else "✗"
@@ -351,18 +360,19 @@ def main(argv: Sequence[str] | None = None) -> None:
         print("Both stages were skipped; nothing to do.")
         return
 
-    selected_articles: tuple[str, ...]
-    if args.article == "both":
-        selected_articles = ("a", "b")
+    selected_campaigns: tuple[str, ...]
+    if args.campaign == DEFAULT_CAMPAIGN:
+        selected_campaigns = (SCENARIO_A_CAMPAIGN, SCENARIO_B_CAMPAIGN)
     else:
-        selected_articles = (args.article,)
+        selected_campaigns = (args.campaign,)
 
     all_outputs: list[Path] = []
 
-    for article in selected_articles:
+    for campaign in selected_campaigns:
+        campaign_label = CAMPAIGN_LABELS[campaign]
         if not args.skip_scenarios:
-            tasks = ARTICLE_SCENARIOS.get(article, ())
-            heading = f"Article {article.upper()} scenarios"
+            tasks = CAMPAIGN_SCENARIOS.get(campaign, ())
+            heading = f"{campaign_label} scenarios"
             all_outputs.extend(
                 execute_tasks(
                     tasks,
@@ -373,16 +383,14 @@ def main(argv: Sequence[str] | None = None) -> None:
                 )
             )
         else:
-            print(f"\nSkipping scenarios for article {article.upper()}.")
+            print(f"\nSkipping scenarios for {campaign_label}.")
 
         if not args.skip_plots:
-            tasks = ARTICLE_PLOTS.get(article, ())
-            heading = f"Article {article.upper()} plots"
-            all_outputs.extend(
-                execute_tasks(tasks, heading, reuse=args.reuse)
-            )
+            tasks = CAMPAIGN_PLOTS.get(campaign, ())
+            heading = f"{campaign_label} plots"
+            all_outputs.extend(execute_tasks(tasks, heading, reuse=args.reuse))
         else:
-            print(f"\nSkipping plots for article {article.upper()}.")
+            print(f"\nSkipping plots for {campaign_label}.")
 
     summarise_outputs(all_outputs)
 

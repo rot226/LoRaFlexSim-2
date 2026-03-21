@@ -34,7 +34,7 @@ SNIR_LABELS = {"snir_on": "SNIR ON", "snir_off": "SNIR OFF", "snir_unknown": "SN
 COLOR_CYCLE = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b"]
 MARKER_CYCLE = ["o", "s", "^", "D", "v", "P", "X"]
 DEFAULT_ALGO_PRIORITY = ["adr", "apra", "mixra_h", "mixra_opt"]
-ARTICLE_COMPARISON_ALGOS = DEFAULT_ALGO_PRIORITY
+CAMPAIGN_COMPARISON_ALGOS = DEFAULT_ALGO_PRIORITY
 
 
 def _normalize_algorithm_name(value: Any) -> str | None:
@@ -672,9 +672,9 @@ def main(argv: Sequence[str] | None = None) -> None:
         help="Génère uniquement les figures superposées SNIR ON/OFF.",
     )
     parser.add_argument(
-        "--article-comparison",
+        "--campaign-comparison",
         action="store_true",
-        help="Force ADR/APRA/MixRA-H/MixRA-Opt avec SNIR ON/OFF sur les mêmes figures.",
+        help="Force la comparaison de campagne ADR/APRA/MixRA-H/MixRA-Opt avec SNIR ON/OFF sur les mêmes figures.",
     )
     parser.add_argument(
         "--network-sizes",
@@ -689,8 +689,8 @@ def main(argv: Sequence[str] | None = None) -> None:
     clusters = [int(value) for value in cluster_values] if cluster_values else None
     overlay_snir = args.overlay_snir
     overlay_only = args.overlay_only
-    if args.pretest_campagne.scenario_comparison:
-        algorithms = list(ARTICLE_COMPARISON_ALGOS)
+    if args.campaign_comparison:
+        algorithms = list(CAMPAIGN_COMPARISON_ALGOS)
         overlay_snir = True
         overlay_only = True
 
