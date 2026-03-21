@@ -19,11 +19,11 @@ python -m loraflexsim.run --nodes 30 --gateways 1 --mode random --interval 10 --
 
 Si l'entrypoint installé n'est pas disponible immédiatement, vous pouvez aussi vérifier l'installation avec `mobilesfrdth --help` une fois l'environnement activé.
 
-## Guide d'utilisation
+## Guide d’utilisation
 
-### Utiliser le dashboard
+### Dashboard
 
-Le dashboard Panel permet de configurer visuellement les nœuds, passerelles, graines, paramètres radio et variantes FLoRa, puis de lancer une simulation interactive depuis le navigateur. C'est le flux le plus rapide pour explorer un scénario, comparer des réglages et obtenir des sorties sans écrire une longue ligne de commande.
+Le dashboard est la voie la plus simple pour un premier test, car il ouvre une interface graphique dans votre navigateur et évite de mémoriser une longue commande.
 
 Commande de lancement :
 
@@ -31,22 +31,84 @@ Commande de lancement :
 panel serve loraflexsim/launcher/dashboard.py --show
 ```
 
-### Utiliser la CLI
+- **Ouvrir l’interface** : lancez la commande depuis la racine du dépôt dans PowerShell. L’option `--show` ouvre normalement automatiquement votre navigateur. Si ce n’est pas le cas, copiez l’URL affichée dans le terminal (souvent `http://localhost:5006/dashboard`) et ouvrez-la manuellement.
+- **Réglages minimaux pour un premier test** : gardez les valeurs par défaut et modifiez seulement **Nombre de nœuds**, **Nombre de passerelles**, **Mode d’émission**, **Intervalle moyen (s)**, **Nombre de paquets par nœud** et éventuellement **Graine** pour rendre le test reproductible.
+- **Lancer une simulation** : cliquez sur **Lancer la simulation**. Le dashboard exécute alors le scénario et met à jour les indicateurs visibles (PDR, collisions, énergie, délai, débit).
+- **Lire et récupérer les résultats** : consultez d’abord les indicateurs et graphiques dans la page. Pour exporter les résultats, utilisez **Exporter résultats** ; pour un flux de fichiers plus structuré, vérifiez aussi les dossiers `results/`, `figures/` ou `runs/` selon le type d’exécution.
+- **Paramètres optionnels** : mobilité, QoS, SNIR, positions manuelles, batterie, réglages FLoRa avancés, choix d’un SF ou d’une puissance fixe, classes LoRaWAN et heatmap. Vous pouvez les laisser inchangés pour un premier essai.
 
-La CLI est adaptée aux exécutions reproductibles, aux batchs et aux exports automatisés. Pour une simulation simple avec export CSV :
+#### Premier essai
+
+1. Lancez `panel serve loraflexsim/launcher/dashboard.py --show`.
+2. Réglez par exemple **Nombre de nœuds = 10**, **Nombre de passerelles = 1**, **Mode d’émission = Aléatoire** et **Nombre de paquets par nœud = 20**.
+3. Cliquez sur **Lancer la simulation**.
+4. Lisez les indicateurs à l’écran puis utilisez **Exporter résultats** si vous souhaitez récupérer un fichier.
+
+### CLI
+
+La CLI officielle mise en avant dans ce `README.md` est **`mobilesfrdth`**. Elle couvre le flux stable complet : aide, lancement d’une campagne simple, agrégation, génération des figures, puis validation optionnelle.
 
 ```powershell
-python -m loraflexsim.run --nodes 30 --gateways 1 --mode random --interval 10 --steps 100 --output results/quickstart.csv
+mobilesfrdth --help
 ```
 
-Pour les campagnes, l'agrégation et la génération de figures, utilisez le flux `mobilesfrdth` documenté plus bas et dans `docs/`.
+#### Flux minimal recommandé
 
-## Où trouver les résultats
+1. **Afficher l’aide**
 
-- **CSV d'une simulation simple** : dans le dossier que vous passez à `--output`, typiquement `results/...`.
-- **Figures générées** : dans `figures/...`.
-- **Campagnes et agrégats** : dans `runs/...` pour le flux `mobilesfrdth` (`runs/<campagne>`, puis souvent `runs/<campagne>/aggregates`).
-- En pratique : utilisez plutôt **`results/`** pour les runs unitaires et scripts historiques, et **`runs/`** pour les campagnes reproductibles avec agrégation/plots.
+   ```powershell
+   mobilesfrdth --help
+   ```
+
+2. **Lancer une simulation simple**
+
+   ```powershell
+   mobilesfrdth run --config experiments/default.yaml --out runs/quickstart --profile smoke
+   ```
+
+3. **Agréger les résultats**
+
+   ```powershell
+   mobilesfrdth aggregate --results runs/quickstart --out runs/quickstart
+   ```
+
+4. **Générer les plots**
+
+   ```powershell
+   mobilesfrdth plots --aggregates-dir runs/quickstart/aggregates --out runs/quickstart/plots --profile exploratory
+   ```
+
+5. **Valider si souhaité**
+
+   ```powershell
+   mobilesfrdth validate --aggregates-dir runs/quickstart/aggregates
+   ```
+
+#### Ce que fait chaque étape
+
+- **Aide** : liste les sous-commandes disponibles et sert de point d’entrée unique.
+- **Run** : exécute une campagne simple et crée un dossier de sortie dans `runs/quickstart/`.
+- **Aggregate** : consolide les runs bruts en CSV standardisés dans `runs/quickstart/aggregates/`.
+- **Plots** : fabrique les figures à partir des agrégats dans `runs/quickstart/plots/`.
+- **Validate** : contrôle la cohérence des agrégats ; cette étape est utile avant de comparer ou partager les résultats.
+
+#### Interfaces secondaires
+
+Les interfaces historiques ou spécialisées restent disponibles, mais elles sont volontairement reléguées dans la documentation secondaire pour garder ce `README.md` simple :
+
+- `python -m loraflexsim.run` pour des runs unitaires et démonstrations ciblées ;
+- `sfrd/README.md` pour le flux SFRD dédié ;
+- `qos_cli/README.md` et les README des dossiers d’expériences pour les pipelines spécialisés.
+
+### Dashboard vs CLI
+
+| Besoin | Dashboard | CLI |
+| --- | --- | --- |
+| **Quand l’utiliser** | Premier contact, réglages visuels, démonstration rapide, exploration interactive. | Campagnes reproductibles, automatisation, génération systématique d’agrégats et de figures. |
+| **Quand préférer l’autre** | Si vous voulez tester vite sans mémoriser les options. | Si vous devez rejouer exactement le même scénario ou enchaîner plusieurs traitements. |
+| **Avantages** | Interface simple, retour immédiat, visualisation directe, peu de paramètres obligatoires. | Flux séquentiel stable, scriptable, adapté à Windows/CI, plus simple à documenter dans un protocole expérimental. |
+| **Limites** | Moins pratique pour les batchs et l’archivage systématique de nombreuses variantes. | Moins visuel, demande quelques commandes successives. |
+| **Sortie produite** | Indicateurs à l’écran, graphiques interactifs et export manuel de résultats. | Dossiers `runs/...`, CSV agrégés dans `aggregates/`, figures dans `plots/`, validation en ligne de commande. |
 
 ## Documentation avancée
 
