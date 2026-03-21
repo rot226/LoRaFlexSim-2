@@ -39,7 +39,7 @@ def apply_plot_theme(plt: Any) -> None:
         global _FALLBACK_WARNING_EMITTED
         if not _FALLBACK_WARNING_EMITTED:
             warnings.warn(
-                "article_c indisponible: utilisation du style matplotlib par défaut.",
+                "pretest_campagne.scenario_c indisponible: utilisation du style matplotlib par défaut.",
                 RuntimeWarning,
                 stacklevel=2,
             )

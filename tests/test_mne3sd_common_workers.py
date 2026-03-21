@@ -48,7 +48,7 @@ def test_resolve_worker_count_without_tasks_returns_zero():
 
 def test_fast_profile_limits_mobility_speed_tasks(monkeypatch, tmp_path):
     module = importlib.import_module(
-        "scripts.mne3sd.article_b.scenarios.run_mobility_speed_sweep"
+        "pretest_campagne.scenario_b.scenarios.run_mobility_speed_sweep"
     )
 
     recorded: list[dict[str, object]] = []

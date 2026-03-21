@@ -21,12 +21,12 @@ log() {
 run_density_sweep() {
   local nodes=$1
   log "Article A – class density sweep (${nodes} nodes, profile ${PROFILE})"
-  "${PYTHON_BIN}" -m scripts.mne3sd.article_a.scenarios.run_class_density_sweep \
+  "${PYTHON_BIN}" -m pretest_campagne.scenario_a.scenarios.run_class_density_sweep \
     --nodes-list "${nodes}" \
     --profile "${PROFILE}" \
     --seed $((40 + nodes))
-  local output="${ROOT_DIR}/results/mne3sd/article_a/class_density_metrics.csv"
-  local target="${ROOT_DIR}/results/mne3sd/article_a/class_density_metrics_nodes_${nodes}.csv"
+  local output="${ROOT_DIR}/results/pretest_campagne/scenario_a/class_density_metrics.csv"
+  local target="${ROOT_DIR}/results/pretest_campagne/scenario_a/class_density_metrics_nodes_${nodes}.csv"
   if [[ -f "${output}" ]]; then
     mv -f "${output}" "${target}"
   else
@@ -37,14 +37,14 @@ run_density_sweep() {
 run_density_sweep_adr() {
   local nodes=$1
   log "Article A – ADR sensitivity (${nodes} nodes)"
-  "${PYTHON_BIN}" -m scripts.mne3sd.article_a.scenarios.run_class_density_sweep \
+  "${PYTHON_BIN}" -m pretest_campagne.scenario_a.scenarios.run_class_density_sweep \
     --nodes-list "${nodes}" \
     --profile "${PROFILE}" \
     --adr-node \
     --adr-server \
     --seed $((140 + nodes))
-  local output="${ROOT_DIR}/results/mne3sd/article_a/class_density_metrics.csv"
-  local target="${ROOT_DIR}/results/mne3sd/article_a/class_density_metrics_adr_nodes_${nodes}.csv"
+  local output="${ROOT_DIR}/results/pretest_campagne/scenario_a/class_density_metrics.csv"
+  local target="${ROOT_DIR}/results/pretest_campagne/scenario_a/class_density_metrics_adr_nodes_${nodes}.csv"
   if [[ -f "${output}" ]]; then
     mv -f "${output}" "${target}"
   else
@@ -55,8 +55,8 @@ run_density_sweep_adr() {
 run_range_sweep() {
   local nodes=$1
   log "Article B – mobility range sweep (${nodes} nodes, profile ${PROFILE})"
-  local target="${ROOT_DIR}/results/mne3sd/article_b/mobility_range_metrics_nodes_${nodes}.csv"
-  "${PYTHON_BIN}" -m scripts.mne3sd.article_b.scenarios.run_mobility_range_sweep \
+  local target="${ROOT_DIR}/results/pretest_campagne/scenario_b/mobility_range_metrics_nodes_${nodes}.csv"
+  "${PYTHON_BIN}" -m pretest_campagne.scenario_b.scenarios.run_mobility_range_sweep \
     --nodes "${nodes}" \
     --profile "${PROFILE}" \
     --seed $((80 + nodes)) \
@@ -69,8 +69,8 @@ run_range_sweep() {
 run_range_sweep_adr() {
   local nodes=$1
   log "Article B – ADR sensitivity (${nodes} nodes)"
-  local target="${ROOT_DIR}/results/mne3sd/article_b/mobility_range_metrics_adr_nodes_${nodes}.csv"
-  "${PYTHON_BIN}" -m scripts.mne3sd.article_b.scenarios.run_mobility_range_sweep \
+  local target="${ROOT_DIR}/results/pretest_campagne/scenario_b/mobility_range_metrics_adr_nodes_${nodes}.csv"
+  "${PYTHON_BIN}" -m pretest_campagne.scenario_b.scenarios.run_mobility_range_sweep \
     --nodes "${nodes}" \
     --profile "${PROFILE}" \
     --adr-node \
@@ -85,18 +85,18 @@ run_range_sweep_adr() {
 export_tables() {
   log "Exporting summary tables"
   "${PYTHON_BIN}" -m scripts.mne3sd.export_node_summaries \
-    --inputs "results/mne3sd/article_a/class_density_metrics_nodes_*.csv" \
+    --inputs "results/pretest_campagne/scenario_a/class_density_metrics_nodes_*.csv" \
     --group-columns class \
-    --output-csv "results/mne3sd/article_a/tables/class_density_summary.csv" \
-    --output-tex "results/mne3sd/article_a/tables/class_density_summary.tex" \
+    --output-csv "results/pretest_campagne/scenario_a/tables/class_density_summary.csv" \
+    --output-tex "results/pretest_campagne/scenario_a/tables/class_density_summary.tex" \
     --tex-caption "Article A node population sweep (classes A/B/C)." \
     --tex-label "tab:article_a_node_summary"
 
   "${PYTHON_BIN}" -m scripts.mne3sd.export_node_summaries \
-    --inputs "results/mne3sd/article_b/mobility_range_metrics_nodes_*.csv" \
+    --inputs "results/pretest_campagne/scenario_b/mobility_range_metrics_nodes_*.csv" \
     --group-columns model range_km \
-    --output-csv "results/mne3sd/article_b/tables/mobility_range_summary.csv" \
-    --output-tex "results/mne3sd/article_b/tables/mobility_range_summary.tex" \
+    --output-csv "results/pretest_campagne/scenario_b/tables/mobility_range_summary.csv" \
+    --output-tex "results/pretest_campagne/scenario_b/tables/mobility_range_summary.tex" \
     --tex-caption "Article B mobility range sweep across node populations." \
     --tex-label "tab:article_b_node_summary"
 }

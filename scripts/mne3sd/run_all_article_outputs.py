@@ -27,44 +27,44 @@ class Task:
 ARTICLE_SCENARIOS: dict[str, tuple[Task, ...]] = {
     "a": (
         Task(
-            module="scripts.mne3sd.article_a.scenarios.run_class_density_sweep",
+            module="pretest_campagne.scenario_a.scenarios.run_class_density_sweep",
             description="Class density sweep",
-            outputs=(Path("results/mne3sd/article_a/class_density_metrics.csv"),),
+            outputs=(Path("results/pretest_campagne/scenario_a/class_density_metrics.csv"),),
         ),
         Task(
-            module="scripts.mne3sd.article_a.scenarios.run_class_downlink_energy_profile",
+            module="pretest_campagne.scenario_a.scenarios.run_class_downlink_energy_profile",
             description="Class downlink energy profile",
-            outputs=(Path("results/mne3sd/article_a/class_downlink_energy.csv"),),
+            outputs=(Path("results/pretest_campagne/scenario_a/class_downlink_energy.csv"),),
         ),
         Task(
-            module="scripts.mne3sd.article_a.scenarios.simulate_energy_classes",
+            module="pretest_campagne.scenario_a.scenarios.simulate_energy_classes",
             description="Class energy consumption simulation",
             outputs=(
-                Path("results/mne3sd/article_a/energy_consumption.csv"),
-                Path("results/mne3sd/article_a/energy_consumption_summary.csv"),
+                Path("results/pretest_campagne/scenario_a/energy_consumption.csv"),
+                Path("results/pretest_campagne/scenario_a/energy_consumption_summary.csv"),
             ),
         ),
         Task(
-            module="scripts.mne3sd.article_a.scenarios.run_class_load_sweep",
+            module="pretest_campagne.scenario_a.scenarios.run_class_load_sweep",
             description="Class load sweep",
-            outputs=(Path("results/mne3sd/article_a/class_load_metrics.csv"),),
+            outputs=(Path("results/pretest_campagne/scenario_a/class_load_metrics.csv"),),
         ),
     ),
     "b": (
         Task(
-            module="scripts.mne3sd.article_b.scenarios.run_mobility_range_sweep",
+            module="pretest_campagne.scenario_b.scenarios.run_mobility_range_sweep",
             description="Mobility range sweep",
-            outputs=(Path("results/mne3sd/article_b/mobility_range_metrics.csv"),),
+            outputs=(Path("results/pretest_campagne/scenario_b/mobility_range_metrics.csv"),),
         ),
         Task(
-            module="scripts.mne3sd.article_b.scenarios.run_mobility_speed_sweep",
+            module="pretest_campagne.scenario_b.scenarios.run_mobility_speed_sweep",
             description="Mobility speed sweep",
-            outputs=(Path("results/mne3sd/article_b/mobility_speed_metrics.csv"),),
+            outputs=(Path("results/pretest_campagne/scenario_b/mobility_speed_metrics.csv"),),
         ),
         Task(
-            module="scripts.mne3sd.article_b.scenarios.run_mobility_gateway_sweep",
+            module="pretest_campagne.scenario_b.scenarios.run_mobility_gateway_sweep",
             description="Mobility gateway sweep",
-            outputs=(Path("results/mne3sd/article_b/mobility_gateway_metrics.csv"),),
+            outputs=(Path("results/pretest_campagne/scenario_b/mobility_gateway_metrics.csv"),),
         ),
     ),
 }
@@ -73,79 +73,79 @@ ARTICLE_SCENARIOS: dict[str, tuple[Task, ...]] = {
 ARTICLE_PLOTS: dict[str, tuple[Task, ...]] = {
     "a": (
         Task(
-            module="scripts.mne3sd.article_a.plots.plot_class_load_results",
+            module="pretest_campagne.scenario_a.plots.plot_class_load_results",
             description="Class load plots",
             outputs=(
                 Path(
-                    "figures/mne3sd/article_a/class_load/energy_vs_interval/"
+                    "figures/pretest_campagne/scenario_a/class_load/energy_vs_interval/"
                     "class_energy_vs_interval.png"
                 ),
                 Path(
-                    "figures/mne3sd/article_a/class_load/energy_vs_interval/"
+                    "figures/pretest_campagne/scenario_a/class_load/energy_vs_interval/"
                     "class_energy_vs_interval.eps"
                 ),
                 Path(
-                    "figures/mne3sd/article_a/class_load/pdr_vs_interval/"
+                    "figures/pretest_campagne/scenario_a/class_load/pdr_vs_interval/"
                     "class_pdr_vs_interval.png"
                 ),
                 Path(
-                    "figures/mne3sd/article_a/class_load/pdr_vs_interval/"
+                    "figures/pretest_campagne/scenario_a/class_load/pdr_vs_interval/"
                     "class_pdr_vs_interval.eps"
                 ),
             ),
         ),
         Task(
-            module="scripts.mne3sd.article_a.plots.plot_energy_duty_cycle",
+            module="pretest_campagne.scenario_a.plots.plot_energy_duty_cycle",
             description="Energy consumption versus duty cycle plots",
             outputs=(
                 Path(
-                    "figures/mne3sd/article_a/energy_duty_cycle/"
+                    "figures/pretest_campagne/scenario_a/energy_duty_cycle/"
                     "energy_per_node_vs_duty_cycle/"
                     "energy_per_node_vs_duty_cycle.png"
                 ),
                 Path(
-                    "figures/mne3sd/article_a/energy_duty_cycle/"
+                    "figures/pretest_campagne/scenario_a/energy_duty_cycle/"
                     "energy_per_node_vs_duty_cycle/"
                     "energy_per_node_vs_duty_cycle.eps"
                 ),
                 Path(
-                    "figures/mne3sd/article_a/energy_duty_cycle/pdr_vs_duty_cycle/"
+                    "figures/pretest_campagne/scenario_a/energy_duty_cycle/pdr_vs_duty_cycle/"
                     "pdr_vs_duty_cycle.png"
                 ),
                 Path(
-                    "figures/mne3sd/article_a/energy_duty_cycle/pdr_vs_duty_cycle/"
+                    "figures/pretest_campagne/scenario_a/energy_duty_cycle/pdr_vs_duty_cycle/"
                     "pdr_vs_duty_cycle.eps"
                 ),
                 Path(
-                    "figures/mne3sd/article_a/energy_duty_cycle/"
+                    "figures/pretest_campagne/scenario_a/energy_duty_cycle/"
                     "energy_breakdown_vs_duty_cycle/"
                     "energy_breakdown_vs_duty_cycle.png"
                 ),
                 Path(
-                    "figures/mne3sd/article_a/energy_duty_cycle/"
+                    "figures/pretest_campagne/scenario_a/energy_duty_cycle/"
                     "energy_breakdown_vs_duty_cycle/"
                     "energy_breakdown_vs_duty_cycle.eps"
                 ),
             ),
         ),
         Task(
-            module="scripts.mne3sd.article_a.plots.plot_class_downlink_energy",
+            module="pretest_campagne.scenario_a.plots.plot_class_downlink_energy",
             description="Class downlink energy plots",
             outputs=(
                 Path(
-                    "figures/mne3sd/article_a/class_downlink_energy/energy_breakdown/"
+                    "figures/pretest_campagne/scenario_a/class_downlink_energy/energy_breakdown/"
                     "energy_breakdown.png"
                 ),
                 Path(
-                    "figures/mne3sd/article_a/class_downlink_energy/energy_breakdown/"
+                    "figures/pretest_campagne/scenario_a/class_downlink_energy/energy_breakdown/"
                     "energy_breakdown.eps"
                 ),
                 Path(
-                    "figures/mne3sd/article_a/class_downlink_energy/pdr_comparison/"
+                    "figures/pretest_campagne/scenario_a/class_downlink_energy/pdr_comparison/"
                     "pdr_comparison.png"
                 ),
                 Path(
-                    "figures/mne3sd/article_a/class_downlink_energy/pdr_comparison/"
+                    "figures/pretest_campagne/scenario_a/class_downlink_energy/pdr_comparison/"
                     "pdr_comparison.eps"
                 ),
             ),
@@ -153,92 +153,92 @@ ARTICLE_PLOTS: dict[str, tuple[Task, ...]] = {
     ),
     "b": (
         Task(
-            module="scripts.mne3sd.article_b.plots.plot_mobility_range_metrics",
+            module="pretest_campagne.scenario_b.plots.plot_mobility_range_metrics",
             description="Mobility range plots",
             outputs=(
                 Path(
-                    "figures/mne3sd/article_b/mobility_range/pdr_vs_range/"
+                    "figures/pretest_campagne/scenario_b/mobility_range/pdr_vs_range/"
                     "pdr_vs_communication_range.png"
                 ),
                 Path(
-                    "figures/mne3sd/article_b/mobility_range/pdr_vs_range/"
+                    "figures/pretest_campagne/scenario_b/mobility_range/pdr_vs_range/"
                     "pdr_vs_communication_range.eps"
                 ),
                 Path(
-                    "figures/mne3sd/article_b/mobility_range/average_delay_vs_range/"
+                    "figures/pretest_campagne/scenario_b/mobility_range/average_delay_vs_range/"
                     "average_delay_vs_communication_range.png"
                 ),
                 Path(
-                    "figures/mne3sd/article_b/mobility_range/average_delay_vs_range/"
+                    "figures/pretest_campagne/scenario_b/mobility_range/average_delay_vs_range/"
                     "average_delay_vs_communication_range.eps"
                 ),
             ),
         ),
         Task(
-            module="scripts.mne3sd.article_b.plots.plot_mobility_speed_metrics",
+            module="pretest_campagne.scenario_b.plots.plot_mobility_speed_metrics",
             description="Mobility speed plots",
             outputs=(
                 Path(
-                    "figures/mne3sd/article_b/mobility_speed/pdr_by_speed_profile/"
+                    "figures/pretest_campagne/scenario_b/mobility_speed/pdr_by_speed_profile/"
                     "pdr_by_speed_profile.png"
                 ),
                 Path(
-                    "figures/mne3sd/article_b/mobility_speed/pdr_by_speed_profile/"
+                    "figures/pretest_campagne/scenario_b/mobility_speed/pdr_by_speed_profile/"
                     "pdr_by_speed_profile.eps"
                 ),
                 Path(
-                    "figures/mne3sd/article_b/mobility_speed/"
+                    "figures/pretest_campagne/scenario_b/mobility_speed/"
                     "average_delay_by_speed_profile/"
                     "average_delay_by_speed_profile.png"
                 ),
                 Path(
-                    "figures/mne3sd/article_b/mobility_speed/"
+                    "figures/pretest_campagne/scenario_b/mobility_speed/"
                     "average_delay_by_speed_profile/"
                     "average_delay_by_speed_profile.eps"
                 ),
                 Path(
-                    "figures/mne3sd/article_b/mobility_speed/"
+                    "figures/pretest_campagne/scenario_b/mobility_speed/"
                     "pdr_heatmap_speed_profile_range/"
                     "pdr_heatmap_speed_profile_range.png"
                 ),
                 Path(
-                    "figures/mne3sd/article_b/mobility_speed/"
+                    "figures/pretest_campagne/scenario_b/mobility_speed/"
                     "pdr_heatmap_speed_profile_range/"
                     "pdr_heatmap_speed_profile_range.eps"
                 ),
             ),
         ),
         Task(
-            module="scripts.mne3sd.article_b.plots.plot_mobility_gateway_metrics",
+            module="pretest_campagne.scenario_b.plots.plot_mobility_gateway_metrics",
             description="Mobility gateway plots",
             outputs=(
                 Path(
-                    "figures/mne3sd/article_b/mobility_gateway/"
+                    "figures/pretest_campagne/scenario_b/mobility_gateway/"
                     "pdr_distribution_by_gateway/"
                     "pdr_distribution_by_gateway.png"
                 ),
                 Path(
-                    "figures/mne3sd/article_b/mobility_gateway/"
+                    "figures/pretest_campagne/scenario_b/mobility_gateway/"
                     "pdr_distribution_by_gateway/"
                     "pdr_distribution_by_gateway.eps"
                 ),
                 Path(
-                    "figures/mne3sd/article_b/mobility_gateway/"
+                    "figures/pretest_campagne/scenario_b/mobility_gateway/"
                     "downlink_delay_vs_gateways/"
                     "average_downlink_delay_vs_gateways.png"
                 ),
                 Path(
-                    "figures/mne3sd/article_b/mobility_gateway/"
+                    "figures/pretest_campagne/scenario_b/mobility_gateway/"
                     "downlink_delay_vs_gateways/"
                     "average_downlink_delay_vs_gateways.eps"
                 ),
                 Path(
-                    "figures/mne3sd/article_b/mobility_gateway/"
+                    "figures/pretest_campagne/scenario_b/mobility_gateway/"
                     "model_comparison/"
                     "pdr_vs_delay_model_comparison.png"
                 ),
                 Path(
-                    "figures/mne3sd/article_b/mobility_gateway/"
+                    "figures/pretest_campagne/scenario_b/mobility_gateway/"
                     "model_comparison/"
                     "pdr_vs_delay_model_comparison.eps"
                 ),
@@ -403,8 +403,8 @@ def summarise_outputs(paths: Iterable[Path]) -> None:
     print_group("Other artefacts", lambda p: p.suffix.lower() not in {".csv", *FIGURE_SUFFIXES})
 
     required_energy_files = (
-        Path("results/mne3sd/article_a/energy_consumption.csv"),
-        Path("results/mne3sd/article_a/energy_consumption_summary.csv"),
+        Path("results/pretest_campagne/scenario_a/energy_consumption.csv"),
+        Path("results/pretest_campagne/scenario_a/energy_consumption_summary.csv"),
     )
     print("\nEnergy consumption files (Article A):")
     for path in required_energy_files:

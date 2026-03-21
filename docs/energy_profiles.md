@@ -51,11 +51,11 @@ afin de documenter et comparer les profils de consommation.
 ## Visualisation du cycle d'activité énergétique
 
 Pour analyser la consommation issue des scénarios de l'article A, le module
-[`scripts.mne3sd.article_a.plots.plot_energy_duty_cycle`](../scripts/mne3sd/article_a/plots/plot_energy_duty_cycle.py)
+[`pretest_campagne.scenario_a.plots.plot_energy_duty_cycle`](../pretest_campagne/scenario_a/plots/plot_energy_duty_cycle.py)
 propose une commande prête à l'emploi :
 
 ```bash
-python -m scripts.mne3sd.article_a.plots.plot_energy_duty_cycle --results results/mne3sd/article_a
+python -m pretest_campagne.scenario_a.plots.plot_energy_duty_cycle --results results/pretest_campagne/scenario_a
 ```
 
 Cette commande charge le résumé énergétique généré par les simulations

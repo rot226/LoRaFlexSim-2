@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 
-def test_plot_step1_results_generates_png_without_article_c(tmp_path: Path) -> None:
+def test_plot_step1_results_generates_png_without_scenario_c(tmp_path: Path) -> None:
     results_dir = tmp_path / "results"
     figures_dir = tmp_path / "figures"
     algo_dir = results_dir / "adr"
@@ -62,6 +62,6 @@ def test_plot_step1_results_generates_png_without_article_c(tmp_path: Path) -> N
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert "article_c indisponible" in completed.stderr
+    assert "pretest_campagne.scenario_c indisponible" in completed.stderr
     png_files = list(figures_dir.rglob("*.png"))
-    assert png_files, "Aucun PNG généré en mode fallback sans article_c."
+    assert png_files, "Aucun PNG généré en mode fallback sans pretest_campagne.scenario_c."

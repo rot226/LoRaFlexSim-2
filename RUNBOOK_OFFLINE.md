@@ -59,8 +59,8 @@ pytest tests/test_qos_validation_script.py
 ### Nettoyage sûr des résultats (Windows)
 
 ```powershell
-if (Test-Path .\article_c\step1\results) { Remove-Item -Recurse -Force .\article_c\step1\results }
-if (Test-Path .\article_c\step2\results) { Remove-Item -Recurse -Force .\article_c\step2\results }
+if (Test-Path .\pretest_campagne.scenario_c\step1\results) { Remove-Item -Recurse -Force .\pretest_campagne.scenario_c\step1\results }
+if (Test-Path .\pretest_campagne.scenario_c\step2\results) { Remove-Item -Recurse -Force .\pretest_campagne.scenario_c\step2\results }
 ```
 
 ### 1) Step 1 — Générer les CSV

@@ -689,7 +689,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     clusters = [int(value) for value in cluster_values] if cluster_values else None
     overlay_snir = args.overlay_snir
     overlay_only = args.overlay_only
-    if args.article_comparison:
+    if args.pretest_campagne.scenario_comparison:
         algorithms = list(ARTICLE_COMPARISON_ALGOS)
         overlay_snir = True
         overlay_only = True

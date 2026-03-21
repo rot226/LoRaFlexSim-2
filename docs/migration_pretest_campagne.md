@@ -21,7 +21,7 @@ Les conventions suivantes s'appliquent partout pendant la migration :
 
 - **`snake_case` obligatoire** pour les chemins, dossiers, modules Python, fichiers de sortie et identifiants de tests.
 - **Aucune majuscule** dans les nouveaux chemins ou packages Python.
-- **Aucun mélange de casse** (`IWCMC`, `iwcmc`, `Article_C`, etc.) dans les nouveaux noms.
+- **Aucun mélange de casse** (`pretest_campagne/iwcmc_archive`, `iwcmc`, `Article_C`, etc.) dans les nouveaux noms.
 - Les noms doivent être **sémantiques**, **stables** et **réutilisables** dans la documentation, les imports et les scripts CLI.
 - Quand un nom historique est trop générique (`article_a`, `article_b`, etc.), le nouveau nom doit rester court tout en explicitant son rôle dans la campagne.
 
@@ -33,10 +33,10 @@ La table ci-dessous est la **source d'autorité** pour la migration. Toute impl�
 | --- | --- | --- | --- |
 | `article_a` | `scenario_a` | campagne | Campagne MNE3SD historique, renommée avec une nomenclature stable. |
 | `article_b` | `scenario_b` | campagne | Campagne MNE3SD mobilité. |
-| `article_c` | `scenario_c` | campagne | Pipeline de reproduction / recherche existant. |
+| `pretest_campagne.scenario_c` | `scenario_c` | campagne | Pipeline de reproduction / recherche existant. |
 | `article_d` | `scenario_d` | campagne | Campagne MNE3SD scénario D. |
-| `IWCMC` | `iwcmc_archive` | campagne / dossier | La casse historique est supprimée ; le statut archive est rendu explicite. |
-| `iwcmc` | `iwcmc_archive` | préfixe de chemin | Tous les chemins `results/iwcmc/...` deviennent `results/pretest_campagne/iwcmc_archive/...`. |
+| `pretest_campagne/iwcmc_archive` | `iwcmc_archive` | campagne / dossier | La casse historique est supprimée ; le statut archive est rendu explicite. |
+| `iwcmc` | `iwcmc_archive` | préfixe de chemin | Tous les chemins `results/pretest_campagne/iwcmc_archive/...` deviennent `results/pretest_campagne/iwcmc_archive/...`. |
 
 ## Mapping obligatoire
 
@@ -48,17 +48,17 @@ Cette section doit être relue et validée **avant toute modification de code** 
 
 | Ancien package / module | Nouveau package / module cible |
 | --- | --- |
-| `article_c` | `pretest_campagne.scenario_c` |
-| `article_c.common` | `pretest_campagne.scenario_c.common` |
-| `article_c.step1` | `pretest_campagne.scenario_c.step1` |
-| `article_c.step2` | `pretest_campagne.scenario_c.step2` |
-| `article_c.tools` | `pretest_campagne.scenario_c.tools` |
-| `IWCMC.rl_static` | `pretest_campagne.iwcmc_archive.rl_static` |
-| `IWCMC.rl_mobile` | `pretest_campagne.iwcmc_archive.rl_mobile` |
-| `IWCMC.snir_static` | `pretest_campagne.iwcmc_archive.snir_static` |
-| `scripts.mne3sd.article_a` | `pretest_campagne.scenario_a` |
-| `scripts.mne3sd.article_b` | `pretest_campagne.scenario_b` |
-| `scripts.mne3sd.article_d` | `pretest_campagne.scenario_d` |
+| `pretest_campagne.scenario_c` | `pretest_campagne.scenario_c` |
+| `pretest_campagne.scenario_c.common` | `pretest_campagne.scenario_c.common` |
+| `pretest_campagne.scenario_c.step1` | `pretest_campagne.scenario_c.step1` |
+| `pretest_campagne.scenario_c.step2` | `pretest_campagne.scenario_c.step2` |
+| `pretest_campagne.scenario_c.tools` | `pretest_campagne.scenario_c.tools` |
+| `pretest_campagne.iwcmc_archive.rl_static` | `pretest_campagne.iwcmc_archive.rl_static` |
+| `pretest_campagne.iwcmc_archive.rl_mobile` | `pretest_campagne.iwcmc_archive.rl_mobile` |
+| `pretest_campagne.iwcmc_archive.snir_static` | `pretest_campagne.iwcmc_archive.snir_static` |
+| `pretest_campagne.scenario_a` | `pretest_campagne.scenario_a` |
+| `pretest_campagne.scenario_b` | `pretest_campagne.scenario_b` |
+| `pretest_campagne.scenario_d` | `pretest_campagne.scenario_d` |
 
 #### Nouveaux packages Python importables
 
@@ -86,12 +86,12 @@ Tous les résultats liés à cette migration doivent converger vers un espace de
 
 | Ancien chemin | Nouveau chemin cible |
 | --- | --- |
-| `results/mne3sd/article_a/...` | `results/pretest_campagne/scenario_a/...` |
-| `results/mne3sd/article_b/...` | `results/pretest_campagne/scenario_b/...` |
-| `results/mne3sd/article_d/...` | `results/pretest_campagne/scenario_d/...` |
-| `article_c/step1/results/...` | `results/pretest_campagne/scenario_c/step1/...` |
-| `article_c/step2/results/...` | `results/pretest_campagne/scenario_c/step2/...` |
-| `results/iwcmc/...` | `results/pretest_campagne/iwcmc_archive/...` |
+| `results/pretest_campagne/scenario_a/...` | `results/pretest_campagne/scenario_a/...` |
+| `results/pretest_campagne/scenario_b/...` | `results/pretest_campagne/scenario_b/...` |
+| `results/pretest_campagne/scenario_d/...` | `results/pretest_campagne/scenario_d/...` |
+| `pretest_campagne.scenario_c/step1/results/...` | `results/pretest_campagne/scenario_c/step1/...` |
+| `pretest_campagne.scenario_c/step2/results/...` | `results/pretest_campagne/scenario_c/step2/...` |
+| `results/pretest_campagne/iwcmc_archive/...` | `results/pretest_campagne/iwcmc_archive/...` |
 
 #### Noms des nouveaux sous-dossiers de résultats
 
@@ -115,14 +115,14 @@ Toutes les figures liées aux campagnes renommées doivent être regroupées sou
 
 | Ancien chemin | Nouveau chemin cible |
 | --- | --- |
-| `figures/mne3sd/article_a/...` | `figures/pretest_campagne/scenario_a/...` |
-| `figures/mne3sd/article_b/...` | `figures/pretest_campagne/scenario_b/...` |
-| `figures/mne3sd/article_d/...` | `figures/pretest_campagne/scenario_d/...` |
-| `article_c/plots/output/...` | `figures/pretest_campagne/scenario_c/...` |
-| `IWCMC/figures/...` | `figures/pretest_campagne/iwcmc_archive/...` |
-| `IWCMC/rl_static/plots/figures/...` | `figures/pretest_campagne/iwcmc_archive/rl_static/...` |
-| `IWCMC/rl_mobile/figures/...` | `figures/pretest_campagne/iwcmc_archive/rl_mobile/...` |
-| `IWCMC/snir_static/figures/...` | `figures/pretest_campagne/iwcmc_archive/snir_static/...` |
+| `figures/pretest_campagne/scenario_a/...` | `figures/pretest_campagne/scenario_a/...` |
+| `figures/pretest_campagne/scenario_b/...` | `figures/pretest_campagne/scenario_b/...` |
+| `figures/pretest_campagne/scenario_d/...` | `figures/pretest_campagne/scenario_d/...` |
+| `pretest_campagne.scenario_c/plots/output/...` | `figures/pretest_campagne/scenario_c/...` |
+| `figures/pretest_campagne/iwcmc_archive/...` | `figures/pretest_campagne/iwcmc_archive/...` |
+| `figures/pretest_campagne/iwcmc_archive/rl_static/...` | `figures/pretest_campagne/iwcmc_archive/rl_static/...` |
+| `figures/pretest_campagne/iwcmc_archive/rl_mobile/...` | `figures/pretest_campagne/iwcmc_archive/rl_mobile/...` |
+| `figures/pretest_campagne/iwcmc_archive/snir_static/...` | `figures/pretest_campagne/iwcmc_archive/snir_static/...` |
 
 #### Noms des nouveaux sous-dossiers de figures
 
@@ -140,12 +140,12 @@ Tous les README, exemples de commandes et extraits CLI devront être migrés sel
 
 | Ancien usage | Nouveau usage cible |
 | --- | --- |
-| `python -m article_c.run_all ...` | `python -m pretest_campagne.scenario_c.run_all ...` |
-| `python -m article_c.make_all_plots ...` | `python -m pretest_campagne.scenario_c.make_all_plots ...` |
-| `python -m scripts.mne3sd.article_a...` | `python -m pretest_campagne.scenario_a...` |
-| `python -m scripts.mne3sd.article_b...` | `python -m pretest_campagne.scenario_b...` |
-| `python -m scripts.mne3sd.article_d...` | `python -m pretest_campagne.scenario_d...` |
-| `python -m pytest IWCMC/tests` | `python -m pytest tests/pretest_campagne/iwcmc_archive` |
+| `python -m pretest_campagne.scenario_c.run_all ...` | `python -m pretest_campagne.scenario_c.run_all ...` |
+| `python -m pretest_campagne.scenario_c.make_all_plots ...` | `python -m pretest_campagne.scenario_c.make_all_plots ...` |
+| `python -m pretest_campagne.scenario_a...` | `python -m pretest_campagne.scenario_a...` |
+| `python -m pretest_campagne.scenario_b...` | `python -m pretest_campagne.scenario_b...` |
+| `python -m pretest_campagne.scenario_d...` | `python -m pretest_campagne.scenario_d...` |
+| `python -m pytest tests/pretest_campagne/iwcmc_archive` | `python -m pytest tests/pretest_campagne/iwcmc_archive` |
 
 Règles supplémentaires :
 
@@ -159,20 +159,20 @@ Règles supplémentaires :
 
 | Ancien répertoire | Nouveau répertoire cible |
 | --- | --- |
-| `tests/article_c/` | `tests/pretest_campagne/scenario_c/` |
-| `IWCMC/tests/` | `tests/pretest_campagne/iwcmc_archive/` |
+| `tests/pretest_campagne.scenario_c/` | `tests/pretest_campagne/scenario_c/` |
+| `tests/pretest_campagne/iwcmc_archive/` | `tests/pretest_campagne/iwcmc_archive/` |
 
 #### Préfixes de noms de tests à harmoniser
 
 | Ancien préfixe / nom | Nouveau préfixe / nom recommandé |
 | --- | --- |
-| `test_article_c_*` | `test_scenario_c_*` |
-| `tests/article_c/test_*` | `tests/pretest_campagne/scenario_c/test_*` |
-| `IWCMC/tests/test_*` | `tests/pretest_campagne/iwcmc_archive/test_*` |
+| `test_pretest_campagne.scenario_c_*` | `test_scenario_c_*` |
+| `tests/pretest_campagne.scenario_c/test_*` | `tests/pretest_campagne/scenario_c/test_*` |
+| `tests/pretest_campagne/iwcmc_archive/test_*` | `tests/pretest_campagne/iwcmc_archive/test_*` |
 | références à `article_a` dans les tests | références à `scenario_a` |
 | références à `article_b` dans les tests | références à `scenario_b` |
 | références à `article_d` dans les tests | références à `scenario_d` |
-| références à `IWCMC` ou `iwcmc` dans les tests | références à `iwcmc_archive` |
+| références à `pretest_campagne/iwcmc_archive` ou `iwcmc` dans les tests | références à `iwcmc_archive` |
 
 ## Règles de validation avant modification de code
 
