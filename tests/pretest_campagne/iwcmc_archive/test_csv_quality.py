@@ -16,7 +16,7 @@ DER_COLUMN_PATTERN = re.compile(r"(^|_)der($|_)")
 def _collect_csv_paths() -> list[Path]:
     candidates = [
         ROOT_DIR / "pretest_campagne/iwcmc_archive",
-        ROOT_DIR / "results" / "iwcmc",
+        ROOT_DIR / "results" / "pretest_campagne" / "iwcmc_archive",
         ROOT_DIR / "experiments" / "ucb1",
         FIXTURE_DIR,
     ]
