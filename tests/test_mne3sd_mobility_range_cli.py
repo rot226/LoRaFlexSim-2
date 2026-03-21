@@ -49,9 +49,8 @@ def range_module(monkeypatch: pytest.MonkeyPatch):
 
     module_path = (
         Path(__file__).resolve().parents[1]
-        / "scripts"
-        / "mne3sd"
-        / "article_b"
+        / "pretest_campagne"
+        / "scenario_b"
         / "scenarios"
         / "run_mobility_range_sweep.py"
     )

@@ -707,7 +707,7 @@ def main() -> None:
     algorithms_input = _parse_list(args.algorithms)
     if args.algorithm:
         algorithms_input.extend(args.algorithm)
-    if args.article_comparison:
+    if args.pretest_campagne.scenario_comparison:
         algorithms_input = list(ARTICLE_COMPARISON_ALGOS)
     if algorithms_input and all_records:
         _validate_algorithms(algorithms_input, _available_algorithms(all_records))

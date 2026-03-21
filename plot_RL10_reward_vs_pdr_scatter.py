@@ -325,8 +325,8 @@ def main() -> None:
     if network_sizes is not None and _has_invalid_network_sizes(network_sizes):
         return
     root_dir = Path(__file__).resolve().parent
-    step_dir = root_dir / "article_c" / "step2"
-    step1_results_path = root_dir / "article_c" / "step1" / "results" / "raw_results.csv"
+    step_dir = root_dir / "pretest_campagne.scenario_c" / "step2"
+    step1_results_path = root_dir / "pretest_campagne.scenario_c" / "step1" / "results" / "raw_results.csv"
     step2_results_path = step_dir / "results" / "raw_all.csv"
     points = _collect_points(
         step1_results_path,

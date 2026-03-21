@@ -1,1 +1,1 @@
-"""Package racine pour la future campagne prétest mutualisée."""
+"""Package racine des campagnes prétest."""

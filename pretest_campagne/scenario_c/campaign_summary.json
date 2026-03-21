@@ -1,0 +1,63 @@
+{
+  "network_sizes": [
+    80
+  ],
+  "replications_total": 1,
+  "simulation_quality": "ok",
+  "quality_thresholds": {
+    "step2": {
+      "success_rate_mean_min": 0.2,
+      "failed_runs_max": 0
+    }
+  },
+  "quality_reasons": [],
+  "total_elapsed_seconds": 0.0,
+  "sizes": [
+    {
+      "network_size": 80,
+      "replications_total": 1,
+      "failed": 0,
+      "elapsed_seconds": 0.0,
+      "step1": {
+        "status": "skipped",
+        "failed": 0,
+        "elapsed_seconds": 0.0,
+        "output_path": "/workspace/LoRaFlexSim-2/pretest_campagne/scenario_c/step1/results",
+        "status_file": "/workspace/LoRaFlexSim-2/pretest_campagne/scenario_c/step1/results/run_status_step1.csv"
+      },
+      "step2": {
+        "status": "ok",
+        "failed": 0,
+        "elapsed_seconds": 0.0,
+        "output_path": "/workspace/LoRaFlexSim-2/pretest_campagne/scenario_c/step2/results",
+        "status_file": "/workspace/LoRaFlexSim-2/pretest_campagne/scenario_c/step2/results/run_status_step2.csv",
+        "quality": {
+          "simulation_quality": "ok",
+          "reasons": []
+        }
+      }
+    }
+  ],
+  "output_paths": {
+    "step1_results": "/workspace/LoRaFlexSim-2/pretest_campagne/scenario_c/step1/results",
+    "step2_results": "/workspace/LoRaFlexSim-2/pretest_campagne/scenario_c/step2/results"
+  },
+  "report": {
+    "kind": "partial",
+    "executed_steps": [
+      "step2"
+    ],
+    "skipped_steps": [
+      "step1"
+    ],
+    "note": "Rapport partiel: certaines étapes ont été explicitement ignorées (step1)."
+  },
+  "validation": {
+    "status": "ok",
+    "exit_code": 0,
+    "scope": {
+      "skip_step1": true,
+      "skip_step2": false
+    }
+  }
+}

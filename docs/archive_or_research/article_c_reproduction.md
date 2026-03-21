@@ -1,34 +1,34 @@
 # Reproduction du scénario C
 
-Documentation historique / de recherche issue de `article_c/README.md`.
+Documentation historique / de recherche issue de `pretest_campagne.scenario_c/README.md`.
 
 ## Organisation
 
-- `article_c/common/` : modules utilitaires partagés ;
-- `article_c/step1/` : scripts de la première étape ;
-- `article_c/step2/` : scripts de la seconde étape ;
-- `article_c/run_all.py` : exécution complète ;
-- `article_c/make_all_plots.py` : génération de graphes.
+- `pretest_campagne.scenario_c/common/` : modules utilitaires partagés ;
+- `pretest_campagne.scenario_c/step1/` : scripts de la première étape ;
+- `pretest_campagne.scenario_c/step2/` : scripts de la seconde étape ;
+- `pretest_campagne.scenario_c/run_all.py` : exécution complète ;
+- `pretest_campagne.scenario_c/make_all_plots.py` : génération de graphes.
 
 ## Contrat de sortie
 
 ### Sorties fines
 
-- `article_c/step1/results/by_size/size_<N>/rep_<R>/...`
-- `article_c/step2/results/by_size/size_<N>/rep_<R>/...`
+- `pretest_campagne.scenario_c/step1/results/by_size/size_<N>/rep_<R>/...`
+- `pretest_campagne.scenario_c/step2/results/by_size/size_<N>/rep_<R>/...`
 
 ### Agrégats
 
-- `article_c/step1/results/aggregates/aggregated_results.csv`
-- `article_c/step2/results/aggregates/aggregated_results.csv`
+- `pretest_campagne.scenario_c/step1/results/aggregates/aggregated_results.csv`
+- `pretest_campagne.scenario_c/step2/results/aggregates/aggregated_results.csv`
 
 ## Workflow Windows 11
 
 ```powershell
-python -m article_c.run_all --network-sizes 80 160 320 640 1280 --replications 5 --seeds_base 1
-python -m article_c.tools.aggregate_step1
-python -m article_c.tools.aggregate_step2
-python -m article_c.make_all_plots --formats png,eps,pdf --no-suptitle
+python -m pretest_campagne.scenario_c.run_all --network-sizes 80 160 320 640 1280 --replications 5 --seeds_base 1
+python -m pretest_campagne.scenario_c.tools.aggregate_step1
+python -m pretest_campagne.scenario_c.tools.aggregate_step2
+python -m pretest_campagne.scenario_c.make_all_plots --formats png,eps,pdf --no-suptitle
 ```
 
 ## Modèle radio et SNIR

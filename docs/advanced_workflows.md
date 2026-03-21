@@ -8,8 +8,8 @@ Le guide détaillé de génération des figures issues du scénario C a été d�
 
 ### Emplacements de résultats attendus
 
-- `article_c/step1/results`
-- `article_c/step2/results`
+- `pretest_campagne.scenario_c/step1/results`
+- `pretest_campagne.scenario_c/step2/results`
 
 Ces sorties servent de base aux scripts de génération de figures et d’exports consolidés.
 
@@ -34,18 +34,18 @@ Le scénario C fournit un pipeline de reproduction plus riche que le flux commun
 
 ### Organisation
 
-- `article_c/common/` : utilitaires partagés ;
-- `article_c/step1/` : première étape ;
-- `article_c/step2/` : seconde étape ;
-- `article_c/run_all.py` : orchestration globale ;
-- `article_c/make_all_plots.py` : génération complète des graphes.
+- `pretest_campagne.scenario_c/common/` : utilitaires partagés ;
+- `pretest_campagne.scenario_c/step1/` : première étape ;
+- `pretest_campagne.scenario_c/step2/` : seconde étape ;
+- `pretest_campagne.scenario_c/run_all.py` : orchestration globale ;
+- `pretest_campagne.scenario_c/make_all_plots.py` : génération complète des graphes.
 
 ### Workflow Windows 11 recommandé
 
 ```powershell
-python -m article_c.run_all --network-sizes 80 160 320 640 1280 --replications 5 --seeds_base 1
-python -m article_c.make_all_plots --formats png,eps,pdf --no-suptitle
-python -m article_c.all_plot_compare --export-csv --output-dir article_c/plots/output/compare_all
+python -m pretest_campagne.scenario_c.run_all --network-sizes 80 160 320 640 1280 --replications 5 --seeds_base 1
+python -m pretest_campagne.scenario_c.make_all_plots --formats png,eps,pdf --no-suptitle
+python -m pretest_campagne.scenario_c.all_plot_compare --export-csv --output-dir pretest_campagne.scenario_c/plots/output/compare_all
 ```
 
 ### Usage conseillé

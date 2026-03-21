@@ -1,6 +1,6 @@
-# Archive IWCMC
+# Archive pretest_campagne/iwcmc_archive
 
-Documentation historique issue de `IWCMC/README.md`.
+Documentation historique issue de `pretest_campagne/iwcmc_archive/README.md`.
 
 ## Portée
 
@@ -40,7 +40,7 @@ data/      # CSV et données intermédiaires
 ## Vérification
 
 ```powershell
-python -m pytest IWCMC/tests
+python -m pytest tests/pretest_campagne/iwcmc_archive
 ```
 
 ## But de cette archive
