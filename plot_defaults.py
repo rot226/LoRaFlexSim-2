@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Tuple
 
-from article_c.common.plotting_style import (
+from pretest_campagne.common.plotting_style import (
     DOUBLE_COLUMN_FIGSIZE,
     DOUBLE_COLUMN_WIDTH,
     SINGLE_COLUMN_FIGSIZE,

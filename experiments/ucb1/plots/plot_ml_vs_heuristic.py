@@ -9,7 +9,7 @@ import warnings
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from article_c.common.plot_helpers import apply_figure_layout, save_figure
+from pretest_campagne.common.plot_helpers import apply_figure_layout, save_figure
 from plot_defaults import resolve_ieee_figsize
 from experiments.ucb1.plots.plot_style import apply_plot_style, filter_top_groups
 

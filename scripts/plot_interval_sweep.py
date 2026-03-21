@@ -13,7 +13,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from article_c.common.plotting_style import apply_base_rcparams
+from pretest_campagne.common.plotting_style import apply_base_rcparams
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS_DIR = ROOT / "results"

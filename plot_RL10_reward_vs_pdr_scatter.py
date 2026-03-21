@@ -9,7 +9,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 
-from article_c.common.plot_helpers import (
+from pretest_campagne.common.plot_helpers import (
     ALGO_COLORS,
     ALGO_MARKERS,
     algo_label,

@@ -12,7 +12,7 @@ from typing import Any, Dict, Iterable, List, Mapping, Sequence
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from article_c.common.plotting_style import (
+from pretest_campagne.common.plotting_style import (
     FIGURE_MARGINS,
     LEGEND_STYLE,
     TIGHT_LAYOUT_RECT,

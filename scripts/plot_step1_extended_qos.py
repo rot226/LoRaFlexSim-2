@@ -12,7 +12,7 @@ from typing import Any, Dict, Iterable, List, Mapping, Sequence, Tuple
 
 import matplotlib.pyplot as plt
 
-from article_c.common.plotting_style import apply_base_rcparams
+from pretest_campagne.common.plotting_style import apply_base_rcparams
 from scripts.plot_step1_results import _detect_snir_state, _normalize_algorithm_name
 from plot_theme import SNIR_COLORS
 

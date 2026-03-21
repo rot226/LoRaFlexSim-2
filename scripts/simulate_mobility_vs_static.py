@@ -13,7 +13,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from article_c.common.plotting_style import apply_base_rcparams
+from pretest_campagne.common.plotting_style import apply_base_rcparams
 from loraflexsim.launcher import MultiChannel, Simulator
 
 from mobility_models import RandomWaypointWithPause, SmoothMobilityWithPause

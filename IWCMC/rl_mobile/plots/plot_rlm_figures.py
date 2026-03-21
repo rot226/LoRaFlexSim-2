@@ -14,7 +14,7 @@ try:  # pragma: no cover - matplotlib optionnel
 except Exception:  # pragma: no cover
     plt = None  # type: ignore
 
-from article_c.common.plotting_style import (
+from pretest_campagne.common.plotting_style import (
     FIGURE_MARGINS,
     LEGEND_STYLE,
     TIGHT_LAYOUT_RECT,

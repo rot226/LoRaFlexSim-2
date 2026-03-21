@@ -18,7 +18,7 @@ import sys
 try:  # pandas and matplotlib are optional but required for plotting
     import pandas as pd
     import matplotlib.pyplot as plt
-    from article_c.common.plotting_style import apply_base_rcparams
+    from pretest_campagne.common.plotting_style import apply_base_rcparams
 except Exception as exc:  # pragma: no cover - handled at runtime
     raise SystemExit(f"Required plotting libraries missing: {exc}")
 from plot_defaults import DEFAULT_FIGSIZE_SIMPLE
