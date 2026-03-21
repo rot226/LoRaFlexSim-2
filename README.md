@@ -106,7 +106,7 @@ Les interfaces suivantes restent disponibles, mais avec un statut secondaire par
 - `qos_cli/README.md` pour le guide spécialisé QoS ;
 - `sfrd/README.md` pour le workflow avancé SFRD ;
 - `final/README.md` pour les scripts de reproduction/export historiques ;
-- `IWCMC/README.md` pour les archives et reproductions IWCMC conservées dans le dépôt.
+- `IWCMC/README.md` pour les archives et reproductions de campagne héritée conservées dans le dépôt.
 
 ### Dashboard vs CLI
 
@@ -146,7 +146,7 @@ depuis un terminal disposant de `make` (Git Bash, WSL ou équivalent).
 
 ## 🪵 Journalisation Step 2
 
-Les statistiques de récompense émises par `article_c/step2/simulate_step2.py`
+Les statistiques de récompense émises par `community_core/step2/simulate_step2.py`
 (`_log_reward_stats`) sont désormais journalisées au niveau **INFO** par
 défaut et **dédupliquées par algo/round** pour éviter le spam. Pour retrouver
 le niveau précédent, passez explicitement `reward_alert_level="WARNING"` lors
@@ -204,7 +204,7 @@ python scripts/run_step1_matrix.py --algos adr apra mixra_h mixra_opt --with-sni
 ```
 
 > **Note sur les proxys Step 1** : les implémentations dans
-> `article_c/step1/simulate_step1.py` servent de substituts fidèles lorsque les
+> `community_core/step1/simulate_step1.py` servent de substituts fidèles lorsque les
 > formules exactes ne sont pas disponibles. ADR choisit le plus petit SF
 > satisfaisant les seuils SNR/RSSI, avec une marge SNR modulée par la
 > distance/variabilité. MixRA-H applique une heuristique équilibrant la QoS
@@ -271,7 +271,7 @@ python scripts/plot_step1_results.py --official --use-summary --plot-cdf
 Dans ce mode, toutes les figures sont déposées exclusivement dans
 `figures/step1/extended/`, qui constitue désormais la **source officielle**.
 Seules les figures présentes dans `figures/step1/extended/` sont considérées
-comme **IEEE-ready**.
+comme **prêtes à l’export**.
 Les couleurs par défaut restent **rouge** pour SNIR activé et **bleu** pour
 SNIR désactivé (`#d62728` et `#1f77b4`), telles que définies dans
 `scripts/plot_step1_results.py`.【F:scripts/plot_step1_results.py†L16-L24】【F:scripts/plot_step1_results.py†L450-L520】
@@ -1274,14 +1274,14 @@ python scripts/plot_mobility_multichannel.py results/mobility_multichannel.csv -
 python scripts/plot_mobility_multichannel.py results/mobility_multichannel.csv --scenarios n50_c1_static n50_c1_mobile
 python scripts/plot_mobility_latency_energy.py results/mobility_latency_energy.csv
 python scripts/benchmark_energy_classes.py --nodes 20 --packets 5 --output results/energy_classes.csv
-python -m scripts.mne3sd.article_a.plots.plot_energy_duty_cycle --results results/mne3sd/article_a
+python -m scripts.mne3sd.scenario_a.plots.plot_energy_duty_cycle --results results/mne3sd/scenario_a
 ```
 
-Pour exécuter l'ensemble des scénarios et graphiques associés aux articles MNE3SD
+Pour exécuter l'ensemble des scénarios et graphiques associés aux collections MNE3SD
 en tirant parti du parallélisme des scénarios, utilisez par exemple :
 
 ```bash
-py -m scripts.mne3sd.run_all_article_outputs --scenario-workers 8
+py -m scripts.mne3sd.run_all_scenario_exports --scenario-workers 8
 ```
 
 `plot_sf_distribution.py` generates `sf_distribution` in PNG, JPG and EPS,

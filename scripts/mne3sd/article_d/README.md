@@ -1,6 +1,6 @@
-# Expériences de mobilité Article D
+# Expériences de mobilité du scénario D
 
-Ce dossier rassemble les scripts utilisés pour reproduire les expériences axées sur la mobilité de l'étude « Article D » de la campagne MNE3SD. La suite est organisée autour d'un petit ensemble de scénarios de mobilité canoniques et des utilitaires de post-traitement nécessaires pour transformer les sorties brutes du simulateur en figures prêtes à être publiées.
+Ce dossier rassemble les scripts utilisés pour reproduire les expériences axées sur la mobilité du scénario D de la campagne MNE3SD. La suite est organisée autour d'un petit ensemble de scénarios de mobilité canoniques et des utilitaires de post-traitement nécessaires pour transformer les sorties brutes du simulateur en figures prêtes à l’export.
 
 ## Scénarios de mobilité
 
@@ -31,7 +31,7 @@ Chaque script de scénario stocke les paramètres dérivés (exposant de propaga
 
 ## Scénarios D1–D10
 
-Les scénarios D1–D10 structurent l'Article D autour d'une grille d'expériences cohérente. Chaque scénario définit un objectif précis et les paramètres clés à surveiller.
+Les scénarios D1–D10 structurent le scénario D autour d'une grille d'expériences cohérente. Chaque scénario définit un objectif précis et les paramètres clés à surveiller.
 
 | Scénario | Nom | Objectif | Paramètres clés |
 | --- | --- | --- | --- |
@@ -44,7 +44,7 @@ Les scénarios D1–D10 structurent l'Article D autour d'une grille d'expérien
 | D7 | `mobility_model_comparison` | Comparer les modèles de mobilité (RandomWaypoint/Smooth). | `mobility-model`, `runs`, `seed` |
 | D8 | `mobility_interference_load` | Étudier l'effet d'une charge radio accrue. | `traffic-load`, `duty-cycle`, `runs` |
 | D9 | `mobility_reliability_ci` | Générer un jeu rapide pour validations CI. | `profile ci`, `runs`, `workers` |
-| D10 | `mobility_full_campaign` | Lancer la campagne complète Article D. | `profile full`, `runs`, `workers` |
+| D10 | `mobility_full_campaign` | Lancer la campagne complète du scénario D. | `profile full`, `runs`, `workers` |
 
 ## Paramètres de simulation
 
@@ -56,25 +56,25 @@ Les points d'entrée des scénarios proposent les options suivantes :
 - `--duration` : horizon de simulation en secondes. Valeur par défaut : `7200` s.
 - `--distance-min` / `--distance-max` : redéfinit les distances minimales et maximales du lien. En l'absence de ces options, les plages ci-dessus sont utilisées.
 - `--speed-min` / `--speed-max` : redéfinit l'intervalle de vitesses autorisé par les générateurs aléatoires propres au scénario.
-- `--output` : fichier CSV de destination dans `results/mne3sd/article_d/`.
+- `--output` : fichier CSV de destination dans `results/mne3sd/scenario_d/`.
 
 Les modules de scénario peuvent proposer d'autres options (activation de la diversité passerelle, ajustement de la charge, etc.). Documentez-les dans les docstrings correspondantes.
 
 ## Utilitaires de tracé
 
-Les modules de tracé sont de fines surcouches qui agrègent les CSV produits par les scénarios et génèrent les figures de l'Article D. L'interface partagée accepte :
+Les modules de tracé sont de fines surcouches qui agrègent les CSV produits par les scénarios et génèrent les figures du scénario D. L'interface partagée accepte :
 
 - `--input` : un ou plusieurs fichiers CSV générés par les scripts de scénario. Répétez l'option pour traiter plusieurs jeux de données.
-- `--figures-dir` : répertoire de destination des figures exportées. Valeur par défaut : `figures/mne3sd/article_d/`.
+- `--figures-dir` : répertoire de destination des figures exportées. Valeur par défaut : `figures/mne3sd/scenario_d/`.
 - `--format` : format de sortie (`png`, `pdf`, `svg`, …). Par défaut : `png` (EPS optionnel au besoin).
-- `--style` : feuille de style Matplotlib optionnelle appliquée avant le rendu (par défaut `figures/matplotlib-paper.mplstyle` lorsqu'elle est disponible).
+- `--style` : feuille de style Matplotlib optionnelle appliquée avant le rendu (par défaut `figures/matplotlib-export.mplstyle` lorsqu'elle est disponible).
 
 ## Figures
 
 ### `plot_mobility_gateway_metrics`
-- **Répartition du PDR par passerelle** (`figures/mne3sd/article_d/mobility_gateway/pdr_distribution_by_gateway/`) : graphique en barres empilées montrant la part de trafic collectée par chaque passerelle selon le modèle de mobilité et le nombre total de passerelles. Une répartition homogène signale une couverture bien équilibrée tandis qu'un segment dominant met en évidence un goulot d'étranglement.
-- **Délai moyen downlink vs passerelles** (`figures/mne3sd/article_d/mobility_gateway/downlink_delay_vs_gateways/`) : courbes avec barres d'erreur reliant le nombre de passerelles au délai moyen des accusés de réception. La pente renseigne sur l'intérêt d'ajouter des passerelles supplémentaires pour réduire la latence downlink.
-- **Comparaison RandomWaypoint/Smooth** (`figures/mne3sd/article_d/mobility_gateway/model_comparison/`) : nuage de points positionnant chaque configuration selon son PDR agrégé et son délai downlink moyen. Les annotations `n GW` rappellent le nombre de passerelles associé, ce qui aide à visualiser le compromis portée/latence entre les profils de mobilité.
+- **Répartition du PDR par passerelle** (`figures/mne3sd/scenario_d/mobility_gateway/pdr_distribution_by_gateway/`) : graphique en barres empilées montrant la part de trafic collectée par chaque passerelle selon le modèle de mobilité et le nombre total de passerelles. Une répartition homogène signale une couverture bien équilibrée tandis qu'un segment dominant met en évidence un goulot d'étranglement.
+- **Délai moyen downlink vs passerelles** (`figures/mne3sd/scenario_d/mobility_gateway/downlink_delay_vs_gateways/`) : courbes avec barres d'erreur reliant le nombre de passerelles au délai moyen des accusés de réception. La pente renseigne sur l'intérêt d'ajouter des passerelles supplémentaires pour réduire la latence downlink.
+- **Comparaison RandomWaypoint/Smooth** (`figures/mne3sd/scenario_d/mobility_gateway/model_comparison/`) : nuage de points positionnant chaque configuration selon son PDR agrégé et son délai downlink moyen. Les annotations `n GW` rappellent le nombre de passerelles associé, ce qui aide à visualiser le compromis portée/latence entre les profils de mobilité.
 
 ### Profils d'exécution
 Les lanceurs de scénarios respectent l'option `--profile` partagée ainsi que la variable d'environnement `MNE3SD_PROFILE` :
@@ -90,14 +90,14 @@ Les scripts `run_mobility_range_sweep.py`, `run_mobility_speed_sweep.py` et `run
 Chaque sweep expose également `--results` pour définir explicitement le chemin du CSV généré. Cela permet de séparer les différentes séries d'expériences sans devoir renommer les fichiers a posteriori, par exemple :
 
 ```
-python -m scripts.mne3sd.article_d.scenarios.run_mobility_speed_sweep \
-    --profile fast --workers 4 --results results/mne3sd/article_d/mobility_speed_fast.csv
+python -m scripts.mne3sd.scenario_d.scenarios.run_mobility_speed_sweep \
+    --profile fast --workers 4 --results results/mne3sd/scenario_d/mobility_speed_fast.csv
 ```
 
 ## Structure du répertoire
 
 ```
-scripts/mne3sd/article_d/
+scripts/mne3sd/scenario_d/
 ├── README.md                # Ce guide
 ├── __init__.py              # Marqueur de package pour les utilitaires partagés
 ├── scenarios/               # Points d'entrée des scénarios
@@ -109,7 +109,7 @@ scripts/mne3sd/article_d/
 ## Sorties attendues
 
 ### Artefacts CSV
-Toutes les données brutes et métriques agrégées doivent résider dans `results/mne3sd/article_d/`. Utilisez des noms explicites comme `urban_canyon_runs.csv` ou `rural_highway_summary.csv`. Lorsqu'un scénario produit plusieurs fichiers (par exemple métriques par passerelle et traces par nœud), créez un sous-dossier : `results/mne3sd/article_d/industrial_campus/gateway_load.csv`.
+Toutes les données brutes et métriques agrégées doivent résider dans `results/mne3sd/scenario_d/`. Utilisez des noms explicites comme `urban_canyon_runs.csv` ou `rural_highway_summary.csv`. Lorsqu'un scénario produit plusieurs fichiers (par exemple métriques par passerelle et traces par nœud), créez un sous-dossier : `results/mne3sd/scenario_d/industrial_campus/gateway_load.csv`.
 
 Chaque CSV doit contenir au minimum les colonnes suivantes pour alimenter la chaîne de génération de figures :
 
@@ -118,10 +118,10 @@ Chaque CSV doit contenir au minimum les colonnes suivantes pour alimenter la cha
 - `distance_m` : distance instantanée émetteur-récepteur.
 - `speed_mps` : vitesse du nœud à l'instant échantillonné.
 - `snr_db`, `rssi_dbm` : indicateurs de qualité de canal.
-- `latency_s`, `delivery_ratio` : indicateurs clés utilisés dans les figures de l'Article D.
+- `latency_s`, `delivery_ratio` : indicateurs clés utilisés dans les figures du scénario D.
 
 ### Artefacts graphiques
-Exportez les figures dans `figures/mne3sd/article_d/`, en gardant des noms alignés sur la numérotation du manuscrit (ex. `figure_3_latency_vs_speed.png`). Les figures sont en PNG par défaut et l'EPS reste optionnel si une version vectorielle est nécessaire. Placez les graphiques temporaires de débogage dans un sous-dossier dédié tel que `figures/mne3sd/article_d/debug/` pour ne pas les mélanger aux figures finales.
+Exportez les figures dans `figures/mne3sd/scenario_d/`, en gardant des noms alignés sur la nomenclature d’export (ex. `figure_3_latency_vs_speed.png`). Les figures sont en PNG par défaut et l'EPS reste optionnel si une version vectorielle est nécessaire. Placez les graphiques temporaires de débogage dans un sous-dossier dédié tel que `figures/mne3sd/scenario_d/debug/` pour ne pas les mélanger aux figures exportées.
 
 ## Exécution de la chaîne
 
@@ -130,23 +130,23 @@ Toutes les commandes doivent être lancées depuis la racine du dépôt. Remplac
 ### Générer les données de simulation
 
 ```
-python -m scripts.mne3sd.article_d.scenarios.<scenario_module> \
+python -m scripts.mne3sd.scenario_d.scenarios.<scenario_module> \
     --runs 20 \
     --duration 7200 \
     --seed 123 \
-    --output results/mne3sd/article_d/<scenario_name>.csv
+    --output results/mne3sd/scenario_d/<scenario_name>.csv
 
-python -m scripts.mne3sd.article_d.scenarios.run_mobility_range_sweep \
+python -m scripts.mne3sd.scenario_d.scenarios.run_mobility_range_sweep \
     --replicates 5 --seed 321 \
-    --results results/mne3sd/article_d/mobility_range_custom.csv
+    --results results/mne3sd/scenario_d/mobility_range_custom.csv
 ```
 
-Exemples de commandes pour les scénarios Article D :
+Exemples de commandes pour les scénarios du scénario D :
 
 ```
-python -m scripts.mne3sd.article_d.scenarios.run_mobility_range_sweep --algorithm ucb1 ...
-python -m scripts.mne3sd.article_d.scenarios.run_mobility_speed_sweep --algorithm ucb1 ...
-python -m scripts.mne3sd.article_d.scenarios.run_mobility_gateway_sweep --algorithm ucb1 ...
+python -m scripts.mne3sd.scenario_d.scenarios.run_mobility_range_sweep --algorithm ucb1 ...
+python -m scripts.mne3sd.scenario_d.scenarios.run_mobility_speed_sweep --algorithm ucb1 ...
+python -m scripts.mne3sd.scenario_d.scenarios.run_mobility_gateway_sweep --algorithm ucb1 ...
 ```
 
 Pour balayer différentes plages de distance ou de vitesse, utilisez `--distance-min`, `--distance-max`, `--speed-min` et `--speed-max`. Les modules de scénario peuvent proposer des options additionnelles (par exemple `--handover-threshold` dans `rural_highway`). Consultez la docstring pour les détails.
@@ -154,9 +154,9 @@ Pour balayer différentes plages de distance ou de vitesse, utilisez `--distance
 ### Générer les figures
 
 ```
-python -m scripts.mne3sd.article_d.plots.<figure_module> \
-    --input results/mne3sd/article_d/<scenario_name>.csv \
-    --figures-dir figures/mne3sd/article_d/ \
+python -m scripts.mne3sd.scenario_d.plots.<figure_module> \
+    --input results/mne3sd/scenario_d/<scenario_name>.csv \
+    --figures-dir figures/mne3sd/scenario_d/ \
     --format png
 ```
 
@@ -164,17 +164,17 @@ Répétez l'option `--input` pour combiner plusieurs jeux de données dans une s
 
 ### Chaîne complète
 
-1. Exécutez chaque script de scénario requis jusqu'à remplir `results/mne3sd/article_d/` avec les CSV attendus.
+1. Exécutez chaque script de scénario requis jusqu'à remplir `results/mne3sd/scenario_d/` avec les CSV attendus.
 2. Inspectez les sorties pour vérifier que les plages de distance et de vitesse correspondent à la configuration souhaitée.
-3. Lancez les modules de tracé pour générer les figures finales dans `figures/mne3sd/article_d/`.
-4. Relisez les figures exportées localement avant de les intégrer au manuscrit.
+3. Lancez les modules de tracé pour générer les figures exportées dans `figures/mne3sd/scenario_d/`.
+4. Relisez les figures exportées localement avant de les intégrer au support d’export.
 
 ### Lanceur de batch
 
-Vous pouvez exécuter toute la chaîne Article D en une seule commande grâce à `scripts/mne3sd/run_all_article_outputs.py` :
+Vous pouvez exécuter toute la chaîne du scénario D en une seule commande grâce à `scripts/mne3sd/run_all_scenario_exports.py` :
 
 ```
-python -m scripts.mne3sd.run_all_article_outputs --article d
+python -m scripts.mne3sd.run_all_scenario_exports --target scenario_d
 ```
 
 Cette commande orchestre tous les scénarios `run_mobility_*`, puis les modules `plot_*`, et se termine en affichant la liste des CSV et figures générés. Combinez-la avec `--skip-scenarios` ou `--skip-plots` lorsque seule une partie du workflow doit être régénérée.
