@@ -9,26 +9,51 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from importlib import import_module
 from importlib.util import find_spec
 from pathlib import Path
 from statistics import median
 from time import perf_counter, sleep
 
-if find_spec("pretest_campagne.scenario_c") is None:
-    repo_root = Path(__file__).resolve().parents[1]
+CAMPAIGN_ROOT = Path(__file__).resolve().parent
+PRETEST_PACKAGE_NAME = CAMPAIGN_ROOT.parent.name
+CAMPAIGN_DIR_NAME = CAMPAIGN_ROOT.name
+CAMPAIGN_PACKAGE = f"{PRETEST_PACKAGE_NAME}.{CAMPAIGN_DIR_NAME}"
+DEFAULT_STEP1_RESULTS_DIR = (CAMPAIGN_ROOT / "step1" / "results").resolve()
+DEFAULT_STEP2_RESULTS_DIR = (CAMPAIGN_ROOT / "step2" / "results").resolve()
+DEFAULT_RESULTS_DIRS = (DEFAULT_STEP1_RESULTS_DIR, DEFAULT_STEP2_RESULTS_DIR)
+DEFAULT_STEP1_OUTDIR = str(Path(PRETEST_PACKAGE_NAME) / CAMPAIGN_DIR_NAME / "step1" / "results")
+CAMPAIGN_PLOTS_OUTPUT_DIR = (CAMPAIGN_ROOT / "plots" / "output").resolve()
+EXPECTED_GIT_BRANCH = CAMPAIGN_DIR_NAME
+
+
+def _has_campaign_package() -> bool:
+    try:
+        return find_spec(CAMPAIGN_PACKAGE) is not None
+    except ModuleNotFoundError:
+        return False
+
+
+if not _has_campaign_package():
+    repo_root = CAMPAIGN_ROOT.parents[1]
     sys.path.insert(0, str(repo_root))
-    if find_spec("pretest_campagne.scenario_c") is None:
+    if not _has_campaign_package():
         raise ModuleNotFoundError(
-            "Impossible d'importer 'pretest_campagne.scenario_c'. "
+            f"Impossible d'importer '{CAMPAIGN_PACKAGE}'. "
             "Ajoutez la racine du dépôt au PYTHONPATH."
         )
 
-from pretest_campagne.scenario_c.common.config import DEFAULT_CONFIG
-from pretest_campagne.scenario_c.common.csv_io import aggregate_results_by_size
-from pretest_campagne.scenario_c.common.utils import parse_network_size_list, replication_dirnames, replication_ids
-from pretest_campagne.scenario_c.step1.run_step1 import main as run_step1
-from pretest_campagne.scenario_c.step2.run_step2 import main as run_step2
-from pretest_campagne.scenario_c.validate_results import main as validate_results
+DEFAULT_CONFIG = import_module(f"{CAMPAIGN_PACKAGE}.common.config").DEFAULT_CONFIG
+aggregate_results_by_size = import_module(
+    f"{CAMPAIGN_PACKAGE}.common.csv_io"
+).aggregate_results_by_size
+_common_utils = import_module(f"{CAMPAIGN_PACKAGE}.common.utils")
+parse_network_size_list = _common_utils.parse_network_size_list
+replication_dirnames = _common_utils.replication_dirnames
+replication_ids = _common_utils.replication_ids
+run_step1 = import_module(f"{CAMPAIGN_PACKAGE}.step1.run_step1").main
+run_step2 = import_module(f"{CAMPAIGN_PACKAGE}.step2.run_step2").main
+validate_results = import_module(f"{CAMPAIGN_PACKAGE}.validate_results").main
 
 DEFAULT_REPLICATIONS = 10
 STEP2_SUCCESS_RATE_MEAN_LOW_THRESHOLD = 0.20
@@ -120,15 +145,12 @@ def _assert_no_global_writes_during_simulation(results_dir: Path, step_label: st
 
 def _clean_run_artifacts(*, hard: bool) -> None:
     """Nettoie les artefacts run_all puis recrée l'arborescence minimale requise."""
-    base_dir = Path(__file__).resolve().parent
-    results_dirs = [
-        (base_dir / "step1" / "results").resolve(),
-        (base_dir / "step2" / "results").resolve(),
-    ]
+    base_dir = CAMPAIGN_ROOT
+    results_dirs = list(DEFAULT_RESULTS_DIRS)
     plots_output_dirs = [
         (base_dir / "step1" / "plots" / "output").resolve(),
         (base_dir / "step2" / "plots" / "output").resolve(),
-        (base_dir / "plots" / "output").resolve(),
+        CAMPAIGN_PLOTS_OUTPUT_DIR,
     ]
 
     dirs_to_purge = list(results_dirs)
@@ -405,7 +427,7 @@ def _run_verify_all_strict(replications_total: int) -> None:
     command = [
         sys.executable,
         "-m",
-        "pretest_campagne.scenario_c.tools.verify_all",
+        f"{CAMPAIGN_PACKAGE}.tools.verify_all",
         "--replications",
         str(int(replications_total)),
     ]
@@ -678,11 +700,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
-        "--allow-non-scenario-c",
+        "--allow-non-campaign-branch",
         action="store_true",
         help=(
             "Bypass explicite du garde-fou de branche Git "
-            "(autorise une branche différente de 'pretest_campagne.scenario_c')."
+            "(autorise une branche différente de la campagne attendue)."
         ),
     )
     parser.add_argument(
@@ -976,7 +998,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         default=False,
         help=(
-            "Nettoie step1/results et step2/results avant exécution, "
+            "Nettoie les dossiers de résultats par défaut de la campagne avant exécution, "
             "puis recrée les dossiers requis."
         ),
     )
@@ -986,7 +1008,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
         default=False,
         help=(
             "Purge totale: --clean + suppression de step1/plots/output, "
-            "step2/plots/output et pretest_campagne/scenario_c/plots/output."
+            "step2/plots/output et le dossier plots/output de la campagne."
         ),
     )
     parser.add_argument(
@@ -1129,9 +1151,9 @@ def _get_current_git_branch() -> str | None:
     return branch
 
 
-def _enforce_scenario_c_branch(allow_non_scenario_c: bool) -> None:
+def _enforce_expected_campaign_branch(allow_non_campaign_branch: bool) -> None:
     """Informe sur la branche courante sans bloquer l'exécution utilisateur."""
-    if allow_non_scenario_c:
+    if allow_non_campaign_branch:
         return
     current_branch = _get_current_git_branch()
     if current_branch is None:
@@ -1141,12 +1163,12 @@ def _enforce_scenario_c_branch(allow_non_scenario_c: bool) -> None:
             "Contrôle de branche ignoré."
         )
         return
-    expected_branch = "scenario_c"
+    expected_branch = EXPECTED_GIT_BRANCH
     if current_branch != expected_branch:
         log_debug(
-            "AVERTISSEMENT: branche Git attendue 'scenario_c', "
+            f"AVERTISSEMENT: branche Git attendue '{expected_branch}', "
             f"branche détectée: '{current_branch}'. "
-            "Exécution poursuivie pour compatibilité locale/Windows."
+            "Exécution poursuivie pour compatibilité locale, y compris sous Windows."
         )
 
 
@@ -1182,7 +1204,7 @@ def _build_step1_args(args: argparse.Namespace) -> list[str]:
     if args.step1_outdir:
         step1_args.extend(["--outdir", args.step1_outdir])
     else:
-        step1_args.extend(["--outdir", "pretest_campagne/scenario_c/step1/results"])
+        step1_args.extend(["--outdir", DEFAULT_STEP1_OUTDIR])
     if args.progress is not None:
         step1_args.append("--progress" if args.progress else "--no-progress")
     if args.mixra_opt_max_iterations is not None:
@@ -1483,7 +1505,7 @@ def main(argv: list[str] | None = None) -> None:
         for key, value in preset_values.items():
             if getattr(args, key) is None:
                 setattr(args, key, value)
-    _enforce_scenario_c_branch(args.allow_non_scenario_c)
+    _enforce_expected_campaign_branch(args.allow_non_campaign_branch)
     if args.auto_safe_profile:
         log_debug(
             "Auto-safe-profile activé par défaut: le profil sécurisé sera appliqué "
@@ -1496,8 +1518,8 @@ def main(argv: list[str] | None = None) -> None:
         )
     if args.step1_outdir is not None:
         default_step1_dir = (
-            Path(__file__).resolve().parent / "step1" / "results"
-        ).resolve()
+            DEFAULT_STEP1_RESULTS_DIR
+        )
         requested_dir = Path(args.step1_outdir).resolve()
         if requested_dir != default_step1_dir:
             raise ValueError(
@@ -1514,12 +1536,12 @@ def main(argv: list[str] | None = None) -> None:
         if args.replications is not None
         else DEFAULT_REPLICATIONS
     )
-    step1_results_dir = (Path(__file__).resolve().parent / "step1" / "results").resolve()
-    step2_results_dir = (Path(__file__).resolve().parent / "step2" / "results").resolve()
-    campaign_state_path = (Path(__file__).resolve().parent / "campaign_state.json").resolve()
+    step1_results_dir = DEFAULT_STEP1_RESULTS_DIR
+    step2_results_dir = DEFAULT_STEP2_RESULTS_DIR
+    campaign_state_path = (CAMPAIGN_ROOT / "campaign_state.json").resolve()
     _assert_path_within_scope(step1_results_dir / "run_status_step1.csv", step1_results_dir, "Step1")
     _assert_path_within_scope(step2_results_dir / "run_status_step2.csv", step2_results_dir, "Step2")
-    campaign_summary_path = (Path(__file__).resolve().parent / "campaign_summary.json").resolve()
+    campaign_summary_path = (CAMPAIGN_ROOT / "campaign_summary.json").resolve()
     _remove_global_aggregation_artifacts(step1_results_dir, "Step1")
     _remove_global_aggregation_artifacts(step2_results_dir, "Step2")
     campaign_summary: dict[str, object] = {
