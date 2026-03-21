@@ -1,1 +1,1 @@
-"""Sous-package RL statique de l’archive IWCMC."""
+"""Sous-package RL statique de l’archive métier migrée."""

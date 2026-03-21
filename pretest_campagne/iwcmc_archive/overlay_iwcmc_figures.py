@@ -21,12 +21,12 @@ from pretest_campagne.common.plotting_style import (
     legend_bbox_to_anchor,
 )
 
-from pretest_campagne.paths import iwcmc_figures_dir, iwcmc_results_dir, iwcmc_snir_data_dir
+from pretest_campagne.paths import archive_figures_dir, archive_results_dir, archive_snir_data_dir
 
-DEFAULT_SNIR_DATA_DIR = iwcmc_snir_data_dir()
-DEFAULT_RLS_RESULTS_DIR = iwcmc_results_dir("rl_static")
-DEFAULT_RLM_RESULTS_DIR = iwcmc_results_dir("rl_mobile")
-DEFAULT_OUTPUT_DIR = iwcmc_figures_dir("overlays")
+DEFAULT_SNIR_DATA_DIR = archive_snir_data_dir()
+DEFAULT_RLS_RESULTS_DIR = archive_results_dir("rl_static")
+DEFAULT_RLM_RESULTS_DIR = archive_results_dir("rl_mobile")
+DEFAULT_OUTPUT_DIR = archive_figures_dir("overlays")
 
 SCENARIOS_SNIR = [f"S{idx}" for idx in range(1, 9)]
 

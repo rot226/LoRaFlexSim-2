@@ -1,6 +1,9 @@
-.PHONY: validate
+.PHONY: validate static-legacy-identifiers
 
-validate:
+static-legacy-identifiers:
+	pytest tests/test_legacy_identifiers_absent.py
+
+validate: static-legacy-identifiers
 	pytest -k "channel"
 	pytest -k "omnet_phy or rx_chain or overlap_snir or flora_capture or startup_currents or pa_ramp"
 	pytest -k "gateway or collision_capture or compare_flora"

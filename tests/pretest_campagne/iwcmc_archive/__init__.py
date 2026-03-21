@@ -1,1 +1,1 @@
-"""Tests de l’archive IWCMC migrée."""
+"""Tests de l’archive métier migrée."""

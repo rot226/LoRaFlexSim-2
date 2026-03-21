@@ -9,22 +9,28 @@ PRETEST_ROOT = REPO_ROOT / "pretest_campagne"
 RESULTS_ROOT = REPO_ROOT / "results" / "pretest_campagne"
 FIGURES_ROOT = REPO_ROOT / "figures" / "pretest_campagne"
 
-LEGACY_SCOPE_ALIASES = {
-    "article_a": "scenario_a",
-    "article_b": "scenario_b",
-    "article_c": "scenario_c",
-    "article_d": "scenario_d",
-    "iwcmc": "iwcmc_archive",
-}
+VALID_SCOPES = frozenset(
+    {
+        "common",
+        "iwcmc_archive",
+        "scenario_a",
+        "scenario_b",
+        "scenario_c",
+        "scenario_d",
+    }
+)
 
 
 def normalize_scope(scope: str) -> str:
-    """Normalise un identifiant historique (``article_*``, ``iwcmc``) vers la cible pretest_campagne."""
+    """Valide et normalise un identifiant de campagne courant."""
 
     cleaned = str(scope).strip()
     if not cleaned:
         raise ValueError("scope must not be empty")
-    return LEGACY_SCOPE_ALIASES.get(cleaned, cleaned)
+    if cleaned not in VALID_SCOPES:
+        valid = ", ".join(sorted(VALID_SCOPES))
+        raise ValueError(f"scope must be one of: {valid}")
+    return cleaned
 
 
 def scenario_dir(scope: str, *parts: str | Path) -> Path:
@@ -69,44 +75,44 @@ def mne3sd_figure_dir(scope: str, scenario: str, metric: str) -> Path:
     return figures_dir(scope, scenario, metric)
 
 
-def iwcmc_results_dir(*parts: str | Path) -> Path:
+def archive_results_dir(*parts: str | Path) -> Path:
     """Retourne ``results/pretest_campagne/iwcmc_archive/...``."""
 
     return results_dir("iwcmc_archive", *parts)
 
 
-def iwcmc_figures_dir(*parts: str | Path) -> Path:
+def archive_figures_dir(*parts: str | Path) -> Path:
     """Retourne ``figures/pretest_campagne/iwcmc_archive/...``."""
 
     return figures_dir("iwcmc_archive", *parts)
 
 
-def iwcmc_source_dir(*parts: str | Path) -> Path:
+def archive_source_dir(*parts: str | Path) -> Path:
     """Retourne ``pretest_campagne/iwcmc_archive/...`` pour les fichiers sources archivés."""
 
     return scenario_dir("iwcmc_archive", *parts)
 
 
-def iwcmc_snir_data_dir() -> Path:
+def archive_snir_data_dir() -> Path:
     """Retourne le dossier des CSV SNIR statiques migrés."""
 
-    return iwcmc_results_dir("snir_static")
+    return archive_results_dir("snir_static")
 
 
-def iwcmc_snir_data_file(figure_id: str, suffix: str = ".csv") -> Path:
+def archive_snir_data_file(figure_id: str, suffix: str = ".csv") -> Path:
     """Retourne le chemin du CSV SNIR statique pour une figure donnée."""
 
     normalized_suffix = suffix if str(suffix).startswith(".") else f".{suffix}"
-    return iwcmc_snir_data_dir() / f"{figure_id}{normalized_suffix}"
+    return archive_snir_data_dir() / f"{figure_id}{normalized_suffix}"
 
 
-def iwcmc_archive_dir() -> Path:
+def archive_bundle_dir() -> Path:
     """Retourne le dossier des archives compressées pretest_campagne."""
 
-    return iwcmc_source_dir("archive")
+    return archive_source_dir("archive")
 
 
-def iwcmc_archive_filename(stamp: str) -> str:
-    """Retourne le nom du tarball d'archive sans référence historique à IWCMC."""
+def archive_bundle_filename(stamp: str) -> str:
+    """Retourne le nom du tarball d'archive sans référence historique obsolète."""
 
     return f"pretest_campagne_archive_results_{stamp}.tar.gz"

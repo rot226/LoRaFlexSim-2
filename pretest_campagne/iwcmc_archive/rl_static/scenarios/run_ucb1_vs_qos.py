@@ -13,7 +13,7 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from loraflexsim.launcher.qos import QoSManager
-from pretest_campagne.paths import iwcmc_results_dir
+from pretest_campagne.paths import archive_results_dir
 from loraflexsim.launcher.simulator import InterferenceTracker, Simulator
 from loraflexsim.scenarios.qos_cluster_bench import (
     _apply_adr_pure,
@@ -27,7 +27,7 @@ from loraflexsim.scenarios.qos_cluster_bench import (
     _write_csv,
 )
 
-DEFAULT_RESULTS_DIR = iwcmc_results_dir("rl_static")
+DEFAULT_RESULTS_DIR = archive_results_dir("rl_static")
 DEFAULT_NODE_COUNTS = (1000, 5000, 10000)
 DEFAULT_PACKET_INTERVALS = (300.0,)
 DEFAULT_REPLICATIONS = 3

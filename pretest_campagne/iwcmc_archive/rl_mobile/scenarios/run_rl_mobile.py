@@ -32,9 +32,9 @@ from pretest_campagne.iwcmc_archive.rl_mobile.mobility_models import (
     available_models,
 )
 
-from pretest_campagne.paths import iwcmc_results_dir
+from pretest_campagne.paths import archive_results_dir
 
-DEFAULT_RESULTS_DIR = iwcmc_results_dir("rl_mobile")
+DEFAULT_RESULTS_DIR = archive_results_dir("rl_mobile")
 DEFAULT_NODE_COUNTS = (100, 150, 200)
 DEFAULT_PACKET_INTERVALS = (300.0,)
 DEFAULT_REPLICATIONS = 3
