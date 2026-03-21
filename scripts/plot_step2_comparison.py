@@ -25,7 +25,7 @@ SNIR_TITLES = {"snir_off": "SNIR OFF", "snir_on": "SNIR ON"}
 
 MARKER_CYCLE = ["o", "s", "^", "D", "v", "P", "X"]
 DEFAULT_ALGO_PRIORITY = ["adr", "apra", "mixra_h", "mixra_opt"]
-ARTICLE_COMPARISON_ALGOS = DEFAULT_ALGO_PRIORITY
+CAMPAIGN_COMPARISON_ALGOS = DEFAULT_ALGO_PRIORITY
 
 
 def _parse_float(value: Any, default: float | None = None) -> float | None:
@@ -646,9 +646,9 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Ne génère que les figures principales (performance + convergence).",
     )
     parser.add_argument(
-        "--article-comparison",
+        "--campaign-comparison",
         action="store_true",
-        help="Force ADR/APRA/MixRA-H/MixRA-Opt avec SNIR ON/OFF sur les mêmes figures.",
+        help="Force la comparaison de campagne ADR/APRA/MixRA-H/MixRA-Opt avec SNIR ON/OFF sur les mêmes figures.",
     )
     parser.add_argument(
         "--network-sizes",
@@ -707,8 +707,8 @@ def main() -> None:
     algorithms_input = _parse_list(args.algorithms)
     if args.algorithm:
         algorithms_input.extend(args.algorithm)
-    if args.pretest_campagne.scenario_comparison:
-        algorithms_input = list(ARTICLE_COMPARISON_ALGOS)
+    if args.campaign_comparison:
+        algorithms_input = list(CAMPAIGN_COMPARISON_ALGOS)
     if algorithms_input and all_records:
         _validate_algorithms(algorithms_input, _available_algorithms(all_records))
     if args.per_size:

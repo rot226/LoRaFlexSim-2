@@ -1,5 +1,7 @@
 $ErrorActionPreference = "Stop"
 
+# Orchestrateur de campagne pretest_campagne/iwcmc_archive.
+
 $rootDir = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 Set-Location $rootDir
 

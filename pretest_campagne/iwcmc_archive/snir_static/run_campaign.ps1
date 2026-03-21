@@ -1,7 +1,7 @@
 <#
 ---------------------------------------------------------------------------------------------------
 Objectif :
-  Enchaîner les scénarios pretest_campagne/iwcmc_archive SNIR statique (S1–S8), vérifier la présence
+  Orchestrer la campagne pretest_campagne/iwcmc_archive SNIR statique (S1–S8), vérifier la présence
   des CSV générés, puis lancer les scripts de tracé associés.
 
 Paramètres :
