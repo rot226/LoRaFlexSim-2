@@ -1,45 +1,9 @@
-# Figures Step 1
+# Figures et exports
 
-## Emplacements des résultats (scénario C)
+**Documentation avancée** — ce document n’est pas nécessaire pour un premier usage et pointe maintenant vers le guide documentaire consolidé.
 
-Les scripts du scénario C écrivent leurs CSV aux emplacements fixes suivants :
+La documentation détaillée de génération et d’export des figures a été déplacée vers :
 
-- **Step1** : `scenario_c/step1/results`
-- **Step2** : `scenario_c/step2/results`
+- `docs/advanced_workflows.md`
 
-Ces chemins sont requis par `scenario_c/make_all_plots.py` afin d'éviter les
-confusions entre étapes lorsque seul un CSV est disponible.
-
-Ce document décrit les figures générées par `scripts/plot_step1_comparison.py`.
-Les titres, axes et légendes sont en anglais afin d'être directement publiables.
-
-## Figure 1 — PDR and DER vs Nodes
-
-- **Structure** : grille 3×2 (lignes = clusters, colonnes = SNIR OFF/ON).
-- **Contenu** : pour chaque cluster, les courbes montrent les moyennes PDR (plein)
-  et DER (pointillé) en fonction du nombre de nœuds.
-- **Incertitude** : les barres d'erreur représentent l'intervalle de confiance à 95 %.
-
-Fichiers exportés :
-- `figures/step1/step1_pdr_der_comparison.png`
-- `figures/step1/step1_pdr_der_comparison.pdf`
-
-## Figure 2 — Jain Index vs Nodes
-
-- **Structure** : 1×2 (SNIR OFF/ON).
-- **Contenu** : indice de Jain en fonction du nombre de nœuds, pour 4 algorithmes.
-- **Incertitude** : intervalle de confiance à 95 %.
-
-Fichiers exportés :
-- `figures/step1/step1_jain_comparison.png`
-- `figures/step1/step1_jain_comparison.pdf`
-
-## Figure 3 — Throughput vs Nodes
-
-- **Structure** : 1×2 (SNIR OFF/ON).
-- **Contenu** : débit (bps) en fonction du nombre de nœuds, pour 4 algorithmes.
-- **Incertitude** : intervalle de confiance à 95 %.
-
-Fichiers exportés :
-- `figures/step1/step1_throughput_comparison.png`
-- `figures/step1/step1_throughput_comparison.pdf`
+Ce README est conservé comme redirection depuis la racine du dépôt.
