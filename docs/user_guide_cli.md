@@ -63,5 +63,5 @@ Les interfaces ci-dessous existent toujours mais ne sont pas nécessaires pour u
 - `qos_cli/README.md` pour la CLI QoS spécialisée ;
 - `sfrd/README.md` pour le pipeline SFRD avancé ;
 - `final/README.md` pour des scripts historiques d’export/reproduction ;
-- `pretest_campagne/iwcmc_archive/README.md` pour les campagnes archivées ;
-- `pretest_campagne.scenario_c/README.md` pour les pipelines de reproduction/recherche du scénario C.
+- `pretest_campagne/iwcmc_archive/README.md` pour l’archive métier `iwcmc_archive` ;
+- `pretest_campagne/scenario_c/README.md` pour le pipeline de reproduction du scénario C.

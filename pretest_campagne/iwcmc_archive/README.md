@@ -1,7 +1,7 @@
-# Campagnes pretest_campagne/iwcmc_archive
+# Archive métier `iwcmc_archive`
 
 > [!TIP]
-> **À quoi sert ce dossier ?** Conserver un point d’accès court vers les campagnes pretest_campagne/iwcmc_archive historiques et leur documentation d’archive.
+> **À quoi sert ce dossier ?** Conserver un point d’accès court vers l’archive métier `iwcmc_archive` et sa documentation d’archive.
 >
 > **Quand l’utiliser ?** Quand vous devez reproduire, comparer ou relire des campagnes héritées plutôt que suivre le flux standard courant.
 >
@@ -13,7 +13,7 @@
 
 ## 1. Objectif du dossier
 
-Le dossier `pretest_campagne/iwcmc_archive/` sert de point d’entrée court vers les artefacts et la documentation des campagnes historiques pretest_campagne/iwcmc_archive.
+Le dossier `pretest_campagne/iwcmc_archive/` sert de point d’entrée court vers les artefacts et la documentation de l’archive métier `iwcmc_archive`.
 
 ## 2. Prérequis
 
