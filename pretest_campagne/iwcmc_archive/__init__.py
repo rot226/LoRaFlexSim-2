@@ -1,1 +1,1 @@
-"""Archive des campagnes IWCMC migrées sous pretest_campagne."""
+"""Archive des campagnes métier migrées sous pretest_campagne."""

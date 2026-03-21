@@ -1,1 +1,1 @@
-"""Sous-package RL mobile de l’archive IWCMC."""
+"""Sous-package RL mobile de l’archive métier migrée."""

@@ -24,10 +24,10 @@ from pretest_campagne.common.plotting_style import (
     legend_bbox_to_anchor,
 )
 
-from pretest_campagne.paths import iwcmc_figures_dir, iwcmc_results_dir
+from pretest_campagne.paths import archive_figures_dir, archive_results_dir
 
-DEFAULT_RESULTS_DIR = iwcmc_results_dir("rl_static")
-DEFAULT_OUTPUT_DIR = iwcmc_figures_dir("rl_static")
+DEFAULT_RESULTS_DIR = archive_results_dir("rl_static")
+DEFAULT_OUTPUT_DIR = archive_figures_dir("rl_static")
 
 
 @dataclass(frozen=True)
