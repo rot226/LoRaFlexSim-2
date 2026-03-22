@@ -1,5 +1,7 @@
 # sfrd
 
+CLI historique avancée.
+
 > [!TIP]
 > **À quoi sert ce dossier ?** Servir de point d’entrée court pour la CLI SFRD historique et renvoyer vers la documentation consolidée.
 >
