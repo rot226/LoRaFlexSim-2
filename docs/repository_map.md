@@ -28,11 +28,10 @@ Ce document sert de **référence unique** pour statuer sur les dossiers structu
 | `final/` | compatibilité / legacy | Pipeline historique de CSV/figures, encore documenté pour reproduction. | convertir en simple archive/documentation | **Décision explicite** : `final/` n'est plus la voie recommandée pour l'usage standard ; il reste un flux historique de reproduction. |
 | `flora-master/` | recherche / archive | Copie de référence externe liée aux travaux FLoRa. | convertir en simple archive/documentation | Dossier conservé pour traçabilité scientifique et comparaison, pas comme point d'entrée courant. |
 | `loraflexsim/` | produit principal / flux standard | Cœur applicatif du dashboard et du simulateur. | conserver tel quel comme point d’entrée officiel | C'est l'un des deux socles techniques à privilégier pour le produit principal. |
-| `mobile-sfrd/` | recherche / archive | Générateur expérimental « mock » séparé du simulateur principal. | convertir en simple archive/documentation | **Décision explicite** : `mobile-sfrd/` est conservé comme archive expérimentale documentée, sans rôle d'entrée officielle. |
 | `mobile-sfrd_th/` | compatibilité / legacy | Archive legacy documentée ; le doublon `src/mobilesfrdth/` interne a été retiré. | convertir en simple archive/documentation | **Décision explicite** : le code packagé `mobilesfrdth` vit uniquement sous `src/mobilesfrdth/`; `mobile-sfrd_th/` reste une archive de contexte. |
 | `numpy_stub/` | compatibilité / legacy | Compatibilité locale / stub minimal de dépendance. | conserver tel quel comme point d’entrée officiel | Utilitaire de compatibilité conservé tant qu'il répond à un besoin d'exécution/tests hors dépendances complètes. |
 | `plots/` | outillage / packaging | Scripts de tracé transverses hors pipeline principal. | conserver tel quel comme point d’entrée officiel | Zone d'outillage pour les graphes transverses et diagnostics. |
-| `pretest_campagne/` | recherche / archive | Racine canonique des campagnes de recherche et reproductions. | conserver tel quel comme point d’entrée officiel | Point d'ancrage officiel pour les scénarios historiques, migrations et reproductions scientifiques. |
+| `pretest_campagne/` | recherche / archive | Racine canonique des campagnes de recherche et reproductions, y compris l’espace `archive_or_mock/`. | conserver tel quel comme point d’entrée officiel | Point d'ancrage officiel pour les scénarios historiques, migrations, reproductions scientifiques et contenus reclassés comme archives pédagogiques. |
 | `qos_cli/` | compatibilité / legacy | CLI spécialisée distincte du parcours communauté. | convertir en simple archive/documentation | Son rôle devient documentaire/avancé tant qu'aucune convergence produit n'est décidée. |
 | `results/` | recherche / archive | Résultats versionnés, rapports et sorties consolidées. | convertir en simple archive/documentation | Les résultats existants sont conservés comme référence ; la documentation doit primer sur l'usage direct du dossier. |
 | `scipy/` | compatibilité / legacy | Compatibilité locale / stub léger autour de SciPy. | conserver tel quel comme point d’entrée officiel | Conservé comme support technique tant que l'environnement du dépôt en dépend. |
@@ -44,17 +43,18 @@ Ce document sert de **référence unique** pour statuer sur les dossiers structu
 
 ## Sous-dossier critique explicitement demandé
 
-Même s'il n'est pas top-level, le dossier ci-dessous doit être statué explicitement car il fait partie des points d'ambiguïté du dépôt.
+Même s'ils ne sont pas top-level, les dossiers ci-dessous doivent être statués explicitement car ils font partie des points d'ambiguïté du dépôt.
 
 | Dossier | Catégorie | Statut explicite | Action unique | Description visible / justification |
 | --- | --- | --- | --- | --- |
 | `src/mobilesfrdth/` | produit principal / flux standard | Implémentation canonique de la CLI `mobilesfrdth`. | conserver tel quel comme point d’entrée officiel | **Décision explicite** : `src/mobilesfrdth/` est la source officielle à conserver ; toute duplication depuis `mobile-sfrd_th/` doit être résorbée ici. |
+| `pretest_campagne/archive_or_mock/mobile-sfrd/` | recherche / archive | Archive d’un mock pédagogique historique séparé du simulateur principal. | conserver sous `pretest_campagne/archive_or_mock/` | **Décision explicite** : ce contenu n’a plus de rôle d’entrée officielle et reste disponible uniquement pour archive, démonstration légère et comparaison avec le flux standard `mobilesfrdth`. |
 
 ## Décisions structurantes à retenir
 
 1. **Entrées officielles à privilégier** : `loraflexsim/`, `src/`, `src/mobilesfrdth/`, `docs/`, `config/`, `scripts/`, `docker/`.
 2. **Zone officielle de recherche / reproduction** : `pretest_campagne/`, avec convergence souhaitée des contenus exploratoires de `experiments/`.
-3. **Éléments à traiter comme historiques ou non prioritaires** : `mobile-sfrd/`, `sfrd/`, `final/`, `qos_cli/`, `flora-master/`, `figures/`, `results/`.
+3. **Éléments à traiter comme historiques ou non prioritaires** : `pretest_campagne/archive_or_mock/mobile-sfrd/`, `sfrd/`, `final/`, `qos_cli/`, `flora-master/`, `figures/`, `results/`.
 4. **Chevauchement résorbé pour le package** : le seul code source canonique de `mobilesfrdth` est `src/mobilesfrdth/`; `mobile-sfrd_th/` ne contient plus de package Python actif.
 
 ## Conséquence documentaire

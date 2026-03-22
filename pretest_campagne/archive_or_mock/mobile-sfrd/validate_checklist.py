@@ -1,6 +1,6 @@
 """Validation automatique de la checklist qualité mobile-sfrd.
 
-Ce script lit les CSV générés dans ``mobile-sfrd/outputs/csv`` et vérifie:
+Ce script lit les CSV générés dans ``pretest_campagne/archive_or_mock/mobile-sfrd/outputs/csv`` et vérifie:
 - noms de colonnes exacts;
 - monotonie PDR/DER vs vitesse + contrainte RWP < SM;
 - ordre de la courbe d'apprentissage (v=1 > v=5 > v=10) en convergence et plateau;
