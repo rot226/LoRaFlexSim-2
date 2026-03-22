@@ -16,7 +16,7 @@
 
 - **Point d’entrée officiel recommandé** : `mobilesfrdth`
 - **Points d’entrée avancés / spécialisés** : `sfrd`, `qos_cli`
-- **Flux historiques / reproduction** : `final`, `mobile-sfrd`
+- **Flux historiques / reproduction** : `final/`, `pretest_campagne/archive_or_mock/mobile-sfrd/`
 - **Archives / anciens pipelines** : tout dossier déplacé sous l’espace d’archives
 
 Si vous ne travaillez pas explicitement sur un scénario QoS spécialisé, revenez au flux standard `mobilesfrdth`.

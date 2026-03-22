@@ -10,7 +10,7 @@ Pour éviter toute hésitation entre plusieurs CLI ou dossiers :
 
 - **Point d’entrée officiel recommandé** : `mobilesfrdth`
 - **Points d’entrée avancés / spécialisés** : `sfrd`
-- **Flux historiques / reproduction** : `final`, `mobile-sfrd`
+- **Flux historiques / reproduction** : `final/`, `pretest_campagne/archive_or_mock/mobile-sfrd/`
 - **Archives / anciens pipelines** : tout dossier déplacé sous l’espace d’archives
 
 En pratique, **si vous débutez ou si vous lancez une nouvelle campagne, utilisez `mobilesfrdth`**. Les autres entrées ne doivent être utilisées que si vous savez déjà que votre besoin relève d’un workflow spécialisé, historique ou archivé.
@@ -267,27 +267,27 @@ La référence détaillée reste `docs/repository_map.md`, mais le tableau ci-de
 
 | Dossier | À quoi sert-il ? | Public cible | Statut | Ouvrir d’abord |
 | --- | --- | --- | --- | --- |
-| `src/` | Racine officielle du package Python installé par `pip install -e .`, notamment `src/mobilesfrdth/`. | Développeurs Python, mainteneurs CLI | **Officiel** | `README.md`, puis `docs/user_guide_cli.md` |
-| `loraflexsim/` | Cœur applicatif du simulateur et du dashboard interactif. | Utilisateurs avancés, développeurs produit | **Officiel** | `docs/user_guide_dashboard.md` |
-| `docs/` | Documentation utilisateur, technique, validation et workflows avancés. | Tous les publics | **Officiel** | `docs/user_guide_dashboard.md` ou `docs/user_guide_cli.md` selon l’entrée choisie |
-| `tests/` | Tests automatisés unitaires, d’intégration et de non-régression du dépôt. | Développeurs, contributeurs, CI | **Officiel** | `docs/test_plan.md` |
-| `scripts/` | Scripts utilitaires de bootstrap, validation, compatibilité Windows et automatisation. | Développeurs, mainteneurs, contributeurs | **Officiel / support** | `README.md`, puis les scripts concernés sous `scripts/windows/` si besoin |
-| `config/` | Fichiers de configuration partagés pour les flux standards du simulateur. | Développeurs, mainteneurs | **Officiel / support** | `README.md` |
-| `examples/` | Exemples de lancement et scripts simples d’analyse ou de démonstration. | Nouveaux utilisateurs, formateurs | **Officiel / secondaire** | `README.md` |
-| `pretest_campagne/` | Racine des campagnes de recherche, reproductions métier et archives associées. | Équipe recherche, reproduction, analyse métier | **Secondaire / recherche** | `docs/archive_or_research/README.md` |
+| `src/` | Racine officielle du package Python installé par `pip install -e .`, notamment `src/mobilesfrdth/`. | Développeurs Python, mainteneurs CLI | **Officiel** | `src/README.md`, puis `docs/user_guide_cli.md` |
+| `loraflexsim/` | Cœur applicatif du simulateur et du dashboard interactif. | Utilisateurs avancés, développeurs produit | **Officiel** | `loraflexsim/README.md`, puis `docs/user_guide_dashboard.md` |
+| `docs/` | Documentation utilisateur, technique, validation et workflows avancés. | Tous les publics | **Officiel** | `docs/README.md`, puis `docs/user_guide_dashboard.md` ou `docs/user_guide_cli.md` |
+| `tests/` | Tests automatisés unitaires, d’intégration et de non-régression du dépôt. | Développeurs, contributeurs, CI | **Officiel** | `tests/README.md`, puis `docs/test_plan.md` |
+| `scripts/` | Scripts utilitaires de bootstrap, validation, compatibilité Windows et automatisation. | Développeurs, mainteneurs, contributeurs | **Officiel / support** | `scripts/README.md`, puis les scripts concernés sous `scripts/windows/` si besoin |
+| `config/` | Fichiers de configuration partagés pour les flux standards du simulateur. | Développeurs, mainteneurs | **Officiel / support** | `config/README.md` |
+| `examples/` | Exemples de lancement et scripts simples d’analyse ou de démonstration. | Nouveaux utilisateurs, formateurs | **Officiel / secondaire** | `examples/README.md` |
+| `pretest_campagne/` | Racine des campagnes de recherche, reproductions métier et archives associées. | Équipe recherche, reproduction, analyse métier | **Secondaire / recherche** | `pretest_campagne/README.md`, puis `docs/archive_or_research/README.md` |
 | `sfrd/` | CLI SFRD historique pour campagnes spécialisées distinctes du flux standard `mobilesfrdth`. | Utilisateurs experts SFRD, maintenance | **Historique / spécialisé** | `sfrd/README.md` |
 | `final/` | Pipeline historique d’export CSV et de génération de figures pour reproduction ou comparaison rapide. | Utilisateurs avancés, reproduction, documentation | **Historique / secondaire** | `final/README.md` |
 | `qos_cli/` | CLI spécialisée pour campagnes QoS, métriques, figures et rapports dédiés. | Utilisateurs QoS avancés, recherche | **Secondaire / spécialisé** | `qos_cli/README.md` |
-| `experiments/` | Configurations d’expériences exploratoires conservées pour campagnes de recherche. | Recherche, benchmark, reproduction | **Secondaire / recherche** | Le `README.md` du sous-dossier concerné, par ex. `experiments/ucb1/README.md` |
+| `experiments/` | Configurations d’expériences exploratoires conservées pour campagnes de recherche. | Recherche, benchmark, reproduction | **Secondaire / recherche** | `experiments/README.md`, puis le `README.md` du sous-dossier concerné |
 | `mobile-sfrd_th/` | Archive legacy autour d’anciens presets, résultats et exemples ; ce n’est plus la source canonique du package. | Mainteneurs, archivage, comparaison historique | **Historique** | `mobile-sfrd_th/README.md` |
 | `pretest_campagne/archive_or_mock/mobile-sfrd/` | Ancien mock pédagogique déplacé hors top-level pour éviter de le confondre avec le flux officiel. | Archivage, démonstration historique | **Historique / archive** | `pretest_campagne/archive_or_mock/mobile-sfrd/README.md` |
 | `docker/` | Runner CI local et environnement conteneurisé minimal pour vérifier installation et tests. | Contributeurs, CI locale, intégration | **Officiel / support** | `docker/README.md` |
 | `results/` | Résultats versionnés et sorties consolidées gardées comme références de reproduction. | Recherche, validation, comparaison | **Historique / archive** | `results/README.md` |
-| `figures/` | Figures versionnées servant surtout d’archives ou de références documentaires. | Documentation, comparaison, reproduction | **Historique / archive** | `README.md`, puis les dossiers de figures utiles |
-| `plots/` | Scripts ou artefacts de tracé transverses hors pipeline principal. | Développeurs, analyse technique | **Secondaire / support** | `docs/advanced_workflows.md` |
-| `traffic/` | Composants et utilitaires liés au trafic réseau simulé. | Développeurs simulation, recherche | **Officiel / technique** | `docs/usage_scenarios.md` |
+| `figures/` | Figures versionnées servant surtout d’archives ou de références documentaires. | Documentation, comparaison, reproduction | **Historique / archive** | `figures/README.md` |
+| `plots/` | Scripts ou artefacts de tracé transverses hors pipeline principal. | Développeurs, analyse technique | **Secondaire / support** | `plots/README.md`, puis `docs/advanced_workflows.md` |
+| `traffic/` | Composants et utilitaires liés au trafic réseau simulé. | Développeurs simulation, recherche | **Officiel / technique** | `traffic/README.md`, puis `docs/usage_scenarios.md` |
 | `flora-master/` | Copie de référence externe liée à FLoRa, conservée pour comparaison scientifique et archive. | Recherche, comparaison académique | **Historique / archive** | `flora-master/README.md` |
-| `numpy_stub/` et `scipy/` | Couches locales de compatibilité autour de dépendances scientifiques. | Mainteneurs, CI, environnements contraints | **Support technique** | `README.md` |
+| `numpy_stub/` et `scipy/` | Couches locales de compatibilité autour de dépendances scientifiques. | Mainteneurs, CI, environnements contraints | **Support technique** | `numpy_stub/README.md` et `scipy/README.md` |
 | `.github/` | Workflows GitHub Actions et automatisation du dépôt. | Mainteneurs, contributeurs CI | **Officiel / support** | Les fichiers sous `.github/workflows/` |
 
 ## Repères rapides selon votre besoin

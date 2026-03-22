@@ -21,7 +21,7 @@ CLI avancée / spécialisée.
 
 - **Point d’entrée officiel recommandé** : `mobilesfrdth`
 - **Points d’entrée avancés / spécialisés** : `sfrd`
-- **Flux historiques / reproduction** : `final`, `mobile-sfrd`
+- **Flux historiques / reproduction** : `final/`, `pretest_campagne/archive_or_mock/mobile-sfrd/`
 - **Archives / anciens pipelines** : tout dossier déplacé sous l’espace d’archives
 
 ## Documentation détaillée
