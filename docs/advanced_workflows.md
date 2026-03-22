@@ -81,4 +81,16 @@ Ce flux est utile si vous travaillez spécifiquement sur :
 
 ## 4. Où trouver l’historique et les campagnes de recherche ?
 
-Les contenus hérités, de reproduction et d’archive sont maintenant regroupés sous `docs/archive_or_research/`.
+Les contenus hérités, de reproduction et d’archive sont maintenant regroupés sous `docs/archive_or_research/` et, pour les sources conservées dans l’arbre exécutable, sous `pretest_campagne/`.
+
+### Statut de `mobile-sfrd`
+
+`mobile-sfrd` n’est **pas** un outil encore supporté ni une entrée recommandée. Le dossier a été reclassé comme **archive d’un mock pédagogique historique** et déplacé sous `pretest_campagne/archive_or_mock/mobile-sfrd/`.
+
+Utilisez-le uniquement si vous devez :
+
+- illustrer un mock déterministe très léger ;
+- rejouer les cinq expériences simplifiées qu’il produit ;
+- comparer un artefact pédagogique avec le flux standard.
+
+Ne l’utilisez pas pour une campagne standard, une validation produit ou un workflow communauté. Dans ces cas, l’entrée officielle reste `mobilesfrdth`.

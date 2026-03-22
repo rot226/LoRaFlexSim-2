@@ -214,11 +214,10 @@ La référence détaillée est maintenue dans `docs/repository_map.md`. Le table
 | `final/` | compatibilité / legacy | Pipeline historique de reproduction CSV/figures. | convertir en simple archive/documentation |
 | `flora-master/` | recherche / archive | Copie de référence externe liée à FLoRa. | convertir en simple archive/documentation |
 | `loraflexsim/` | produit principal / flux standard | Cœur applicatif du dashboard et du simulateur. | conserver tel quel comme point d’entrée officiel |
-| `mobile-sfrd/` | recherche / archive | Générateur expérimental séparé du flux principal. | convertir en simple archive/documentation |
 | `mobile-sfrd_th/` | compatibilité / legacy | Archive legacy documentée ; le code package a été retiré au profit de `src/mobilesfrdth/`. | convertir en simple archive/documentation |
 | `numpy_stub/` | compatibilité / legacy | Stub de compatibilité local. | conserver tel quel comme point d’entrée officiel |
 | `plots/` | outillage / packaging | Scripts de tracé transverses. | conserver tel quel comme point d’entrée officiel |
-| `pretest_campagne/` | recherche / archive | Racine officielle des campagnes de recherche et de reproduction. | conserver tel quel comme point d’entrée officiel |
+| `pretest_campagne/` | recherche / archive | Racine officielle des campagnes de recherche et de reproduction, incluant l’espace `archive_or_mock/`. | conserver tel quel comme point d’entrée officiel |
 | `qos_cli/` | compatibilité / legacy | CLI spécialisée hors parcours standard. | convertir en simple archive/documentation |
 | `results/` | recherche / archive | Résultats consolidés conservés comme référence. | convertir en simple archive/documentation |
 | `scipy/` | compatibilité / legacy | Support de compatibilité local autour de SciPy. | conserver tel quel comme point d’entrée officiel |
@@ -231,6 +230,10 @@ La référence détaillée est maintenue dans `docs/repository_map.md`. Le table
 ### Décision explicite sur le dossier `src/mobilesfrdth/`
 
 Bien qu'il ne soit pas top-level, `src/mobilesfrdth/` fait partie des cas à clarifier : c'est **l'implémentation officielle** de la CLI `mobilesfrdth`, à **conserver tel quel comme point d’entrée officiel**. L'ancien doublon `mobile-sfrd_th/src/mobilesfrdth/` a été supprimé ; `mobile-sfrd_th/` ne sert plus que d'archive documentaire.
+
+### Décision explicite sur le dossier déplacé `pretest_campagne/archive_or_mock/mobile-sfrd/`
+
+L’ancien dossier top-level `mobile-sfrd/` a été déplacé sous `pretest_campagne/archive_or_mock/mobile-sfrd/`. Son statut retenu est : **archive d’un mock pédagogique historique**. Il n’est plus un point d’entrée recommandé ; pour le flux standard, utilisez `mobilesfrdth`.
 
 ## Vérification avant contribution
 
