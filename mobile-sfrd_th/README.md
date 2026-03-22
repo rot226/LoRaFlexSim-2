@@ -1,6 +1,10 @@
 # mobile-sfrd_th
 
-Structure initiale d'un package Python 3.11 indépendant.
+> Archive legacy.
+>
+> Le **seul package Python canonique `mobilesfrdth`** vit désormais dans `src/mobilesfrdth/` à la racine du dépôt. Le doublon `mobile-sfrd_th/src/mobilesfrdth/` a été supprimé pour éviter toute ambiguïté lors du développement et de l'installation editable.
+
+Ce dossier est conservé uniquement comme archive documentaire légère autour des anciens presets, exemples et tests exploratoires.
 
 ## Génération des figures depuis `aggregates/*.csv`
 

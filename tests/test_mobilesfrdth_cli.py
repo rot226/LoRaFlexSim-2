@@ -9,6 +9,7 @@ import pytest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
 from mobilesfrdth import cli
+from mobilesfrdth.presets import get_preset, list_presets
 
 
 def test_main_rejects_unsupported_python(monkeypatch, capsys):
@@ -108,6 +109,76 @@ def test_build_parser_accepts_run_profile_without_grid(tmp_path):
     assert args.grid is None
 
 
+def test_build_parser_accepts_run_preset_without_config():
+    parser = cli.build_parser()
+
+    args = parser.parse_args(
+        [
+            "run",
+            "--preset",
+            "paper_fast",
+            "--out",
+            "runs/quickstart",
+        ]
+    )
+
+    assert args.preset == "paper_fast"
+    assert args.config is None
+
+
+def test_presets_module_exposes_expected_names():
+    names = {preset.name for preset in list_presets()}
+
+    assert {"paper_core", "paper_fast", "safe"} <= names
+    assert get_preset("paper_fast").config_relpath == "experiments/paper_fast.yaml"
+
+
+def test_cmd_presets_lists_available_presets(capsys):
+    args = cli.build_parser().parse_args(["presets", "--list"])
+
+    exit_code = cli.cmd_presets(args)
+    out = capsys.readouterr().out
+
+    assert exit_code == 0
+    assert "paper_core" in out
+    assert "paper_fast" in out
+
+
+def test_cmd_run_accepts_preset_without_explicit_config(monkeypatch, tmp_path):
+    observed = {}
+
+    class _FakeOrchestrator:
+        def __init__(self, *, output_root):
+            observed["output_root"] = output_root
+
+        def execute_jobs(self, jobs, **kwargs):
+            observed["jobs"] = jobs
+            return SimpleNamespace(
+                reports=[SimpleNamespace(run_id="run_01", success=True, run_dir=tmp_path / "run_01", error=None)],
+                total_jobs=1,
+                skipped_runs=0,
+                scheduled_runs=1,
+                failed_reports=[],
+                interrupted=False,
+            )
+
+    monkeypatch.setattr("mobilesfrdth.simulator.engine.GridRunOrchestrator", _FakeOrchestrator)
+
+    args = cli.build_parser().parse_args(
+        [
+            "run",
+            "--preset",
+            "paper_fast",
+            "--out",
+            str(tmp_path / "out"),
+        ]
+    )
+
+    assert cli.cmd_run(args) == 0
+    assert args.config.name == "paper_fast.yaml"
+    assert float(observed["jobs"][0]["params"]["time_bin_s"]) == 10.0
+
+
 def test_cmd_run_uses_profile_and_prints_progress(monkeypatch, tmp_path, capsys):
     config_path = tmp_path / "cfg.yaml"
     config_path.write_text("demo: true\n", encoding="utf-8")
@@ -168,8 +239,8 @@ def test_cmd_run_uses_profile_and_prints_progress(monkeypatch, tmp_path, capsys)
     out = capsys.readouterr().out
     assert exit_code == 1
     assert "Profil sélectionné: smoke" in out
-    assert "[1/2] run_01: succès | ETA=00:00:45" in out
-    assert "[2/2] run_02: échec | ETA=N/A" in out
+    assert "[1/2] OK succès=1 échecs=0 ETA=00:00:45" in out
+    assert "[2/2] KO succès=1 échecs=1 ETA=N/A" in out
     assert len(observed["jobs"]) > 0
 
 

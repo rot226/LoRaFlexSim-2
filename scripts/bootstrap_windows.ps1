@@ -20,10 +20,11 @@ function Show-RunCommand {
     Write-Host "==== Commande à utiliser ====" -ForegroundColor Cyan
 
     if ($EditableInstalled) {
-        Write-Host "CLI installée :" -ForegroundColor Green
+        Write-Host "CLI installée (source canonique : src/mobilesfrdth) :" -ForegroundColor Green
         Write-Host "  mobilesfrdth --help"
+        Write-Host "  mobilesfrdth presets --list"
     } else {
-        Write-Host "Mode fallback sans installation editable :" -ForegroundColor Yellow
+        Write-Host "Mode fallback sans installation editable (toujours via src/mobilesfrdth) :" -ForegroundColor Yellow
         Write-Host "  powershell -ExecutionPolicy Bypass -File scripts/mobilesfrdth.ps1 --help"
         Write-Host "  # (équivalent direct)"
         Write-Host "  `$env:PYTHONPATH='src'; python -m mobilesfrdth --help"

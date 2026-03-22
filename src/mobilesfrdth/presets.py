@@ -1,4 +1,4 @@
-"""Profils/presets de campagne pour la CLI mobilesfrdth."""
+"""Presets de campagne pour la CLI ``mobilesfrdth``."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ SAFE_TIME_BIN_S = 10.0
 
 @dataclass(frozen=True)
 class RunPreset:
-    """Définition d'un preset de campagne exécutable par `mobilesfrdth run`."""
+    """Définition d'un preset exécutable par ``mobilesfrdth run``."""
 
     name: str
     description: str
@@ -35,9 +35,12 @@ def _with_safe_time_bin(grid: str, time_bin_s: float) -> str:
 PRESETS: dict[str, RunPreset] = {
     "paper_core": RunPreset(
         name="paper_core",
-        description="Grille principale validée pour résultats cœur papier.",
+        description="Grille principale validée pour les résultats cœur papier.",
         config_relpath="experiments/paper_core.yaml",
-        grid="N=40,60,80,100,120,140,160,180,200;speed=1,3;mode=SNIR_OFF,SNIR_ON;algo=ADR,ADR_MIXRA,UCB,UCB_FORGET;reps=8;seed_base=1234",
+        grid=(
+            "N=40,60,80,100,120,140,160,180,200;speed=1,3;"
+            "mode=SNIR_OFF,SNIR_ON;algo=ADR,ADR_MIXRA,UCB,UCB_FORGET;reps=8;seed_base=1234"
+        ),
         force_time_bin_s=SAFE_TIME_BIN_S,
     ),
     "paper_fast": RunPreset(
@@ -80,7 +83,7 @@ def materialize_grid(preset: RunPreset) -> str:
 
 
 def inject_preset_args(args: Any, *, project_dir: Path) -> None:
-    """Injecte config/grille/params depuis `--preset` si fourni."""
+    """Injecte config/grille/paramètres depuis ``--preset`` si fourni."""
 
     preset_name = getattr(args, "preset", None)
     if not preset_name:

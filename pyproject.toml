@@ -3,10 +3,9 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "LoRaFlexSim"
+name = "mobilesfrdth"
 version = "1.0.1"
-# Updated name to reflect new project identity
-description = "LoRaFlexSim : simulateur complet et flexible de réseau LoRa"
+description = "Distribution Python canonique fournissant le package et la CLI mobilesfrdth"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
 license = {file = "LICENSE"}

@@ -4,7 +4,7 @@ Ce document sert de **référence unique** pour statuer sur les dossiers structu
 
 - le `README.md` expose une vue courte et immédiatement visible ;
 - ce document fixe la **catégorie**, le **statut** et l'**action cible** de chaque dossier top-level ;
-- les décisions ci-dessous sont des **décisions de gouvernance documentaire** : elles clarifient la cible d'organisation sans déplacer automatiquement le code dans cette modification.
+- les décisions ci-dessous sont des **décisions de gouvernance documentaire** : elles clarifient la cible d'organisation ; pour `mobilesfrdth`, la convergence vers `src/mobilesfrdth/` est désormais matérialisée dans l'arbre du dépôt.
 
 ## Catégories utilisées
 
@@ -29,7 +29,7 @@ Ce document sert de **référence unique** pour statuer sur les dossiers structu
 | `flora-master/` | recherche / archive | Copie de référence externe liée aux travaux FLoRa. | convertir en simple archive/documentation | Dossier conservé pour traçabilité scientifique et comparaison, pas comme point d'entrée courant. |
 | `loraflexsim/` | produit principal / flux standard | Cœur applicatif du dashboard et du simulateur. | conserver tel quel comme point d’entrée officiel | C'est l'un des deux socles techniques à privilégier pour le produit principal. |
 | `mobile-sfrd/` | recherche / archive | Générateur expérimental « mock » séparé du simulateur principal. | convertir en simple archive/documentation | **Décision explicite** : `mobile-sfrd/` est conservé comme archive expérimentale documentée, sans rôle d'entrée officielle. |
-| `mobile-sfrd_th/` | compatibilité / legacy | Ancien squelette de package redondant avec le package installé depuis `src/`. | fusionner avec un autre dossier | **Décision explicite** : `mobile-sfrd_th/` doit converger vers `src/mobilesfrdth/`, qui porte déjà la CLI officielle packagée. |
+| `mobile-sfrd_th/` | compatibilité / legacy | Archive legacy documentée ; le doublon `src/mobilesfrdth/` interne a été retiré. | convertir en simple archive/documentation | **Décision explicite** : le code packagé `mobilesfrdth` vit uniquement sous `src/mobilesfrdth/`; `mobile-sfrd_th/` reste une archive de contexte. |
 | `numpy_stub/` | compatibilité / legacy | Compatibilité locale / stub minimal de dépendance. | conserver tel quel comme point d’entrée officiel | Utilitaire de compatibilité conservé tant qu'il répond à un besoin d'exécution/tests hors dépendances complètes. |
 | `plots/` | outillage / packaging | Scripts de tracé transverses hors pipeline principal. | conserver tel quel comme point d’entrée officiel | Zone d'outillage pour les graphes transverses et diagnostics. |
 | `pretest_campagne/` | recherche / archive | Racine canonique des campagnes de recherche et reproductions. | conserver tel quel comme point d’entrée officiel | Point d'ancrage officiel pour les scénarios historiques, migrations et reproductions scientifiques. |
@@ -55,7 +55,7 @@ Même s'il n'est pas top-level, le dossier ci-dessous doit être statué explici
 1. **Entrées officielles à privilégier** : `loraflexsim/`, `src/`, `src/mobilesfrdth/`, `docs/`, `config/`, `scripts/`, `docker/`.
 2. **Zone officielle de recherche / reproduction** : `pretest_campagne/`, avec convergence souhaitée des contenus exploratoires de `experiments/`.
 3. **Éléments à traiter comme historiques ou non prioritaires** : `mobile-sfrd/`, `sfrd/`, `final/`, `qos_cli/`, `flora-master/`, `figures/`, `results/`.
-4. **Chevauchement à résorber** : `mobile-sfrd_th/` doit être considéré comme redondant par rapport à `src/mobilesfrdth/`.
+4. **Chevauchement résorbé pour le package** : le seul code source canonique de `mobilesfrdth` est `src/mobilesfrdth/`; `mobile-sfrd_th/` ne contient plus de package Python actif.
 
 ## Conséquence documentaire
 
