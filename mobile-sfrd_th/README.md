@@ -1,14 +1,26 @@
-# mobile-sfrd_th
+# `mobile-sfrd_th/`
 
-> Archive legacy.
->
+## En 30 secondes
+
+| Rubrique | Réponse rapide |
+| --- | --- |
+| **À quoi sert ce dossier ?** | Conserver une archive légère autour de l’ancien flux `mobile-sfrd_th` : presets historiques, exemples de commandes, contrats de tests et documentation de transition. |
+| **Quand l’utiliser ?** | Quand vous devez relire un workflow historique, comparer d’anciens presets ou comprendre la migration vers la CLI canonique `mobilesfrdth`. |
+| **Quand ne pas l’utiliser ?** | Ne l’utilisez pas comme source canonique du package Python ni comme point d’entrée principal pour une nouvelle campagne. Pour cela, utilisez `src/mobilesfrdth/` et la CLI `mobilesfrdth`. |
+| **Point d’entrée principal** | La CLI installée à la racine du dépôt : `mobilesfrdth` avec les presets archivés de `mobile-sfrd_th/experiments/`. |
+| **Sorties produites** | Des dossiers de résultats de campagne (`runs/...`), des agrégats CSV (`aggregates/...`) et des figures (`plots/...`) lorsque vous rejouez l’ancien flux. |
+| **Documentation détaillée** | Voir le `README.md` racine pour le positionnement global, puis les sections ci-dessous pour les commandes historiques de `plots`, `presets` et `run → aggregate → plots → validate`. |
+
+> [!IMPORTANT]
 > Le **seul package Python canonique `mobilesfrdth`** vit désormais dans `src/mobilesfrdth/` à la racine du dépôt. Le doublon `mobile-sfrd_th/src/mobilesfrdth/` a été supprimé pour éviter toute ambiguïté lors du développement et de l'installation editable.
 
 Ce dossier est conservé uniquement comme archive documentaire légère autour des anciens presets, exemples et tests exploratoires.
 
-## Génération des figures depuis `aggregates/*.csv`
+## Documentation détaillée
 
-La commande de tracé lit **uniquement** les fichiers CSV produits par l'étape `aggregate`:
+### Génération des figures depuis `aggregates/*.csv`
+
+La commande de tracé lit **uniquement** les fichiers CSV produits par l'étape `aggregate` :
 
 - `metric_by_factor.csv`
 - `distribution_sf.csv`
@@ -16,7 +28,7 @@ La commande de tracé lit **uniquement** les fichiers CSV produits par l'étape 
 - `sinr_cdf.csv`
 - `fairness_airtime_switching.csv`
 
-Elle génère dans le dossier de sortie (`--out`) les figures minimales:
+Elle génère dans le dossier de sortie (`--out`) les figures minimales :
 
 1. `fig01_pdr_vs_n_snir_off.png`
 2. `fig02_pdr_vs_n_snir_on.png`
@@ -29,7 +41,7 @@ Elle génère dans le dossier de sortie (`--out`) les figures minimales:
 9. `fig09_sf_distribution.png`
 10. `fig10_sinr_cdf.png`
 
-Bonus (si données disponibles):
+Bonus (si données disponibles) :
 
 11. `fig11_airtime_vs_n.png`
 12. `fig12_switch_count_vs_n.png`
@@ -75,8 +87,8 @@ mobilesfrdth presets --list
 
 Exemples de presets fournis :
 
-- `paper_core` (config: `experiments/paper_core.yaml`)
-- `paper_fast` (config: `experiments/paper_fast.yaml`)
+- `paper_core` (config : `experiments/paper_core.yaml`)
+- `paper_fast` (config : `experiments/paper_fast.yaml`)
 - `safe` (force `time_bin_s=10` pour un calcul `Tc` stable/compatible protocole)
 
 ### Exécution preset en une commande

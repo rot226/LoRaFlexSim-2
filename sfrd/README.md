@@ -1,23 +1,28 @@
-# sfrd
+# `sfrd/`
+
+## En 30 secondes
+
+| Rubrique | Réponse rapide |
+| --- | --- |
+| **À quoi sert ce dossier ?** | Fournir la CLI SFRD historique pour des campagnes spécialisées, de la calibration UCB et des validations ciblées hors du flux standard. |
+| **Quand l’utiliser ?** | Quand vous travaillez sur un pipeline SFRD avancé déjà existant, avec des scripts de `sfrd/cli/` ou une logique d’agrégation/validation spécifique. |
+| **Quand ne pas l’utiliser ?** | Ne l’utilisez pas pour un premier contact avec le projet ni pour une campagne standard : la voie recommandée reste `mobilesfrdth`. |
+| **Point d’entrée principal** | Les commandes Python de `sfrd.cli`, par exemple `python -m sfrd.cli.run_campaign` ou `python -m sfrd.cli.validate_outputs`. |
+| **Sorties produites** | Des sorties de campagne SFRD, des journaux, des validations et des agrégations dépendant du workflow choisi. |
+| **Documentation détaillée** | `docs/advanced_workflows.md` décrit quand basculer vers `sfrd/` et les principaux cas d’usage avancés. |
 
 CLI historique avancée.
 
 > [!TIP]
-> **À quoi sert ce dossier ?** Servir de point d’entrée court pour la CLI SFRD historique et renvoyer vers la documentation consolidée.
->
-> **Quand l’utiliser ?** Quand vous travaillez sur des campagnes SFRD avancées, distinctes du flux standard `mobilesfrdth`.
->
-> **Commande minimale** Consulter `docs/advanced_workflows.md` avant exécution.
->
-> **Sorties produites** Dépend du workflow SFRD choisi ; ce README redirige vers la documentation détaillée.
+> **Non nécessaire pour un premier usage** — cette CLI spécialisée est conservée pour des campagnes SFRD avancées et distinctes de l’interface communauté `mobilesfrdth`.
 
-**Non nécessaire pour un premier usage** — cette CLI spécialisée est conservée pour des campagnes SFRD avancées et distinctes de l’interface communauté `mobilesfrdth`.
+## Documentation détaillée
 
-## 1. Objectif du dossier
+### Objectif du dossier
 
 Ce dossier sert surtout de point de redirection vers la documentation SFRD maintenue ailleurs dans le dépôt.
 
-## 2. Prérequis
+### Prérequis
 
 - **OS documenté en priorité : Windows 11**.
 - **Shell documenté : PowerShell**.
@@ -27,30 +32,23 @@ Ce dossier sert surtout de point de redirection vers la documentation SFRD maint
 - **Installation standard recommandée :** `python -m pip install -e . --no-build-isolation` après activation du venv.
 - **`PYTHONPATH=src` n’est pas requis** pour l’usage standard documenté.
 
-## 3. Scénario minimal
+### Scénario minimal
 
 Pour un premier repérage, ouvrez la documentation consolidée avant toute exécution spécifique.
 
-## 4. Commande de run
+### Commandes typiques
 
-Aucune commande de run n’est détaillée dans ce README. Utilisez la documentation ci-dessous pour choisir la bonne commande selon votre campagne.
+Aucune commande unique n’est imposée dans ce README. Les points d’entrée les plus probables sont :
 
-## 5. Agrégation
+- `python -m sfrd.cli.run_campaign`
+- `python -m sfrd.cli.plot_campaign`
+- `python -m sfrd.cli.validate_outputs`
+- `python -m sfrd.cli.calibrate_ucb`
 
-Non documentée dans ce README de redirection.
+### Sorties
 
-## 6. Plots
+Les sorties dépendent du workflow SFRD choisi ; ce dossier ne normalise pas un seul format de résultats.
 
-Non documentés dans ce README de redirection.
-
-## 7. Rapport
-
-Non documenté dans ce README de redirection.
-
-## 8. Figures détaillées et options avancées
-
-La documentation détaillée a été consolidée dans :
+### Lien direct vers la doc détaillée
 
 - `docs/advanced_workflows.md`
-
-Ce README sert désormais de point de redirection depuis `sfrd/`.
