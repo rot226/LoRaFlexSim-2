@@ -6,11 +6,21 @@ Ce guide présente le chemin le plus simple pour un premier usage de LoRaFlexSim
 
 Depuis la racine du dépôt :
 
+### Windows 11 / PowerShell
+
 ```powershell
 panel serve loraflexsim/launcher/dashboard.py --show
 ```
 
+### Linux / macOS / bash
+
+```bash
+panel serve loraflexsim/launcher/dashboard.py --show
+```
+
 Si le navigateur ne s’ouvre pas automatiquement, récupérez l’URL affichée dans le terminal puis ouvrez-la manuellement.
+
+Pour les limitations liées à `--show`, `xdg-open` et `open`, voir `docs/installation.md`.
 
 ## Réglages minimaux pour un premier test
 

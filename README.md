@@ -17,21 +17,31 @@ En pratique, **si vous débutez ou si vous lancez une nouvelle campagne, utilise
 
 ## Politique d’installation et d’exécution
 
-### Plateforme documentée en priorité
+### Compatibilité plateforme
 
-- **OS officiellement documenté en priorité : Windows 11**.
-- Les commandes ci-dessous sont **rédigées et maintenues pour Windows 11 avec PowerShell**, en partant de la **racine du dépôt**.
-- **`cmd.exe` n’est pas la cible documentaire principale** : certaines commandes peuvent fonctionner, mais elles ne sont pas harmonisées ici.
+| Surface | Windows 11 | Linux | macOS |
+| --- | --- | --- | --- |
+| Statut global | **Support documenté principal** | **Support visé / partiel** | **Support visé / partiel** |
+| Installation Python 3.11 / 3.12 | **Documentée et prioritaire** | **Documentée et visée** | **Documentée et visée** |
+| CLI `mobilesfrdth` | **Validée / recommandée** | **Visée / fallback documenté** | **Visée / fallback documenté** |
+| Dashboard Panel | **Documenté en priorité** | **Visé** | **Visé** |
+| Scripts Bash | **Secondaires** | **Oui** | **Oui** |
+| Scripts PowerShell | **Oui** | **Oui si PowerShell 7 est installé** | **Oui si PowerShell 7 est installé** |
+
+- **Plateforme documentée en priorité : Windows 11**.
+- **Linux et macOS sont documentés explicitement** via `docs/installation.md` et les wrappers Bash `scripts/bootstrap_unix.sh`, `scripts/mobilesfrdth.sh`, `scripts/run_campaign_profiles.sh` et `scripts/run_grid.sh`.
+- **`cmd.exe` n’est pas la cible documentaire principale**.
 
 ### Version Python
 
 - **Version recommandée : Python 3.11**.
 - **Versions prises en charge par le packaging : Python 3.11 à 3.12**.
-- Si plusieurs versions sont installées sous Windows, utilisez de préférence **`py -3.11`** pour éviter les ambiguïtés.
+- Sous Windows, utilisez de préférence **`py -3.11`**.
+- Sous Linux/macOS, utilisez de préférence **`python3.11`** ou **`python3.12`**.
 
-### Méthode d’installation recommandée
+### Méthodes d’installation recommandées
 
-Depuis la **racine du dépôt** dans **PowerShell** :
+#### Windows 11 / PowerShell
 
 ```powershell
 py -3.11 -m venv .venv
@@ -39,18 +49,27 @@ py -3.11 -m venv .venv
 python -m pip install -e . --no-build-isolation
 ```
 
-Cette méthode est la référence pour toute la documentation de ce dépôt.
+#### Linux / macOS / bash
+
+```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e . --no-build-isolation
+```
+
+Wrappers dépôt disponibles :
+
+- **Windows 11** : `./scripts/bootstrap_windows.ps1`
+- **Linux / macOS** : `./scripts/bootstrap_unix.sh`
 
 L'installation editable canonique expose désormais **une seule distribution Python et une seule arborescence source pour `mobilesfrdth`** : `pyproject.toml` pointe sur `src/mobilesfrdth/`, et l'ancien doublon `mobile-sfrd_th/src/mobilesfrdth/` ne doit plus être utilisé.
 
-### Méthode offline / fallback
+### Méthode fallback
 
 > [!IMPORTANT]
 > **Mode fallback à utiliser seulement si l’installation editable échoue**.
 
-Le mode fallback ne remplace pas la méthode standard. Il sert uniquement aux environnements Windows 11 où `pip install -e . --no-build-isolation` ne peut pas être finalisé.
-
-Depuis la **racine du dépôt** dans **PowerShell** :
+#### Windows 11
 
 ```powershell
 py -3.11 -m venv .venv
@@ -59,7 +78,17 @@ python -m pip install -r requirements.txt
 powershell -ExecutionPolicy Bypass -File scripts/windows/run_offline.ps1
 ```
 
+#### Linux / macOS
+
+```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
+./scripts/mobilesfrdth.sh --help
+```
+
 Dans ce mode seulement, certains scripts positionnent **`PYTHONPATH=src`** automatiquement. **Vous n’avez pas besoin de définir `PYTHONPATH=src` pour l’installation standard.**
+
+➡ Voir `docs/installation.md` pour la matrice complète, les scripts par shell et les limitations connues.
 
 ## Démarrage rapide Windows 11
 
@@ -180,6 +209,7 @@ mobilesfrdth plots --aggregates-dir runs/quickstart/aggregates --out runs/quicks
 ## Arborescence documentaire recommandée
 
 - `README.md` : point d’entrée communauté.
+- `docs/installation.md` : compatibilité plateforme, installation Python 3.11/3.12, scripts Bash/PowerShell et limitations connues.
 - `docs/user_guide_dashboard.md` : premier usage du dashboard.
 - `docs/user_guide_cli.md` : premier usage de la CLI `mobilesfrdth`.
 - `docs/advanced_workflows.md` : workflows complets, génération de figures et pipelines spécialisés.
