@@ -41,7 +41,7 @@ def _energy_compromise_score(pdr: float, energy: float) -> float:
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Mini-campagne de calibration UCB.")
+    parser = argparse.ArgumentParser(description="Mini-campagne de calibration UCB pour la CLI SFRD avancée / spécialisée ; la CLI officielle recommandée pour le flux standard reste mobilesfrdth.")
     parser.add_argument(
         "--candidates",
         nargs="+",

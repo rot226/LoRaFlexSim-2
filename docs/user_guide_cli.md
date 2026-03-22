@@ -2,6 +2,17 @@
 
 La CLI officielle mise en avant pour la communauté est **`mobilesfrdth`**. Elle couvre le flux stable recommandé pour lancer une campagne, agréger les résultats, générer des figures puis valider les sorties.
 
+## Positionnement des points d’entrée
+
+Pour éviter toute ambiguïté entre plusieurs CLI présentes dans le dépôt :
+
+- **Point d’entrée officiel recommandé** : `mobilesfrdth`
+- **Points d’entrée avancés / spécialisés** : `sfrd`
+- **Flux historiques / reproduction** : `final`, `mobile-sfrd`
+- **Archives / anciens pipelines** : tout dossier déplacé sous l’espace d’archives
+
+Si vous ne savez pas encore quelle commande utiliser, **choisissez `mobilesfrdth`**.
+
 ## Vérifier l’installation
 
 ```powershell
@@ -73,6 +84,13 @@ Utilisez cette CLI si vous voulez :
 
 Le package Python canonique est `mobilesfrdth` et son unique arborescence source est `src/mobilesfrdth/`. L'ancien doublon `mobile-sfrd_th/src/mobilesfrdth/` ne fait plus partie du flux d'installation editable.
 
+## Que faire si vous hésitez avec une autre CLI ?
+
+- **Vous voyez `sfrd`** : gardez-le pour un pipeline avancé / spécialisé déjà identifié.
+- **Vous voyez `final`** : gardez-le pour un flux historique de reproduction ou de comparaison.
+- **Vous voyez `mobile-sfrd`** : considérez-le comme un flux historique conservé pour archive et reproduction légère.
+- **Vous tombez sur un dossier d’archives** : ne l’utilisez pas comme point de départ pour une nouvelle campagne.
+
 ## Interfaces secondaires
 
 Les interfaces ci-dessous existent toujours mais ne sont pas nécessaires pour un premier usage :
@@ -80,5 +98,6 @@ Les interfaces ci-dessous existent toujours mais ne sont pas nécessaires pour u
 - `qos_cli/README.md` pour la CLI QoS spécialisée ;
 - `sfrd/README.md` pour le pipeline SFRD avancé ;
 - `final/README.md` pour des scripts historiques d’export/reproduction ;
-- `pretest_campagne/iwcmc_archive/README.md` pour l’archive métier `iwcmc_archive` ;
+- `pretest_campagne/archive_or_mock/mobile-sfrd/README.md` pour le mock historique `mobile-sfrd` ;
+- `docs/archive_or_research/` pour les contenus archivés, de reproduction et de recherche ;
 - `pretest_campagne/scenario_c/README.md` pour le pipeline de reproduction du scénario C.

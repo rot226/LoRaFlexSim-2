@@ -897,8 +897,15 @@ def cmd_plots(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="mobilesfrdth",
-        description="CLI de campagnes mobile-sfrd_th: génération, agrégation et préparation des plots.",
+        description=(
+            "CLI officielle recommandée `mobilesfrdth` pour les campagnes communauté : "
+            "génération, agrégation, plots et validation. "
+            "Les workflows avancés/spécialisés relèvent de `sfrd`; "
+            "les flux `final` et `mobile-sfrd` sont historiques."
+        ),
         epilog=(
+            "Point d'entrée officiel recommandé : mobilesfrdth.\n"
+            "CLI avancée / spécialisée : sfrd. Flux historiques : final, mobile-sfrd.\n"
             "Exemple grille: N=40,60,80,100,120,140,160,180,200;speed=1,3;reps=8;seed_base=1234\n"
             "Exemple run: mobilesfrdth run --config experiments/default.yaml --out runs --profile paper_core"
         ),

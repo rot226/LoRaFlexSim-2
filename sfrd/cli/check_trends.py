@@ -39,8 +39,8 @@ class Anomaly:
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Vérifie les tendances QA des résultats finaux (PDR/throughput) "
-            "et génère un rapport texte + CSV d'anomalies."
+            "CLI SFRD avancée / spécialisée : vérifie les tendances QA des résultats finaux (PDR/throughput) "
+            "et génère un rapport texte + CSV d'anomalies. Pour une nouvelle campagne standard, utilisez plutôt mobilesfrdth."
         )
     )
     parser.add_argument(

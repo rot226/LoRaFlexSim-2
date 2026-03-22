@@ -89,4 +89,5 @@ Write-Host "[4/4] validate" -ForegroundColor Cyan
 python -m mobilesfrdth.qa.validate_results --aggregates-dir $aggregatesDir --plots-summary (Join-Path $figuresDir "plots_summary.json")
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-Write-Host "Pipeline offline terminé avec succès." -ForegroundColor Green
+Write-Host "Pipeline offline terminé avec succès via le point d’entrée officiel recommandé `mobilesfrdth`." -ForegroundColor Green
+Write-Host "Les flux `sfrd`, `final` et `mobile-sfrd` restent réservés aux cas avancés ou historiques." -ForegroundColor DarkYellow
