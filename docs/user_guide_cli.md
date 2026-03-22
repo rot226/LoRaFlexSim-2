@@ -16,25 +16,39 @@ python -m mobilesfrdth --help
 
 ## Workflow minimal recommandé
 
-### 1. Lancer une simulation
+### 1. Lister les presets disponibles
+
+```powershell
+mobilesfrdth presets --list
+```
+
+### 2. Lancer une simulation
+
+Option preset canonique :
+
+```powershell
+mobilesfrdth run --preset paper_fast --out runs/quickstart
+```
+
+Option explicite avec config + profil :
 
 ```powershell
 mobilesfrdth run --config experiments/default.yaml --out runs/quickstart --profile smoke
 ```
 
-### 2. Agréger les résultats
+### 3. Agréger les résultats
 
 ```powershell
 mobilesfrdth aggregate --results runs/quickstart --out runs/quickstart
 ```
 
-### 3. Générer les figures
+### 4. Générer les figures
 
 ```powershell
 mobilesfrdth plots --aggregates-dir runs/quickstart/aggregates --out runs/quickstart/plots --profile exploratory
 ```
 
-### 4. Valider les agrégats
+### 5. Valider les agrégats
 
 ```powershell
 mobilesfrdth validate --aggregates-dir runs/quickstart/aggregates
@@ -42,6 +56,7 @@ mobilesfrdth validate --aggregates-dir runs/quickstart/aggregates
 
 ## Rôle de chaque étape
 
+- **presets** : affiche les presets canonisés de campagne ;
 - **run** : exécute la campagne et écrit les sorties dans `runs/quickstart/` ;
 - **aggregate** : consolide les résultats bruts dans `runs/quickstart/aggregates/` ;
 - **plots** : génère les figures dans `runs/quickstart/plots/` ;
@@ -55,6 +70,8 @@ Utilisez cette CLI si vous voulez :
 - enchaîner plusieurs traitements de façon reproductible ;
 - automatiser un protocole expérimental ;
 - intégrer le flux à un script Windows, à CI ou à un pipeline d’analyse.
+
+Le package Python canonique est `mobilesfrdth` et son unique arborescence source est `src/mobilesfrdth/`. L'ancien doublon `mobile-sfrd_th/src/mobilesfrdth/` ne fait plus partie du flux d'installation editable.
 
 ## Interfaces secondaires
 

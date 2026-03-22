@@ -1,0 +1,5 @@
+# Preset rapide: exécution courte pour smoke tests et debug local
+name: paper_fast
+notes:
+  - "Couverture minimale de la matrice pour validation rapide."
+  - "Utilise time_bin_s=10s pour compatibilité du calcul Tc."

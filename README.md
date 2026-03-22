@@ -30,6 +30,8 @@ python -m pip install -e . --no-build-isolation
 
 Cette méthode est la référence pour toute la documentation de ce dépôt.
 
+L'installation editable canonique expose désormais **une seule distribution Python et une seule arborescence source pour `mobilesfrdth`** : `pyproject.toml` pointe sur `src/mobilesfrdth/`, et l'ancien doublon `mobile-sfrd_th/src/mobilesfrdth/` ne doit plus être utilisé.
+
 ### Méthode offline / fallback
 
 > [!IMPORTANT]
@@ -57,6 +59,7 @@ py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -e . --no-build-isolation
 mobilesfrdth --help
+mobilesfrdth presets --list
 panel serve loraflexsim/launcher/dashboard.py --show
 ```
 
@@ -212,7 +215,7 @@ La référence détaillée est maintenue dans `docs/repository_map.md`. Le table
 | `flora-master/` | recherche / archive | Copie de référence externe liée à FLoRa. | convertir en simple archive/documentation |
 | `loraflexsim/` | produit principal / flux standard | Cœur applicatif du dashboard et du simulateur. | conserver tel quel comme point d’entrée officiel |
 | `mobile-sfrd/` | recherche / archive | Générateur expérimental séparé du flux principal. | convertir en simple archive/documentation |
-| `mobile-sfrd_th/` | compatibilité / legacy | Ancien squelette redondant avec le package officiel. | fusionner avec un autre dossier (`src/mobilesfrdth/`) |
+| `mobile-sfrd_th/` | compatibilité / legacy | Archive legacy documentée ; le code package a été retiré au profit de `src/mobilesfrdth/`. | convertir en simple archive/documentation |
 | `numpy_stub/` | compatibilité / legacy | Stub de compatibilité local. | conserver tel quel comme point d’entrée officiel |
 | `plots/` | outillage / packaging | Scripts de tracé transverses. | conserver tel quel comme point d’entrée officiel |
 | `pretest_campagne/` | recherche / archive | Racine officielle des campagnes de recherche et de reproduction. | conserver tel quel comme point d’entrée officiel |
@@ -227,7 +230,7 @@ La référence détaillée est maintenue dans `docs/repository_map.md`. Le table
 
 ### Décision explicite sur le dossier `src/mobilesfrdth/`
 
-Bien qu'il ne soit pas top-level, `src/mobilesfrdth/` fait partie des cas à clarifier : c'est **l'implémentation officielle** de la CLI `mobilesfrdth`, à **conserver tel quel comme point d’entrée officiel**, tandis que `mobile-sfrd_th/` est à **fusionner** vers cette implémentation de référence.
+Bien qu'il ne soit pas top-level, `src/mobilesfrdth/` fait partie des cas à clarifier : c'est **l'implémentation officielle** de la CLI `mobilesfrdth`, à **conserver tel quel comme point d’entrée officiel**. L'ancien doublon `mobile-sfrd_th/src/mobilesfrdth/` a été supprimé ; `mobile-sfrd_th/` ne sert plus que d'archive documentaire.
 
 ## Vérification avant contribution
 

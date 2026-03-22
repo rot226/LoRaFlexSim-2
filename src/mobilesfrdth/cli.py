@@ -12,6 +12,7 @@ from collections import Counter
 from pathlib import Path
 from time import monotonic
 
+from .presets import inject_preset_args, list_presets
 from .scenarios import generate_jobs, parse_grid_spec
 
 
@@ -416,6 +417,15 @@ def _suggest_parameter_fixes(top_errors: list[dict[str, object]]) -> list[dict[s
     return suggestions
 
 
+def cmd_presets(args: argparse.Namespace) -> int:
+    if args.list:
+        for preset in list_presets():
+            print(f"- {preset.name}: {preset.description}")
+        return 0
+    print("Aucune action demandée. Utiliser --list.")
+    return 2
+
+
 def cmd_diagnose(args: argparse.Namespace) -> int:
     results_dir: Path = args.results
     batch_summary_path = results_dir / "batch_summary.json"
@@ -482,6 +492,16 @@ def cmd_diagnose(args: argparse.Namespace) -> int:
 def cmd_run(args: argparse.Namespace) -> int:
     out_dir: Path = args.out
     out_dir.mkdir(parents=True, exist_ok=True)
+    inject_preset_args(args, project_dir=Path(__file__).resolve().parents[2])
+    if not hasattr(args, "verbosity"):
+        if getattr(args, "quiet", False):
+            args.verbosity = 0
+        elif getattr(args, "debug", False):
+            args.verbosity = 3
+        elif getattr(args, "verbose", False):
+            args.verbosity = 2
+        else:
+            args.verbosity = 1
 
     try:
         if args.grid:
@@ -490,7 +510,7 @@ def cmd_run(args: argparse.Namespace) -> int:
             grid_spec = PROFILE_PRESETS[args.profile]
             print(f"Profil sélectionné: {args.profile}")
         else:
-            raise SystemExit("Erreur: fournir --grid ou --profile.")
+            raise SystemExit("Erreur: fournir --grid, --profile ou --preset.")
 
         grid = parse_grid_spec(grid_spec)
         jobs = generate_jobs(
@@ -512,6 +532,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         "sf_range": list(args.sf_range) if args.sf_range else None,
         "jobs": jobs,
         "num_jobs": len(jobs),
+        "preset": getattr(getattr(args, "_preset", None), "name", None),
     }
     output_file = out_dir / "jobs.json"
     _dump_json(output_file, payload)
@@ -885,7 +906,18 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     run_parser = subparsers.add_parser("run", help="Génère les jobs puis exécute la campagne.")
-    run_parser.add_argument("--config", required=True, type=_existing_file, help="Fichier de configuration de base.")
+    run_parser.add_argument(
+        "--preset",
+        choices=[preset.name for preset in list_presets()],
+        default=None,
+        help="Preset de campagne canonique (ex: paper_core, paper_fast, safe).",
+    )
+    run_parser.add_argument(
+        "--config",
+        required=False,
+        type=_existing_file,
+        help="Fichier de configuration de base. Optionnel si --preset fournit déjà la config.",
+    )
     run_parser.add_argument("--out", required=True, type=Path, help="Répertoire de sortie (jobs.json, results/<run_id>/...).")
     run_parser.add_argument(
         "--grid",
@@ -1096,6 +1128,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     diagnose_parser.set_defaults(func=cmd_diagnose)
 
+    presets_parser = subparsers.add_parser("presets", help="Liste les presets de campagne disponibles.")
+    presets_parser.add_argument("--list", action="store_true", help="Affiche les presets disponibles.")
+    presets_parser.set_defaults(func=cmd_presets)
+
     validate_parser = subparsers.add_parser(
         "validate",
         help="Valide la cohérence statistique et l'intégrité des agrégats CSV.",
@@ -1155,6 +1191,11 @@ def main(argv: list[str] | None = None) -> int:
     try:
         args = parser.parse_args(argv)
         if getattr(args, "command", None) == "run":
+            if not getattr(args, "preset", None):
+                if getattr(args, "config", None) is None:
+                    raise ValueError("--config est obligatoire sans --preset.")
+                if getattr(args, "grid", None) in (None, "") and getattr(args, "profile", None) is None:
+                    raise ValueError("Fournir --grid ou --profile quand --preset n'est pas utilisé.")
             if args.quiet:
                 args.verbosity = 0
             elif args.debug:

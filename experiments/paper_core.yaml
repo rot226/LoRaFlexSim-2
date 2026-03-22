@@ -1,0 +1,5 @@
+# Preset cœur papier: grille validée et reproductible
+name: paper_core
+notes:
+  - "Preset principal pour campagne article (couverture N/speed/mode/algo)."
+  - "Utilise time_bin_s=10s pour compatibilité du calcul Tc."
