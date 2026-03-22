@@ -4,23 +4,25 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
+is_supported_python() {
+  local candidate=$1
+  if ! command -v "${candidate}" >/dev/null 2>&1; then
+    return 1
+  fi
+
+  local version
+  version="$("${candidate}" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || true)"
+  [[ "${version}" == "3.11" || "${version}" == "3.12" ]]
+}
+
 choose_python() {
-  if command -v python3.11 >/dev/null 2>&1; then
-    printf '%s\n' python3.11
-    return
-  fi
-  if command -v python3.12 >/dev/null 2>&1; then
-    printf '%s\n' python3.12
-    return
-  fi
-  if command -v python3 >/dev/null 2>&1; then
-    printf '%s\n' python3
-    return
-  fi
-  if command -v python >/dev/null 2>&1; then
-    printf '%s\n' python
-    return
-  fi
+  local candidate
+  for candidate in python3.11 python3.12 python3 python; do
+    if is_supported_python "${candidate}"; then
+      printf '%s\n' "${candidate}"
+      return
+    fi
+  done
   return 1
 }
 
@@ -43,7 +45,7 @@ show_run_command() {
 }
 
 PYTHON_CMD="$(choose_python)" || {
-  echo "Aucun interpréteur Python 3.11/3.12/3 n'a été trouvé dans le PATH." >&2
+  echo "Aucun interpréteur Python 3.11 ou 3.12 supporté n'a été trouvé dans le PATH." >&2
   exit 1
 }
 
@@ -57,6 +59,12 @@ source .venv/bin/activate
 
 echo "Version Python active :"
 python --version
+
+ACTIVE_VERSION="$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+if [[ "${ACTIVE_VERSION}" != "3.11" && "${ACTIVE_VERSION}" != "3.12" ]]; then
+  echo "Version Python non supportée dans .venv : ${ACTIVE_VERSION}. Utiliser Python 3.11 ou 3.12." >&2
+  exit 1
+fi
 
 echo "Installation du projet en mode editable (sans build isolation)..."
 if python -m pip install -e . --no-build-isolation; then

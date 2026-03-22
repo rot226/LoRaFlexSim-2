@@ -19,13 +19,16 @@
 
 ## Prérequis et installation
 
-- Python 3.10+
-- Environnement virtuel recommandé
+- **Dans ce dépôt, utilisez de préférence Python 3.11**.
+- **Versions supportées et documentées à la racine du dépôt : Python 3.11 à 3.12**.
+- Environnement virtuel recommandé.
+- Ce mock archive utilise son **propre** `requirements.txt` local, distinct du packaging racine.
+- La lecture des fichiers `config/*.yaml` repose sur **PyYAML** (module importé : `yaml`).
 
 Installation des dépendances :
 
 ```bash
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
 ## Exécution unique

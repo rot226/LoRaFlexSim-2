@@ -48,7 +48,7 @@ Contournement offline (Windows 11 recommandé):
 
 Write-Host "Version Python active: $versionText (supportée)" -ForegroundColor Green
 
-$requiredModules = @("numpy", "pandas", "scipy", "matplotlib", "PIL", "yaml")
+$requiredModules = @("matplotlib", "yaml")
 $missing = @()
 foreach ($module in $requiredModules) {
     python -c "import $module" 2>$null
@@ -59,7 +59,7 @@ foreach ($module in $requiredModules) {
 
 if ($missing.Count -gt 0) {
     Write-Host "Dépendances manquantes: $($missing -join ', ')" -ForegroundColor Yellow
-    Write-Error "Installez les dépendances puis relancez: python -m pip install -r requirements.txt"
+    Write-Error "Installez les dépendances minimales du flux offline puis relancez: python -m pip install matplotlib PyYAML`nAlternative complète: python -m pip install -e . --no-build-isolation"
     exit 3
 }
 

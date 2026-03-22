@@ -85,7 +85,17 @@ python -m pip install -e . --no-build-isolation
 - **Windows 11 / PowerShell** : `./scripts/bootstrap_windows.ps1`
 - **Linux/macOS / bash** : `./scripts/bootstrap_unix.sh`
 
-Le script Unix choisit automatiquement `python3.11`, puis `python3.12`, puis `python3` si nécessaire.
+Le script Unix privilégie `python3.11`, puis `python3.12`, et n’accepte `python3`/`python` que s’ils pointent eux-mêmes vers Python 3.11 ou 3.12.
+
+## Dépendances réellement requises selon le flux
+
+- **Installation editable recommandée** : `python -m pip install -e . --no-build-isolation` installe le **runtime complet documenté** (CLI `mobilesfrdth`, dashboard Panel, API FastAPI/WebSocket, lecture YAML).
+- **Flux standard `mobilesfrdth` (`run -> aggregate -> plots -> validate`) sans installation editable** : les dépendances minimales réellement requises sont **`matplotlib`** et **`PyYAML`**.
+- **Dashboard Panel** : ajoutez **`panel`**, **`plotly`**, **`numpy`** et **`pandas`**.
+- **API web** : ajoutez **`fastapi`** et **`uvicorn`**.
+- **Compatibilité YAML** : le module importé est `yaml`, fourni par le paquet **PyYAML**.
+
+Le fichier `requirements.txt` reste aligné sur le **runtime complet local**. Il installe donc plus que le strict minimum du flux CLI/offline, mais il ne laisse pas de dépendance manquante pour le dashboard ou l'API.
 
 ## Lancer la CLI `mobilesfrdth`
 
