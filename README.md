@@ -200,32 +200,32 @@ Les contenus de reproduction et les campagnes héritées sont maintenant regroup
 
 ## Carte du dépôt et statut des dossiers top-level
 
-La référence détaillée est maintenue dans `docs/repository_map.md`. Le tableau ci-dessous donne la **vue visible depuis le README** afin qu'aucun dossier top-level structurant ne reste sans statut explicite.
+La référence détaillée est maintenue dans `docs/repository_map.md`. Le tableau ci-dessous donne la **vue visible depuis le README** avec, pour chaque dossier top-level, une description d’une phrase et son statut dans le parcours recommandé.
 
-| Dossier | Catégorie | Statut visible | Action décidée |
-| --- | --- | --- | --- |
-| `.github/` | conteneur / CI | Workflows GitHub et automatisation du dépôt. | conserver tel quel comme point d’entrée officiel |
-| `config/` | produit principal / flux standard | Configuration partagée du simulateur. | conserver tel quel comme point d’entrée officiel |
-| `docker/` | conteneur / CI | Référence officielle pour la conteneurisation. | conserver tel quel comme point d’entrée officiel |
-| `docs/` | produit principal / flux standard | Documentation active et gouvernance du dépôt. | conserver tel quel comme point d’entrée officiel |
-| `examples/` | outillage / packaging | Scripts d'exemple pour prise en main. | conserver tel quel comme point d’entrée officiel |
-| `experiments/` | recherche / archive | Configurations exploratoires à rapprocher des campagnes de recherche. | déplacer sous `pretest_campagne/` |
-| `figures/` | recherche / archive | Figures versionnées servant surtout de référence. | convertir en simple archive/documentation |
-| `final/` | compatibilité / legacy | Pipeline historique de reproduction CSV/figures. | convertir en simple archive/documentation |
-| `flora-master/` | recherche / archive | Copie de référence externe liée à FLoRa. | convertir en simple archive/documentation |
-| `loraflexsim/` | produit principal / flux standard | Cœur applicatif du dashboard et du simulateur. | conserver tel quel comme point d’entrée officiel |
-| `mobile-sfrd_th/` | compatibilité / legacy | Archive legacy documentée ; le code package a été retiré au profit de `src/mobilesfrdth/`. | convertir en simple archive/documentation |
-| `numpy_stub/` | compatibilité / legacy | Stub de compatibilité local. | conserver tel quel comme point d’entrée officiel |
-| `plots/` | outillage / packaging | Scripts de tracé transverses. | conserver tel quel comme point d’entrée officiel |
-| `pretest_campagne/` | recherche / archive | Racine officielle des campagnes de recherche et de reproduction, incluant l’espace `archive_or_mock/`. | conserver tel quel comme point d’entrée officiel |
-| `qos_cli/` | compatibilité / legacy | CLI spécialisée hors parcours standard. | convertir en simple archive/documentation |
-| `results/` | recherche / archive | Résultats consolidés conservés comme référence. | convertir en simple archive/documentation |
-| `scipy/` | compatibilité / legacy | Support de compatibilité local autour de SciPy. | conserver tel quel comme point d’entrée officiel |
-| `scripts/` | outillage / packaging | Automatisation, bootstrap et validation. | conserver tel quel comme point d’entrée officiel |
-| `sfrd/` | compatibilité / legacy | CLI SFRD avancée, distincte de `mobilesfrdth`. | convertir en simple archive/documentation |
-| `src/` | produit principal / flux standard | Racine officielle du code Python packagé. | conserver tel quel comme point d’entrée officiel |
-| `tests/` | produit principal / flux standard | Base de validation automatique du dépôt. | conserver tel quel comme point d’entrée officiel |
-| `traffic/` | produit principal / flux standard | Composants trafic et utilitaires réseau. | conserver tel quel comme point d’entrée officiel |
+| Dossier | Description | Statut dans le parcours recommandé |
+| --- | --- | --- |
+| `.github/` | Contient les workflows GitHub et l’automatisation du dépôt. | Support officiel du dépôt. |
+| `config/` | Regroupe la configuration partagée utilisée par le simulateur et ses outils. | Flux standard. |
+| `docker/` | Fournit les éléments de conteneurisation et d’environnement reproductible. | Support officiel du dépôt. |
+| `docs/` | Centralise la documentation active, les guides utilisateur et la gouvernance. | Flux standard. |
+| `examples/` | Propose des scripts d’exemple pour la prise en main et l’analyse rapide. | Flux standard. |
+| `experiments/` | Conserve des configurations exploratoires liées aux campagnes de recherche. | Historique / recherche. |
+| `figures/` | Archive des figures versionnées servant surtout de référence documentaire. | Historique / archive. |
+| `final/` | Conserve le pipeline historique d’export CSV/figures pour reproduction et comparaison rapide. | Historique / secondaire. |
+| `flora-master/` | Garde une copie de référence externe liée à FLoRa pour comparaison ou archive. | Historique / archive. |
+| `loraflexsim/` | Héberge le cœur applicatif du dashboard et du simulateur. | Flux standard. |
+| `mobile-sfrd_th/` | Maintient une archive legacy documentée maintenant séparée du code packagé officiel. | Historique / archive. |
+| `numpy_stub/` | Fournit un stub local de compatibilité autour de NumPy. | Support technique. |
+| `plots/` | Regroupe des scripts de tracé transverses réutilisables. | Outillage standard. |
+| `pretest_campagne/` | Rassemble les campagnes de recherche, de reproduction et l’espace `archive_or_mock/`. | Recherche / reproduction avancée. |
+| `qos_cli/` | Préserve une CLI QoS spécialisée hors du premier parcours utilisateur. | Historique / secondaire. |
+| `results/` | Stocke des résultats consolidés gardés comme référence ou preuve de reproduction. | Historique / archive. |
+| `scipy/` | Ajoute une couche locale de compatibilité autour de SciPy. | Support technique. |
+| `scripts/` | Réunit les scripts d’automatisation, de bootstrap et de validation. | Outillage standard. |
+| `sfrd/` | Conserve une CLI historique avancée pour campagnes SFRD et calibrations spécifiques. | Historique / secondaire. |
+| `src/` | Porte la racine officielle du code Python packagé. | Flux standard. |
+| `tests/` | Contient la base de validation automatique et des tests du dépôt. | Flux standard. |
+| `traffic/` | Héberge des composants trafic et des utilitaires réseau utilisés par le simulateur. | Flux standard. |
 
 ### Décision explicite sur le dossier `src/mobilesfrdth/`
 

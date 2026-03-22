@@ -2,6 +2,14 @@
 
 Ce document regroupe les pipelines complets utiles après la prise en main initiale du projet.
 
+## Quand quitter le flux standard ?
+
+Le flux standard reste le dashboard et la CLI `mobilesfrdth`. Basculez seulement si votre besoin correspond clairement à l’un des cas suivants :
+
+- **Vers [`sfrd/`](../sfrd/README.md)** : quand vous devez lancer une **CLI historique avancée** pour des campagnes SFRD, de la calibration UCB ou une validation/agrégation spécifique non couverte par `mobilesfrdth`. Voir aussi la section [Pipeline SFRD spécialisé](#3-pipeline-sfrd-spécialisé).
+- **Vers [`final/`](../final/README.md)** : quand vous devez rejouer un **pipeline historique d’export CSV/figures** avec des sorties attendues dans `final/data/` et `final/figures/`. Voir aussi la section [Pipeline historique d’export CSV/figures](#4-pipeline-historique-dexport-csvfigures).
+
+
 ## 1. Génération et export avancés de figures
 
 Le guide détaillé de génération des figures du pipeline scénario C a été déplacé depuis `README_FIGURES.md`.
@@ -79,7 +87,28 @@ Ce flux est utile si vous travaillez spécifiquement sur :
 - l’analyse des récompenses UCB ;
 - la calibration de paramètres UCB.
 
-## 4. Où trouver l’historique et les campagnes de recherche ?
+## 4. Pipeline historique d’export CSV/figures
+
+Le dossier [`final/`](../final/README.md) reste disponible pour un flux de reproduction simple centré sur les CSV et les figures.
+
+### Quand y passer ?
+
+Utilisez-le si vous avez déjà validé le flux standard et que vous devez ensuite :
+
+- écrire rapidement un CSV de simulation dans `final/data/` ;
+- produire des figures dans `final/figures/` avec les scripts historiques ;
+- conserver une arborescence de sortie alignée avec d’anciens exports ou documents.
+
+### Workflow Windows 11 recommandé
+
+```powershell
+python -m loraflexsim.run --nodes 30 --gateways 1 --mode random --interval 10 --steps 100 --output final/data/simulation.csv
+python examples/analyse_resultats.py final/data/simulation.csv --output-dir final/figures --basename pdr_by_nodes
+```
+
+Pour les détails, voir directement [`final/README.md`](../final/README.md).
+
+## 5. Où trouver l’historique et les campagnes de recherche ?
 
 Les contenus hérités, de reproduction et d’archive sont maintenant regroupés sous `docs/archive_or_research/` et, pour les sources conservées dans l’arbre exécutable, sous `pretest_campagne/`.
 

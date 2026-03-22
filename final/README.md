@@ -1,5 +1,7 @@
 # Dossier `final/`
 
+Pipeline historique d’export CSV/figures.
+
 > [!TIP]
 > **À quoi sert ce dossier ?** Conserver un flux reproductible pour lancer des simulations, stocker les CSV et centraliser les figures générées.
 >
