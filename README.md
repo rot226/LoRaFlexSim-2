@@ -199,42 +199,51 @@ Les contenus de reproduction et les campagnes héritées sont maintenant regroup
 - ADR, énergie, longue portée, obstacles, QoS : `docs/adr_protocols.md`, `docs/energy_profiles.md`, `docs/long_range.md`, `docs/obstacle_loss.md`, `docs/qos_cluster_bench_report.md`, `docs/qos_cluster_validation_pipeline.md`
 - Reproduction FLoRa et extension du dashboard : `docs/reproduction_flora.md`, `docs/extension_guide.md`
 
-## Carte du dépôt et statut des dossiers top-level
+## Structure du dépôt : à quoi sert chaque dossier ?
 
-La référence détaillée est maintenue dans `docs/repository_map.md`. Le tableau ci-dessous donne la **vue visible depuis le README** avec, pour chaque dossier top-level, une description d’une phrase et son statut dans le parcours recommandé.
+La référence détaillée reste `docs/repository_map.md`, mais le tableau ci-dessous sert de **guide de lecture rapide** pour savoir **où aller en premier** selon votre besoin. Il couvre les dossiers visibles les plus utiles ou les plus ambigus du dépôt.
 
-| Dossier | Description | Statut dans le parcours recommandé |
-| --- | --- | --- |
-| `.github/` | Contient les workflows GitHub et l’automatisation du dépôt. | Support officiel du dépôt. |
-| `config/` | Regroupe la configuration partagée utilisée par le simulateur et ses outils. | Flux standard. |
-| `docker/` | Fournit un runner CI local Docker pour installer le projet et exécuter les tests en environnement isolé. Voir `docker/README.md`. | Support officiel du dépôt. |
-| `docs/` | Centralise la documentation active, les guides utilisateur et la gouvernance. | Flux standard. |
-| `examples/` | Propose des scripts d’exemple pour la prise en main et l’analyse rapide. | Flux standard. |
-| `experiments/` | Conserve des configurations exploratoires liées aux campagnes de recherche. | Historique / recherche. |
-| `figures/` | Archive des figures versionnées servant surtout de référence documentaire. | Historique / archive. |
-| `final/` | Conserve le pipeline historique d’export CSV/figures pour reproduction et comparaison rapide. | Historique / secondaire. |
-| `flora-master/` | Garde une copie de référence externe liée à FLoRa pour comparaison ou archive. | Historique / archive. |
-| `loraflexsim/` | Héberge le cœur applicatif du dashboard et du simulateur. | Flux standard. |
-| `mobile-sfrd_th/` | Maintient une archive legacy documentée maintenant séparée du code packagé officiel. | Historique / archive. |
-| `numpy_stub/` | Fournit un stub local de compatibilité autour de NumPy. | Support technique. |
-| `plots/` | Regroupe des scripts de tracé transverses réutilisables. | Outillage standard. |
-| `pretest_campagne/` | Rassemble les campagnes de recherche, de reproduction et l’espace `archive_or_mock/`. | Recherche / reproduction avancée. |
-| `qos_cli/` | Préserve une CLI QoS spécialisée hors du premier parcours utilisateur. | Historique / secondaire. |
-| `results/` | Stocke des résultats consolidés gardés comme référence ou preuve de reproduction. | Historique / archive. |
-| `scipy/` | Ajoute une couche locale de compatibilité autour de SciPy. | Support technique. |
-| `scripts/` | Réunit les scripts d’automatisation, de bootstrap et de validation. | Outillage standard. |
-| `sfrd/` | Conserve une CLI historique avancée pour campagnes SFRD et calibrations spécifiques. | Historique / secondaire. |
-| `src/` | Porte la racine officielle du code Python packagé. | Flux standard. |
-| `tests/` | Contient la base de validation automatique et des tests du dépôt. | Flux standard. |
-| `traffic/` | Héberge des composants trafic et des utilitaires réseau utilisés par le simulateur. | Flux standard. |
+> [!TIP]
+> **Parcours recommandé pour un premier usage** : commencez par `README.md`, puis `docs/user_guide_dashboard.md` ou `docs/user_guide_cli.md`. Les dossiers marqués **historiques** ou **secondaires** restent utiles pour la reproduction, la recherche ou la maintenance, mais ne sont pas le point d’entrée principal.
 
-### Décision explicite sur le dossier `src/mobilesfrdth/`
+| Dossier | À quoi sert-il ? | Public cible | Statut | Ouvrir d’abord |
+| --- | --- | --- | --- | --- |
+| `src/` | Racine officielle du package Python installé par `pip install -e .`, notamment `src/mobilesfrdth/`. | Développeurs Python, mainteneurs CLI | **Officiel** | `README.md`, puis `docs/user_guide_cli.md` |
+| `loraflexsim/` | Cœur applicatif du simulateur et du dashboard interactif. | Utilisateurs avancés, développeurs produit | **Officiel** | `docs/user_guide_dashboard.md` |
+| `docs/` | Documentation utilisateur, technique, validation et workflows avancés. | Tous les publics | **Officiel** | `docs/user_guide_dashboard.md` ou `docs/user_guide_cli.md` selon l’entrée choisie |
+| `tests/` | Tests automatisés unitaires, d’intégration et de non-régression du dépôt. | Développeurs, contributeurs, CI | **Officiel** | `docs/test_plan.md` |
+| `scripts/` | Scripts utilitaires de bootstrap, validation, compatibilité Windows et automatisation. | Développeurs, mainteneurs, contributeurs | **Officiel / support** | `README.md`, puis les scripts concernés sous `scripts/windows/` si besoin |
+| `config/` | Fichiers de configuration partagés pour les flux standards du simulateur. | Développeurs, mainteneurs | **Officiel / support** | `README.md` |
+| `examples/` | Exemples de lancement et scripts simples d’analyse ou de démonstration. | Nouveaux utilisateurs, formateurs | **Officiel / secondaire** | `README.md` |
+| `pretest_campagne/` | Racine des campagnes de recherche, reproductions métier et archives associées. | Équipe recherche, reproduction, analyse métier | **Secondaire / recherche** | `docs/archive_or_research/README.md` |
+| `sfrd/` | CLI SFRD historique pour campagnes spécialisées distinctes du flux standard `mobilesfrdth`. | Utilisateurs experts SFRD, maintenance | **Historique / spécialisé** | `sfrd/README.md` |
+| `final/` | Pipeline historique d’export CSV et de génération de figures pour reproduction ou comparaison rapide. | Utilisateurs avancés, reproduction, documentation | **Historique / secondaire** | `final/README.md` |
+| `qos_cli/` | CLI spécialisée pour campagnes QoS, métriques, figures et rapports dédiés. | Utilisateurs QoS avancés, recherche | **Secondaire / spécialisé** | `qos_cli/README.md` |
+| `experiments/` | Configurations d’expériences exploratoires conservées pour campagnes de recherche. | Recherche, benchmark, reproduction | **Secondaire / recherche** | Le `README.md` du sous-dossier concerné, par ex. `experiments/ucb1/README.md` |
+| `mobile-sfrd_th/` | Archive legacy autour d’anciens presets, résultats et exemples ; ce n’est plus la source canonique du package. | Mainteneurs, archivage, comparaison historique | **Historique** | `mobile-sfrd_th/README.md` |
+| `pretest_campagne/archive_or_mock/mobile-sfrd/` | Ancien mock pédagogique déplacé hors top-level pour éviter de le confondre avec le flux officiel. | Archivage, démonstration historique | **Historique / archive** | `pretest_campagne/archive_or_mock/mobile-sfrd/README.md` |
+| `docker/` | Runner CI local et environnement conteneurisé minimal pour vérifier installation et tests. | Contributeurs, CI locale, intégration | **Officiel / support** | `docker/README.md` |
+| `results/` | Résultats versionnés et sorties consolidées gardées comme références de reproduction. | Recherche, validation, comparaison | **Historique / archive** | `results/README.md` |
+| `figures/` | Figures versionnées servant surtout d’archives ou de références documentaires. | Documentation, comparaison, reproduction | **Historique / archive** | `README.md`, puis les dossiers de figures utiles |
+| `plots/` | Scripts ou artefacts de tracé transverses hors pipeline principal. | Développeurs, analyse technique | **Secondaire / support** | `docs/advanced_workflows.md` |
+| `traffic/` | Composants et utilitaires liés au trafic réseau simulé. | Développeurs simulation, recherche | **Officiel / technique** | `docs/usage_scenarios.md` |
+| `flora-master/` | Copie de référence externe liée à FLoRa, conservée pour comparaison scientifique et archive. | Recherche, comparaison académique | **Historique / archive** | `flora-master/README.md` |
+| `numpy_stub/` et `scipy/` | Couches locales de compatibilité autour de dépendances scientifiques. | Mainteneurs, CI, environnements contraints | **Support technique** | `README.md` |
+| `.github/` | Workflows GitHub Actions et automatisation du dépôt. | Mainteneurs, contributeurs CI | **Officiel / support** | Les fichiers sous `.github/workflows/` |
 
-Bien qu'il ne soit pas top-level, `src/mobilesfrdth/` fait partie des cas à clarifier : c'est **l'implémentation officielle** de la CLI `mobilesfrdth`, à **conserver tel quel comme point d’entrée officiel**. L'ancien doublon `mobile-sfrd_th/src/mobilesfrdth/` a été supprimé ; `mobile-sfrd_th/` ne sert plus que d'archive documentaire.
+### Repères rapides
 
-### Décision explicite sur le dossier déplacé `pretest_campagne/archive_or_mock/mobile-sfrd/`
+- **Vous voulez utiliser le projet pour la première fois** : ouvrez `README.md`, puis `docs/user_guide_dashboard.md` ou `docs/user_guide_cli.md`.
+- **Vous voulez modifier le code Python packagé** : travaillez d’abord dans `src/`, puis vérifiez `tests/`.
+- **Vous cherchez des campagnes de reproduction ou des archives métier** : commencez par `pretest_campagne/`, `final/`, `sfrd/` ou `qos_cli/` selon le pipeline visé.
+- **Vous hésitez entre plusieurs interfaces** : privilégiez toujours `mobilesfrdth` et le dashboard `loraflexsim/`; les autres interfaces sont là pour des besoins avancés ou historiques.
 
-L’ancien dossier top-level `mobile-sfrd/` a été déplacé sous `pretest_campagne/archive_or_mock/mobile-sfrd/`. Son statut retenu est : **archive d’un mock pédagogique historique**. Il n’est plus un point d’entrée recommandé ; pour le flux standard, utilisez `mobilesfrdth`.
+### Cas ambigus explicitement clarifiés
+
+- **`src/mobilesfrdth/`** est **l’implémentation officielle** de la CLI `mobilesfrdth` à conserver et à faire évoluer.
+- **`mobile-sfrd_th/`** est **une archive legacy** : utile pour relire des artefacts historiques, mais pas comme source canonique du package.
+- **`pretest_campagne/archive_or_mock/mobile-sfrd/`** correspond à **un ancien mock pédagogique historique**, désormais rangé dans les archives pour éviter toute ambiguïté avec le flux officiel.
+
 
 ## Vérification avant contribution
 
