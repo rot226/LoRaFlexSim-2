@@ -66,7 +66,7 @@ class ValidationAnomaly:
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Valide les CSV de sortie SFRD.")
+    parser = argparse.ArgumentParser(description="Valide les CSV de sortie SFRD (CLI avancée / spécialisée ; entrée recommandée par défaut : mobilesfrdth).")
     parser.add_argument(
         "--output-root",
         type=Path,

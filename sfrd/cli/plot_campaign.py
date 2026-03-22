@@ -35,8 +35,8 @@ _METRIC_SPECS = {
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Génère automatiquement les figures depuis SNIR_OFF/*.csv, "
-            "SNIR_ON/*.csv et learning_curve_ucb.csv."
+            "CLI SFRD avancée / spécialisée : génère automatiquement les figures depuis SNIR_OFF/*.csv, "
+            "SNIR_ON/*.csv et learning_curve_ucb.csv. Pour un nouvel utilisateur, l’entrée recommandée reste mobilesfrdth."
         )
     )
     parser.add_argument(

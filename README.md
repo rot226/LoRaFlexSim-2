@@ -4,6 +4,17 @@ LoRaFlexSim est un simulateur LoRa/LoRaWAN en Python pour explorer des scénario
 
 Ce dépôt est destiné à la communauté : le simulateur peut être utilisé librement, la documentation privilégie une prise en main rapide, et le parcours de lecture distingue clairement l’usage standard recommandé des workflows avancés, de recherche ou de reproduction.
 
+## Orientation rapide des points d’entrée
+
+Pour éviter toute hésitation entre plusieurs CLI ou dossiers :
+
+- **Point d’entrée officiel recommandé** : `mobilesfrdth`
+- **Points d’entrée avancés / spécialisés** : `sfrd`
+- **Flux historiques / reproduction** : `final`, `mobile-sfrd`
+- **Archives / anciens pipelines** : tout dossier déplacé sous l’espace d’archives
+
+En pratique, **si vous débutez ou si vous lancez une nouvelle campagne, utilisez `mobilesfrdth`**. Les autres entrées ne doivent être utilisées que si vous savez déjà que votre besoin relève d’un workflow spécialisé, historique ou archivé.
+
 ## Politique d’installation et d’exécution
 
 ### Plateforme documentée en priorité
@@ -66,9 +77,11 @@ panel serve loraflexsim/launcher/dashboard.py --show
 > [!IMPORTANT]
 > **Entrées recommandées pour un premier usage**
 > - **Dashboard** : `panel serve loraflexsim/launcher/dashboard.py --show`
-> - **CLI communauté** : `mobilesfrdth --help`
+> - **CLI officielle recommandée** : `mobilesfrdth --help`
+> - **CLI avancée / spécialisée** : `python -m sfrd.cli.run_campaign` seulement si vous travaillez déjà sur un pipeline SFRD identifié
+> - **Flux historiques / reproduction** : `final/README.md` et `pretest_campagne/archive_or_mock/mobile-sfrd/README.md`
 >
-> Les autres interfaces présentes dans le dépôt sont conservées pour des usages avancés, historiques ou de reproduction.
+> Les autres interfaces présentes dans le dépôt sont conservées pour des usages avancés, historiques ou d’archive. **Ne les considérez pas comme des “CLI principales” concurrentes de `mobilesfrdth`.**
 
 
 ## Premier succès en 5 minutes
@@ -89,32 +102,34 @@ panel serve loraflexsim/launcher/dashboard.py --show
 
 Le dashboard est la voie la plus simple pour vérifier rapidement que l'environnement est prêt et explorer un premier scénario interactif.
 
-### 2. Lancer une simulation CLI minimale
+### 2. Lancer une campagne CLI minimale recommandée
 
 ```powershell
-python -m loraflexsim.run --nodes 30 --gateways 1 --mode random --interval 10 --steps 100 --output final/data/simulation.csv
+mobilesfrdth run --preset paper_fast --out runs/quickstart
 ```
 
-Cette commande produit un CSV minimal dans : `final/data/simulation.csv`.
+Cette commande utilise **le point d’entrée officiel recommandé** pour produire une première campagne reproductible.
 
-### 3. Retrouver le CSV généré
-
-- **CSV produit** : `final/data/simulation.csv`
-- Ce fichier peut ensuite être ouvert dans Excel, importé dans un notebook ou réutilisé pour tracer une figure.
-
-### 4. Trouver ou générer une figure
-
-- **Emplacement habituel des figures** : `final/figures/`
-- Pour générer une figure simple à partir du CSV précédent :
+### 3. Agréger les résultats
 
 ```powershell
-python examples/analyse_resultats.py final/data/simulation.csv --output-dir final/figures --basename pdr_by_nodes
+mobilesfrdth aggregate --results runs/quickstart --out runs/quickstart
 ```
 
-La figure sera alors écrite dans `final/figures/`.
+### 4. Générer une première figure
+
+```powershell
+mobilesfrdth plots --aggregates-dir runs/quickstart/aggregates --out runs/quickstart/plots --profile exploratory
+```
+
+### 5. Retrouver les sorties générées
+
+- **Résultats bruts** : `runs/quickstart/results/`
+- **Agrégats** : `runs/quickstart/aggregates/`
+- **Figures** : `runs/quickstart/plots/`
 
 > [!TIP]
-> Si vous voulez simplement valider une première exécution sous Windows 11, ce parcours suffit : créer l'environnement, ouvrir le dashboard, lancer une simulation CLI, puis générer une figure à partir du CSV produit.
+> Si vous voulez simplement valider une première exécution sous Windows 11, ce parcours suffit : créer l'environnement, ouvrir le dashboard, lancer `mobilesfrdth run`, puis agréger et tracer les résultats.
 
 ## FAQ de démarrage
 
@@ -142,19 +157,25 @@ Le dashboard est l’entrée recommandée pour un premier usage interactif.
 
 ### Comment lancer une simulation en CLI ?
 
-Pour une première simulation reproductible en ligne de commande :
+Pour une première campagne reproductible en ligne de commande, utilisez la CLI officielle recommandée :
 
 ```powershell
-python -m loraflexsim.run --nodes 30 --gateways 1 --mode random --interval 10 --steps 100 --output final/data/simulation.csv
+mobilesfrdth run --preset paper_fast --out runs/quickstart
 ```
 
-Cette commande écrit un fichier CSV exploitable immédiatement.
+Complétez ensuite avec :
+
+```powershell
+mobilesfrdth aggregate --results runs/quickstart --out runs/quickstart
+mobilesfrdth plots --aggregates-dir runs/quickstart/aggregates --out runs/quickstart/plots --profile exploratory
+```
 
 ### Où récupérer les CSV et les figures ?
 
-- Les **CSV** d’exemple ou générés lors d’un premier essai sont généralement placés dans `final/data/`.
-- Les **figures** générées sont généralement écrites dans `final/figures/`.
-- Le document `docs/advanced_workflows.md` détaille ensuite les exports, traitements et pipelines avancés.
+- Les **résultats bruts** d’un premier essai `mobilesfrdth` sont placés dans `runs/quickstart/results/`.
+- Les **CSV agrégés** sont écrits dans `runs/quickstart/aggregates/`.
+- Les **figures** générées sont écrites dans `runs/quickstart/plots/`.
+- Les flux historiques `final/data/` et `final/figures/` restent disponibles seulement pour la reproduction ou la comparaison avec d’anciens exports.
 
 ## Arborescence documentaire recommandée
 
@@ -231,19 +252,21 @@ La référence détaillée reste `docs/repository_map.md`, mais le tableau ci-de
 | `numpy_stub/` et `scipy/` | Couches locales de compatibilité autour de dépendances scientifiques. | Mainteneurs, CI, environnements contraints | **Support technique** | `README.md` |
 | `.github/` | Workflows GitHub Actions et automatisation du dépôt. | Mainteneurs, contributeurs CI | **Officiel / support** | Les fichiers sous `.github/workflows/` |
 
-### Repères rapides
+## Repères rapides selon votre besoin
 
 - **Vous voulez utiliser le projet pour la première fois** : ouvrez `README.md`, puis `docs/user_guide_dashboard.md` ou `docs/user_guide_cli.md`.
-- **Vous voulez modifier le code Python packagé** : travaillez d’abord dans `src/`, puis vérifiez `tests/`.
-- **Vous cherchez des campagnes de reproduction ou des archives métier** : commencez par `pretest_campagne/`, `final/`, `sfrd/` ou `qos_cli/` selon le pipeline visé.
-- **Vous hésitez entre plusieurs interfaces** : privilégiez toujours `mobilesfrdth` et le dashboard `loraflexsim/`; les autres interfaces sont là pour des besoins avancés ou historiques.
+- **Vous voulez lancer une campagne CLI standard** : utilisez `mobilesfrdth`.
+- **Vous cherchez un pipeline SFRD spécialisé** : allez vers `sfrd/` en sachant qu’il s’agit d’une CLI avancée, pas de l’entrée officielle recommandée.
+- **Vous cherchez des campagnes de reproduction ou des archives métier** : commencez par `pretest_campagne/`, `final/`, `pretest_campagne/archive_or_mock/mobile-sfrd/` ou `docs/archive_or_research/` selon le pipeline visé.
+- **Vous hésitez entre plusieurs interfaces** : privilégiez toujours `mobilesfrdth` et le dashboard `loraflexsim/`; les autres interfaces sont là pour des besoins avancés, historiques ou archivés.
 
-### Cas ambigus explicitement clarifiés
+## Notes de gouvernance utiles
 
 - **`src/mobilesfrdth/`** est **l’implémentation officielle** de la CLI `mobilesfrdth` à conserver et à faire évoluer.
+- **`sfrd/`** reste une CLI **avancée / spécialisée**.
+- **`final/`** et **`pretest_campagne/archive_or_mock/mobile-sfrd/`** relèvent des **flux historiques / reproduction**.
 - **`mobile-sfrd_th/`** est **une archive legacy** : utile pour relire des artefacts historiques, mais pas comme source canonique du package.
-- **`pretest_campagne/archive_or_mock/mobile-sfrd/`** correspond à **un ancien mock pédagogique historique**, désormais rangé dans les archives pour éviter toute ambiguïté avec le flux officiel.
-
+- **Tout dossier déplacé dans un espace d’archives** doit être compris comme **non prioritaire pour un nouvel utilisateur**.
 
 ## Vérification avant contribution
 

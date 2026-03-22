@@ -665,7 +665,7 @@ def aggregate_runs(
     diagnostics_path = out_dir / "aggregate_diagnostics.json"
 
     if not run_dirs:
-        verification_hint = "python -m mobilesfrdth.cli aggregate --results <dossier_résultats> --out <dossier_sortie> --verbose"
+        verification_hint = "mobilesfrdth aggregate --results <dossier_résultats> --out <dossier_sortie> --verbose"
         raise ValueError(
             "Aucun dossier de run détecté dans les entrées. "
             "Vérifiez que vos runs sont sous <input>/results/<run_id>/. "
@@ -1010,7 +1010,7 @@ def aggregate_runs(
     _write_diagnostics()
 
     if processed == 0:
-        verification_hint = "python -m mobilesfrdth.cli aggregate --results <dossier_résultats> --out <dossier_sortie> --verbose"
+        verification_hint = "mobilesfrdth aggregate --results <dossier_résultats> --out <dossier_sortie> --verbose"
         if total == 0:
             raise ValueError(
                 "Aucun run trouvé. "

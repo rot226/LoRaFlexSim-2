@@ -10,7 +10,16 @@
 > **Sorties produites** Répertoires de résultats sous `results/`, métriques agrégées, figures dans `qos_cli/figures/` et rapport de synthèse.
 
 > [!WARNING]
-> **Guide spécialisé** : cette interface complète la CLI officielle `mobilesfrdth` pour les scénarios QoS avancés.
+> **Guide spécialisé** : cette interface complète la CLI officielle `mobilesfrdth` pour les scénarios QoS avancés. Ce n’est pas une CLI principale concurrente.
+
+## Positionnement des points d’entrée
+
+- **Point d’entrée officiel recommandé** : `mobilesfrdth`
+- **Points d’entrée avancés / spécialisés** : `sfrd`, `qos_cli`
+- **Flux historiques / reproduction** : `final`, `mobile-sfrd`
+- **Archives / anciens pipelines** : tout dossier déplacé sous l’espace d’archives
+
+Si vous ne travaillez pas explicitement sur un scénario QoS spécialisé, revenez au flux standard `mobilesfrdth`.
 
 Ce répertoire centralise les fichiers nécessaires pour piloter les scénarios QoS via la future CLI.
 Les scripts fournis (préfixés `lfs_`) orchestrent la préparation des données et l'analyse des résultats.

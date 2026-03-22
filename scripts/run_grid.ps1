@@ -15,4 +15,4 @@ Invoke-Expression "mobilesfrdth aggregate $AggregateArgs"
 Write-Host "[3/3] mobilesfrdth plots $PlotsArgs"
 Invoke-Expression "mobilesfrdth plots $PlotsArgs"
 
-Write-Host "Pipeline mobilesfrdth terminé."
+Write-Host "Pipeline mobilesfrdth terminé (point d’entrée officiel recommandé)."

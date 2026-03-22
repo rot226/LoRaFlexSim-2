@@ -2,13 +2,24 @@
 
 Ce document regroupe les pipelines complets utiles après la prise en main initiale du projet.
 
+## Positionnement rapide
+
+Avant de basculer vers un workflow avancé, gardez la règle suivante :
+
+- **Point d’entrée officiel recommandé** : `mobilesfrdth`
+- **Points d’entrée avancés / spécialisés** : `sfrd`
+- **Flux historiques / reproduction** : `final`, `mobile-sfrd`
+- **Archives / anciens pipelines** : tout dossier déplacé sous l’espace d’archives
+
+Autrement dit : **si `mobilesfrdth` suffit, restez sur `mobilesfrdth`**.
+
 ## Quand quitter le flux standard ?
 
 Le flux standard reste le dashboard et la CLI `mobilesfrdth`. Basculez seulement si votre besoin correspond clairement à l’un des cas suivants :
 
-- **Vers [`sfrd/`](../sfrd/README.md)** : quand vous devez lancer une **CLI historique avancée** pour des campagnes SFRD, de la calibration UCB ou une validation/agrégation spécifique non couverte par `mobilesfrdth`. Voir aussi la section [Pipeline SFRD spécialisé](#3-pipeline-sfrd-spécialisé).
+- **Vers [`sfrd/`](../sfrd/README.md)** : quand vous devez lancer une **CLI avancée / spécialisée** pour des campagnes SFRD, de la calibration UCB ou une validation/agrégation spécifique non couverte par `mobilesfrdth`. Voir aussi la section [Pipeline SFRD spécialisé](#3-pipeline-sfrd-spécialisé).
 - **Vers [`final/`](../final/README.md)** : quand vous devez rejouer un **pipeline historique d’export CSV/figures** avec des sorties attendues dans `final/data/` et `final/figures/`. Voir aussi la section [Pipeline historique d’export CSV/figures](#4-pipeline-historique-dexport-csvfigures).
-
+- **Vers `mobile-sfrd`** : seulement pour rejouer un **mock historique** conservé à des fins pédagogiques ou de comparaison légère. Voir aussi la section [Où trouver l’historique et les campagnes de recherche ?](#5-où-trouver-lhistorique-et-les-campagnes-de-recherche-).
 
 ## 1. Génération et export avancés de figures
 
@@ -86,6 +97,10 @@ Ce flux est utile si vous travaillez spécifiquement sur :
 - l’agrégation avancée ;
 - l’analyse des récompenses UCB ;
 - la calibration de paramètres UCB.
+
+### Rappel de gouvernance
+
+Même si `sfrd` reste exécutable, **ce n’est pas la CLI principale recommandée pour un nouvel utilisateur**. Si vous lancez une nouvelle campagne standard et que vous n’avez pas besoin d’un pipeline SFRD identifié, revenez à `mobilesfrdth`.
 
 ## 4. Pipeline historique d’export CSV/figures
 

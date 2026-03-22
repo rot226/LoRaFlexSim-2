@@ -33,6 +33,7 @@ switch ($Profile) {
 }
 
 $cmd = @($baseArgs + $grid + $extra)
+Write-Host "[mobilesfrdth] Point d’entrée officiel recommandé"
 Write-Host "[mobilesfrdth] Profil=$Profile"
 Write-Host "[mobilesfrdth] Sortie=$Out"
 Write-Host "[mobilesfrdth] Commande: python -m mobilesfrdth $($cmd -join ' ')"
