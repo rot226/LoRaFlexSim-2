@@ -195,6 +195,40 @@ Les contenus de reproduction et les campagnes héritées sont maintenant regroup
 - ADR, énergie, longue portée, obstacles, QoS : `docs/adr_protocols.md`, `docs/energy_profiles.md`, `docs/long_range.md`, `docs/obstacle_loss.md`, `docs/qos_cluster_bench_report.md`, `docs/qos_cluster_validation_pipeline.md`
 - Reproduction FLoRa et extension du dashboard : `docs/reproduction_flora.md`, `docs/extension_guide.md`
 
+## Carte du dépôt et statut des dossiers top-level
+
+La référence détaillée est maintenue dans `docs/repository_map.md`. Le tableau ci-dessous donne la **vue visible depuis le README** afin qu'aucun dossier top-level structurant ne reste sans statut explicite.
+
+| Dossier | Catégorie | Statut visible | Action décidée |
+| --- | --- | --- | --- |
+| `.github/` | conteneur / CI | Workflows GitHub et automatisation du dépôt. | conserver tel quel comme point d’entrée officiel |
+| `config/` | produit principal / flux standard | Configuration partagée du simulateur. | conserver tel quel comme point d’entrée officiel |
+| `docker/` | conteneur / CI | Référence officielle pour la conteneurisation. | conserver tel quel comme point d’entrée officiel |
+| `docs/` | produit principal / flux standard | Documentation active et gouvernance du dépôt. | conserver tel quel comme point d’entrée officiel |
+| `examples/` | outillage / packaging | Scripts d'exemple pour prise en main. | conserver tel quel comme point d’entrée officiel |
+| `experiments/` | recherche / archive | Configurations exploratoires à rapprocher des campagnes de recherche. | déplacer sous `pretest_campagne/` |
+| `figures/` | recherche / archive | Figures versionnées servant surtout de référence. | convertir en simple archive/documentation |
+| `final/` | compatibilité / legacy | Pipeline historique de reproduction CSV/figures. | convertir en simple archive/documentation |
+| `flora-master/` | recherche / archive | Copie de référence externe liée à FLoRa. | convertir en simple archive/documentation |
+| `loraflexsim/` | produit principal / flux standard | Cœur applicatif du dashboard et du simulateur. | conserver tel quel comme point d’entrée officiel |
+| `mobile-sfrd/` | recherche / archive | Générateur expérimental séparé du flux principal. | convertir en simple archive/documentation |
+| `mobile-sfrd_th/` | compatibilité / legacy | Ancien squelette redondant avec le package officiel. | fusionner avec un autre dossier (`src/mobilesfrdth/`) |
+| `numpy_stub/` | compatibilité / legacy | Stub de compatibilité local. | conserver tel quel comme point d’entrée officiel |
+| `plots/` | outillage / packaging | Scripts de tracé transverses. | conserver tel quel comme point d’entrée officiel |
+| `pretest_campagne/` | recherche / archive | Racine officielle des campagnes de recherche et de reproduction. | conserver tel quel comme point d’entrée officiel |
+| `qos_cli/` | compatibilité / legacy | CLI spécialisée hors parcours standard. | convertir en simple archive/documentation |
+| `results/` | recherche / archive | Résultats consolidés conservés comme référence. | convertir en simple archive/documentation |
+| `scipy/` | compatibilité / legacy | Support de compatibilité local autour de SciPy. | conserver tel quel comme point d’entrée officiel |
+| `scripts/` | outillage / packaging | Automatisation, bootstrap et validation. | conserver tel quel comme point d’entrée officiel |
+| `sfrd/` | compatibilité / legacy | CLI SFRD avancée, distincte de `mobilesfrdth`. | convertir en simple archive/documentation |
+| `src/` | produit principal / flux standard | Racine officielle du code Python packagé. | conserver tel quel comme point d’entrée officiel |
+| `tests/` | produit principal / flux standard | Base de validation automatique du dépôt. | conserver tel quel comme point d’entrée officiel |
+| `traffic/` | produit principal / flux standard | Composants trafic et utilitaires réseau. | conserver tel quel comme point d’entrée officiel |
+
+### Décision explicite sur le dossier `src/mobilesfrdth/`
+
+Bien qu'il ne soit pas top-level, `src/mobilesfrdth/` fait partie des cas à clarifier : c'est **l'implémentation officielle** de la CLI `mobilesfrdth`, à **conserver tel quel comme point d’entrée officiel**, tandis que `mobile-sfrd_th/` est à **fusionner** vers cette implémentation de référence.
+
 ## Vérification avant contribution
 
 Depuis la racine du dépôt :
