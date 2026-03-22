@@ -29,4 +29,4 @@ def test_mobilesfrdth_unsupported_python_smoke() -> None:
 
     assert completed.returncode == 2
     assert "Version Python non supportée" in completed.stderr
-    assert "utiliser une version >=3.11 et <3.15" in completed.stderr
+    assert "utiliser une version >=3.11 et <3.13" in completed.stderr

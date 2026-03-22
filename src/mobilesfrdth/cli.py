@@ -17,7 +17,7 @@ from .scenarios import generate_jobs, parse_grid_spec
 
 
 MIN_SUPPORTED_PYTHON = (3, 11)
-MAX_SUPPORTED_PYTHON_EXCLUSIVE = (3, 15)
+MAX_SUPPORTED_PYTHON_EXCLUSIVE = (3, 13)
 
 PROFILE_PRESETS: dict[str, str] = {
     "smoke": "N=40,100,200;speed=1;mode=SNIR_OFF,SNIR_ON;algo=ADR,UCB;reps=1;duration_s=300;seed_base=1234",
@@ -1189,7 +1189,7 @@ def _ensure_supported_python() -> bool:
 def main(argv: list[str] | None = None) -> int:
     if not _ensure_supported_python():
         print(
-            "Version Python non supportée: utiliser une version >=3.11 et <3.15.",
+            "Version Python non supportée: utiliser une version >=3.11 et <3.13.",
             file=sys.stderr,
         )
         return 2

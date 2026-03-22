@@ -42,6 +42,13 @@ python -m pip install -e . --no-build-isolation
 
 > Si PowerShell bloque l’activation, utilisez : `powershell -ExecutionPolicy Bypass -File .\.venv\Scripts\Activate.ps1`.
 
+### Dépendances utiles pour ce flux
+
+- L’installation recommandée `python -m pip install -e . --no-build-isolation` installe le **runtime complet documenté** du dépôt.
+- Pour le flux historique `final/` lui-même, il n’y a **pas de dépendance YAML spécifique** ni de dépendance obligatoire au dashboard.
+- Si vous utilisez aussi le dashboard du dépôt, ajoutez ou conservez **`panel`**, **`plotly`**, **`numpy`** et **`pandas`**.
+- Si vous alternez entre `final/` et le flux standard `mobilesfrdth`, gardez **Python 3.11 ou 3.12** pour rester dans la plage supportée partout.
+
 ### Scénario minimal
 
 Depuis la **racine du dépôt** dans **PowerShell**, lancez une simulation qui écrit un CSV dans `final/data/` :

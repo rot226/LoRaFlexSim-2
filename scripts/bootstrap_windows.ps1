@@ -34,13 +34,27 @@ function Show-RunCommand {
 }
 
 if (-not (Get-Command py -ErrorAction SilentlyContinue)) {
-    Write-Error "Le lanceur Python 'py' est introuvable. Installez Python 3.11+ puis relancez ce script."
+    Write-Error "Le lanceur Python 'py' est introuvable. Installez Python 3.11 ou 3.12 puis relancez ce script."
+    exit 1
+}
+
+$selectedPython = $null
+foreach ($candidate in @('-3.11', '-3.12')) {
+    py $candidate -c "import sys" 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        $selectedPython = $candidate
+        break
+    }
+}
+
+if ($null -eq $selectedPython) {
+    Write-Error "Aucune installation Python 3.11 ou 3.12 n'a été détectée via 'py'."
     exit 1
 }
 
 if (-not (Test-Path $venvPython)) {
-    Write-Host "Création de l'environnement virtuel .venv avec py -3.11..."
-    py -3.11 -m venv .venv
+    Write-Host "Création de l'environnement virtuel .venv avec py $selectedPython..."
+    py $selectedPython -m venv .venv
 }
 
 if (-not (Test-Path $activateScript)) {
@@ -58,6 +72,17 @@ if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
 
 Write-Host "Version Python active :" -ForegroundColor Cyan
 python --version
+
+$activeVersion = python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Impossible de lire la version Python active dans .venv."
+    exit 1
+}
+$activeVersion = ($activeVersion | Select-Object -First 1).Trim()
+if ($activeVersion -notin @('3.11', '3.12')) {
+    Write-Error "Version Python non supportée dans .venv : $activeVersion. Utilisez Python 3.11 ou 3.12."
+    exit 1
+}
 
 Write-Host "Vérification de l'import setuptools..." -ForegroundColor Cyan
 $setuptoolsOk = $true

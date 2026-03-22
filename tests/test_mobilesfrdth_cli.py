@@ -20,7 +20,7 @@ def test_main_rejects_unsupported_python(monkeypatch, capsys):
     captured = capsys.readouterr()
     assert exit_code == 2
     assert "Version Python non supportée" in captured.err
-    assert "utiliser une version >=3.11 et <3.15" in captured.err
+    assert "utiliser une version >=3.11 et <3.13" in captured.err
 
 
 def test_main_help_supported_python(monkeypatch):

@@ -39,6 +39,14 @@ En pratique, **si vous débutez ou si vous lancez une nouvelle campagne, utilise
 - Sous Windows, utilisez de préférence **`py -3.11`**.
 - Sous Linux/macOS, utilisez de préférence **`python3.11`** ou **`python3.12`**.
 
+### Dépendances réellement utiles selon le flux
+
+- **Installation editable recommandée** : `python -m pip install -e . --no-build-isolation` installe le **runtime complet documenté** du dépôt (CLI `mobilesfrdth`, dashboard Panel, API FastAPI et lecture YAML).
+- **Flux standard `mobilesfrdth` (`run -> aggregate -> plots -> validate`) en mode dépôt/offline** : les dépendances minimales réellement requises sont **`matplotlib`** et **`PyYAML`**.
+- **Dashboard** : ajoute explicitement **`panel`**, **`plotly`**, **`numpy`** et **`pandas`**.
+- **API web** : ajoute **`fastapi`** et **`uvicorn`**.
+- **Compatibilité YAML** : le module Python importé est `yaml`, fourni par le paquet **PyYAML**.
+
 ### Méthodes d’installation recommandées
 
 #### Windows 11 / PowerShell
@@ -74,7 +82,7 @@ L'installation editable canonique expose désormais **une seule distribution Pyt
 ```powershell
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
+python -m pip install matplotlib PyYAML
 powershell -ExecutionPolicy Bypass -File scripts/windows/run_offline.ps1
 ```
 

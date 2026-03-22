@@ -16,6 +16,23 @@
 
 Ce dossier est conservé uniquement comme archive documentaire légère autour des anciens presets, exemples et tests exploratoires.
 
+## Prérequis pour rejouer ce flux d’archive
+
+- **Version Python recommandée dans ce dépôt** : **3.11**.
+- **Versions supportées et documentées** : **Python 3.11 à 3.12**.
+- **Installation recommandée** depuis la racine du dépôt : `python -m pip install -e . --no-build-isolation`.
+- **Lecture des presets YAML** : le module `yaml` provient du paquet **PyYAML**.
+- **Flux standard `mobilesfrdth`** (`run -> aggregate -> plots -> validate`) : en mode dépôt/offline, les dépendances minimales réellement requises restent **`matplotlib`** et **`PyYAML`**.
+- **Dashboard** : si vous utilisez aussi `loraflexsim/launcher/dashboard.py`, ajoutez **`panel`**, **`plotly`**, **`numpy`** et **`pandas`**.
+
+Exemple Windows 11 (PowerShell) depuis la racine du dépôt :
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e . --no-build-isolation
+```
+
 ## Documentation détaillée
 
 ### Génération des figures depuis `aggregates/*.csv`
