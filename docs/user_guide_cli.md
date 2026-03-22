@@ -15,15 +15,31 @@ Si vous ne savez pas encore quelle commande utiliser, **choisissez `mobilesfrdth
 
 ## Vérifier l’installation
 
+### Windows 11 / PowerShell
+
 ```powershell
 mobilesfrdth --help
 ```
 
-Si l’entrypoint n’est pas encore disponible, utilisez :
+### Linux / macOS / bash
+
+```bash
+mobilesfrdth --help
+```
+
+Si l’entrypoint n’est pas encore disponible, utilisez l’un des fallbacks suivants :
 
 ```powershell
 python -m mobilesfrdth --help
+powershell -ExecutionPolicy Bypass -File scripts/mobilesfrdth.ps1 --help
 ```
+
+```bash
+python -m mobilesfrdth --help
+./scripts/mobilesfrdth.sh --help
+```
+
+Pour la matrice plateforme complète et les scripts par shell, voir `docs/installation.md`.
 
 ## Workflow minimal recommandé
 
