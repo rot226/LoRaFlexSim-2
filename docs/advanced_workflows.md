@@ -8,7 +8,7 @@ Avant de basculer vers un workflow avancé, gardez la règle suivante :
 
 - **Point d’entrée officiel recommandé** : `mobilesfrdth`
 - **Points d’entrée avancés / spécialisés** : `sfrd`
-- **Flux historiques / reproduction** : `final`, `mobile-sfrd`
+- **Flux historiques / reproduction** : `final/`, `pretest_campagne/archive_or_mock/mobile-sfrd/`
 - **Archives / anciens pipelines** : tout dossier déplacé sous l’espace d’archives
 
 Autrement dit : **si `mobilesfrdth` suffit, restez sur `mobilesfrdth`**.
@@ -19,7 +19,7 @@ Le flux standard reste le dashboard et la CLI `mobilesfrdth`. Basculez seulement
 
 - **Vers [`sfrd/`](../sfrd/README.md)** : quand vous devez lancer une **CLI avancée / spécialisée** pour des campagnes SFRD, de la calibration UCB ou une validation/agrégation spécifique non couverte par `mobilesfrdth`. Voir aussi la section [Pipeline SFRD spécialisé](#3-pipeline-sfrd-spécialisé).
 - **Vers [`final/`](../final/README.md)** : quand vous devez rejouer un **pipeline historique d’export CSV/figures** avec des sorties attendues dans `final/data/` et `final/figures/`. Voir aussi la section [Pipeline historique d’export CSV/figures](#4-pipeline-historique-dexport-csvfigures).
-- **Vers `mobile-sfrd`** : seulement pour rejouer un **mock historique** conservé à des fins pédagogiques ou de comparaison légère. Voir aussi la section [Où trouver l’historique et les campagnes de recherche ?](#5-où-trouver-lhistorique-et-les-campagnes-de-recherche-).
+- **Vers `pretest_campagne/archive_or_mock/mobile-sfrd/`** : seulement pour rejouer un **mock historique** conservé à des fins pédagogiques ou de comparaison légère. Voir aussi la section [Où trouver l’historique et les campagnes de recherche ?](#5-où-trouver-lhistorique-et-les-campagnes-de-recherche-).
 
 ## 1. Génération et export avancés de figures
 

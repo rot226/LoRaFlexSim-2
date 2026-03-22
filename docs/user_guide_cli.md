@@ -8,7 +8,7 @@ Pour éviter toute ambiguïté entre plusieurs CLI présentes dans le dépôt :
 
 - **Point d’entrée officiel recommandé** : `mobilesfrdth`
 - **Points d’entrée avancés / spécialisés** : `sfrd`
-- **Flux historiques / reproduction** : `final`, `mobile-sfrd`
+- **Flux historiques / reproduction** : `final/`, `pretest_campagne/archive_or_mock/mobile-sfrd/`
 - **Archives / anciens pipelines** : tout dossier déplacé sous l’espace d’archives
 
 Si vous ne savez pas encore quelle commande utiliser, **choisissez `mobilesfrdth`**.
@@ -104,7 +104,7 @@ Le package Python canonique est `mobilesfrdth` et son unique arborescence source
 
 - **Vous voyez `sfrd`** : gardez-le pour un pipeline avancé / spécialisé déjà identifié.
 - **Vous voyez `final`** : gardez-le pour un flux historique de reproduction ou de comparaison.
-- **Vous voyez `mobile-sfrd`** : considérez-le comme un flux historique conservé pour archive et reproduction légère.
+- **Vous voyez `mobile-sfrd`** : comprenez qu’il s’agit désormais de l’archive `pretest_campagne/archive_or_mock/mobile-sfrd/`, conservée pour reproduction légère et comparaison historique.
 - **Vous tombez sur un dossier d’archives** : ne l’utilisez pas comme point de départ pour une nouvelle campagne.
 
 ## Interfaces secondaires

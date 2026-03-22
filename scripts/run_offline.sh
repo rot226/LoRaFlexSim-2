@@ -143,4 +143,4 @@ echo "[4/4] validate"
 "${PYTHON_BIN}" -m mobilesfrdth.qa.validate_results --aggregates-dir "${aggregates_dir}" --plots-summary "${figures_dir}/plots_summary.json"
 
 echo "Pipeline offline terminé avec succès via le point d’entrée officiel recommandé mobilesfrdth."
-echo "Les flux sfrd, final et mobile-sfrd restent réservés aux cas avancés ou historiques."
+echo "Les flux sfrd, final et pretest_campagne/archive_or_mock/mobile-sfrd restent réservés aux cas avancés ou historiques."
