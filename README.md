@@ -29,7 +29,7 @@ En pratique, **si vous débutez ou si vous lancez une nouvelle campagne, utilise
 | Scripts PowerShell | **Oui** | **Oui si PowerShell 7 est installé** | **Oui si PowerShell 7 est installé** |
 
 - **Plateforme documentée en priorité : Windows 11**.
-- **Linux et macOS sont documentés explicitement** via `docs/installation.md` et les wrappers Bash `scripts/bootstrap_unix.sh`, `scripts/mobilesfrdth.sh`, `scripts/run_campaign_profiles.sh` et `scripts/run_grid.sh`.
+- **Linux et macOS sont documentés explicitement** via `docs/installation.md`, l’inventaire `docs/user_entrypoints_inventory.md` et les wrappers Bash `scripts/bootstrap_unix.sh`, `scripts/mobilesfrdth.sh`, `scripts/run_campaign_profiles.sh`, `scripts/run_grid.sh` et `scripts/run_offline.sh`.
 - **`cmd.exe` n’est pas la cible documentaire principale**.
 
 ### Version Python
@@ -91,7 +91,7 @@ powershell -ExecutionPolicy Bypass -File scripts/windows/run_offline.ps1
 ```bash
 python3.11 -m venv .venv
 source .venv/bin/activate
-./scripts/mobilesfrdth.sh --help
+./scripts/run_offline.sh
 ```
 
 Dans ce mode seulement, certains scripts positionnent **`PYTHONPATH=src`** automatiquement. **Vous n’avez pas besoin de définir `PYTHONPATH=src` pour l’installation standard.**

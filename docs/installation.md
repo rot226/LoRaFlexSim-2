@@ -23,6 +23,7 @@ Le **point d’entrée CLI recommandé** reste `mobilesfrdth` sur toutes les pla
 - **Windows 11** : suivez en priorité les commandes **PowerShell** du dépôt.
 - **Linux/macOS** : utilisez en priorité les commandes **bash/zsh** ci-dessous et les wrappers `*.sh` ajoutés au dépôt.
 - Si l’installation editable échoue sur n’importe quelle plateforme, utilisez le **fallback `python -m mobilesfrdth`** ou le wrapper dépôt correspondant.
+- Pour l’inventaire détaillé des scripts d’entrée utilisateur (`scripts/`, `final/`, `sfrd/`, `pretest_campagne/` et autres points d’entrée conservés), voir `docs/user_entrypoints_inventory.md`.
 
 ## Python 3.11 / 3.12
 
@@ -182,6 +183,7 @@ Les scripts suivants sont prévus pour être lancés depuis **bash/zsh** à la r
 | `scripts/mobilesfrdth.sh` | Wrapper dépôt vers `python -m mobilesfrdth` avec `PYTHONPATH=src`. | Linux, macOS |
 | `scripts/run_campaign_profiles.sh` | Lance des profils de campagne `mobilesfrdth` (`smoke`, `core_article`, `full_article`). | Linux, macOS |
 | `scripts/run_grid.sh` | Exécute `run`, `aggregate`, puis `plots` avec des chaînes d’arguments bash. | Linux, macOS |
+| `scripts/run_offline.sh` | Pipeline offline complet `run -> aggregate -> plots -> validate` sans installation editable. | Linux, macOS |
 | `scripts/run_all_fast.sh` | Orchestrateur rapide de scénarios représentatifs. | Linux, macOS |
 | `scripts/run_ci_pipeline.sh` | Pipeline CI/bash plus large. | Linux, macOS |
 | `scripts/build_flora_cpp.sh` | Compile la bibliothèque native FLoRa avec `make`. | Linux, macOS |
@@ -194,6 +196,7 @@ source .venv/bin/activate
 ./scripts/mobilesfrdth.sh --help
 ./scripts/run_campaign_profiles.sh smoke runs/campaign_profiles
 ./scripts/run_grid.sh "--preset paper_fast --out runs/quickstart" "--results runs/quickstart --out runs/quickstart" "--aggregates-dir runs/quickstart/aggregates --out runs/quickstart/plots --profile exploratory"
+./scripts/run_offline.sh --scenario-filter snir_on
 ```
 
 ## Scripts disponibles en PowerShell
@@ -206,6 +209,7 @@ Les scripts suivants sont les scripts Windows 11 documentés en priorité.
 | `scripts/mobilesfrdth.ps1` | Wrapper dépôt vers `python -m mobilesfrdth` avec `PYTHONPATH=src`. | Windows 11 |
 | `scripts/run_grid.ps1` | Exécute `run`, `aggregate`, puis `plots`. | Windows 11 |
 | `scripts/run_campaign_profiles.ps1` | Lance des profils de campagne `mobilesfrdth`. | Windows 11 |
+| `scripts/windows/run_offline.ps1` | Pipeline offline complet `run -> aggregate -> plots -> validate` sans installation editable. | Windows 11 |
 | `scripts/run_step1_matrix_windows.ps1` | Pipeline Windows dédié à la matrice Step 1. | Windows 11 |
 
 ## Limitations connues
