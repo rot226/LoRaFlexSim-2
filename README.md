@@ -163,6 +163,7 @@ Cette commande écrit un fichier CSV exploitable immédiatement.
 - `docs/user_guide_cli.md` : premier usage de la CLI `mobilesfrdth`.
 - `docs/advanced_workflows.md` : workflows complets, génération de figures et pipelines spécialisés.
 - `docs/archive_or_research/` : documentation historique, campagnes de reproduction, comparatifs et archives.
+- `docker/README.md` : usage du runner CI local Docker et limites de ce support.
 
 ## Par où commencer ?
 
@@ -206,7 +207,7 @@ La référence détaillée est maintenue dans `docs/repository_map.md`. Le table
 | --- | --- | --- |
 | `.github/` | Contient les workflows GitHub et l’automatisation du dépôt. | Support officiel du dépôt. |
 | `config/` | Regroupe la configuration partagée utilisée par le simulateur et ses outils. | Flux standard. |
-| `docker/` | Fournit les éléments de conteneurisation et d’environnement reproductible. | Support officiel du dépôt. |
+| `docker/` | Fournit un runner CI local Docker pour installer le projet et exécuter les tests en environnement isolé. Voir `docker/README.md`. | Support officiel du dépôt. |
 | `docs/` | Centralise la documentation active, les guides utilisateur et la gouvernance. | Flux standard. |
 | `examples/` | Propose des scripts d’exemple pour la prise en main et l’analyse rapide. | Flux standard. |
 | `experiments/` | Conserve des configurations exploratoires liées aux campagnes de recherche. | Historique / recherche. |
