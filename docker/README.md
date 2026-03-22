@@ -1,8 +1,21 @@
-# `docker/` : runner CI local pour LoRaFlexSim
+# `docker/`
+
+## En 30 secondes
+
+| Rubrique | Réponse rapide |
+| --- | --- |
+| **À quoi sert ce dossier ?** | Fournir un runner Docker minimal pour rejouer localement une validation proche de la CI. |
+| **Quand l’utiliser ?** | Quand vous voulez vérifier l’installation du projet, lancer les tests dans un environnement jetable ou reproduire rapidement un contrôle CI local. |
+| **Quand ne pas l’utiliser ?** | Ne l’utilisez pas comme environnement principal de développement quotidien ni comme parcours recommandé pour découvrir le projet. |
+| **Point d’entrée principal** | `docker/Dockerfile`, puis `docker build -f docker/Dockerfile -t loraflexsim-local-ci .` et `docker run --rm loraflexsim-local-ci`. |
+| **Sorties produites** | Un conteneur Python 3.11 prêt à exécuter `pytest -q` et, selon la commande lancée, les logs de tests ou d’aide CLI. |
+| **Documentation détaillée** | Le README racine positionne `docker/` comme support officiel secondaire ; les commandes détaillées sont regroupées ci-dessous. |
 
 Le dossier `docker/` est **conservé**.
 
-## Décision retenue
+## Documentation détaillée
+
+### Décision retenue
 
 `docker/` n'est **pas** l'environnement d'installation/de développement recommandé pour les utilisateurs du projet.
 
@@ -10,14 +23,7 @@ Le parcours officiel reste l'installation locale documentée dans le `README.md`
 
 Le rôle de `docker/` est plus précis : il sert de **runner CI local** pour exécuter rapidement les validations automatiques du dépôt dans un environnement Python isolé et jetable.
 
-En pratique, ce dossier est utile pour :
-
-- vérifier que le projet s'installe correctement depuis `pyproject.toml` ;
-- lancer la suite de tests sans polluer l'environnement local ;
-- reproduire un contrôle proche d'un job CI minimal ;
-- fournir un point d'entrée conteneurisé aux contributeurs qui ne veulent pas installer toutes les dépendances à la main.
-
-## Ce que fait exactement `docker/Dockerfile`
+### Ce que fait `docker/Dockerfile`
 
 L'image :
 
@@ -36,81 +42,45 @@ python -m pip install --no-cache-dir -e . --no-build-isolation pytest
 pytest -q
 ```
 
-## Usage recommandé sous Windows 11
+### Usage recommandé sous Windows 11
 
 Les exemples ci-dessous sont écrits pour **PowerShell** depuis la **racine du dépôt**.
 
-### 1. Construire l'image
+#### Construire l'image
 
 ```powershell
 docker build -f docker/Dockerfile -t loraflexsim-local-ci .
 ```
 
-### 2. Lancer le contrôle par défaut
-
-Cette commande exécute exactement le `CMD` du `Dockerfile`, donc : `pytest -q`.
+#### Lancer le contrôle par défaut
 
 ```powershell
 docker run --rm loraflexsim-local-ci
 ```
 
-## Commandes réellement exécutées et variantes utiles
+### Variantes utiles
 
-### Commande par défaut du conteneur
-
-```powershell
-docker run --rm loraflexsim-local-ci
-```
-
-Commande exécutée dans le conteneur :
-
-```sh
-pytest -q
-```
-
-### Exécuter un fichier de tests précis
+#### Exécuter un fichier de tests précis
 
 ```powershell
 docker run --rm loraflexsim-local-ci pytest -q tests/test_mobilesfrdth_cli.py
 ```
 
-Commande exécutée dans le conteneur :
-
-```sh
-pytest -q tests/test_mobilesfrdth_cli.py
-```
-
-### Exécuter un sous-ensemble de tests par motif
+#### Exécuter un sous-ensemble de tests par motif
 
 ```powershell
 docker run --rm loraflexsim-local-ci pytest -q -k mobility
 ```
 
-Commande exécutée dans le conteneur :
-
-```sh
-pytest -q -k mobility
-```
-
-### Vérifier que la CLI packagée est bien installée
+#### Vérifier que la CLI packagée est bien installée
 
 ```powershell
 docker run --rm loraflexsim-local-ci python -m mobilesfrdth --help
 ```
 
-Commande exécutée dans le conteneur :
-
-```sh
-python -m mobilesfrdth --help
-```
-
-## Ce que `docker/` n'est pas
-
-Pour éviter toute ambiguïté :
+### Ce que `docker/` n'est pas
 
 - ce n'est **pas** la voie d'installation officielle recommandée aux utilisateurs ;
 - ce n'est **pas** un environnement de développement complet avec montage de volume, hot reload ou outillage IDE ;
 - ce n'est **pas** une simple archive technique passive ;
 - ce n'est **pas** le support principal du dashboard en usage quotidien.
-
-Si votre objectif est d'utiliser ou développer LoRaFlexSim au quotidien sous Windows 11, suivez d'abord le `README.md` racine et créez un environnement virtuel local Python 3.11.

@@ -1,21 +1,25 @@
-# Archive métier `iwcmc_archive`
+# `pretest_campagne/iwcmc_archive/`
 
-> [!TIP]
-> **À quoi sert ce dossier ?** Conserver un point d’accès court vers l’archive métier `iwcmc_archive` et sa documentation d’archive.
->
-> **Quand l’utiliser ?** Quand vous devez reproduire, comparer ou relire des campagnes héritées plutôt que suivre le flux standard courant.
->
-> **Commande minimale** Consulter `docs/archive_or_research/iwcmc_archive.md` avant toute reproduction.
->
-> **Sorties produites** Dépendent de la campagne d’archive étudiée ; ce README sert surtout d’orientation documentaire.
+## En 30 secondes
+
+| Rubrique | Réponse rapide |
+| --- | --- |
+| **À quoi sert ce dossier ?** | Conserver les campagnes héritées `iwcmc_archive` pour reproduction, comparaison et archivage métier. |
+| **Quand l’utiliser ?** | Quand vous devez rejouer ou relire une campagne historique `snir_static`, `rl_static`, `rl_mobile` ou les artefacts MED. |
+| **Quand ne pas l’utiliser ?** | Ne l’utilisez pas pour une nouvelle campagne standard ni comme point d’entrée principal du projet. |
+| **Point d’entrée principal** | Commencer par la documentation d’archive, puis utiliser les scripts `run_campaign.*` des sous-dossiers concernés. |
+| **Sorties produites** | Des résultats historiques dans `results/pretest_campagne/iwcmc_archive/` et des artefacts d’archive spécifiques à chaque sous-campagne. |
+| **Documentation détaillée** | `docs/archive_or_research/iwcmc_archive.md` et `docs/archive_or_research/README.md`. |
 
 **Documentation historique** — ce dossier est conservé pour les campagnes héritées, la reproduction et la comparaison de résultats.
 
-## 1. Objectif du dossier
+## Documentation détaillée
+
+### Objectif du dossier
 
 Le dossier `pretest_campagne/iwcmc_archive/` sert de point d’entrée court vers les artefacts et la documentation de l’archive métier `iwcmc_archive`.
 
-## 2. Prérequis
+### Prérequis
 
 - **OS documenté en priorité : Windows 11**.
 - **Shell documenté : PowerShell**.
@@ -25,31 +29,15 @@ Le dossier `pretest_campagne/iwcmc_archive/` sert de point d’entrée court ver
 - **Installation standard recommandée :** `python -m pip install -e . --no-build-isolation` après activation du venv.
 - **`PYTHONPATH=src` n’est pas requis** pour le flux standard ; il ne s’applique qu’aux contournements offline/fallback explicitement indiqués ailleurs.
 
-## 3. Scénario minimal
+### Scénario minimal
 
 Pour un usage minimal, commencez par lire la documentation d’archive afin d’identifier la campagne et les scripts correspondants.
 
-## 4. Commande de run
+### Commandes de run
 
-Aucune commande de run n’est maintenue directement dans ce README. Référez-vous aux documents d’archive pour les commandes exactes.
+Aucune commande de run unique n’est maintenue dans ce README ; utilisez les scripts `run_campaign.ps1` ou `run_campaign.sh` du sous-dossier concerné.
 
-## 5. Agrégation
-
-Non documentée dans ce README de redirection.
-
-## 6. Plots
-
-Non documentés dans ce README de redirection.
-
-## 7. Rapport
-
-Non documenté dans ce README de redirection.
-
-## 8. Figures détaillées et options avancées
-
-La documentation détaillée a été déplacée vers :
+### Lien direct vers la doc détaillée
 
 - `docs/archive_or_research/iwcmc_archive.md`
 - `docs/archive_or_research/README.md`
-
-Ce README sert désormais de point d’entrée court depuis le dossier `pretest_campagne/iwcmc_archive/`.
