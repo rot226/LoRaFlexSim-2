@@ -7,7 +7,7 @@
 | **À quoi sert ce dossier ?** | Regrouper les expériences de mobilité du scénario D de la campagne MNE3SD et leurs variantes D1–D10. |
 | **Quand l’utiliser ?** | Quand vous devez rejouer ou ajuster une campagne de mobilité scénario D avec sweeps de portée, vitesse, passerelles ou charge. |
 | **Quand ne pas l’utiliser ?** | Ne l’utilisez pas pour une campagne standard `mobilesfrdth` ni pour les autres scénarios `pretest_campagne`. |
-| **Point d’entrée principal** | Les scripts `pretest_campagne.scenario_d.scenarios.run_mobility_*` ou le batch `python -m scripts.mne3sd.run_all_scenario_exports --target scenario_d`. |
+| **Point d’entrée principal** | Les scripts `pretest_campagne.scenario_d.scenarios.run_mobility_*` ou le batch `python -m scripts.mne3sd.run_all_campaign_outputs --campaign scenario_d`. |
 | **Sorties produites** | Des CSV dans `results/mne3sd/scenario_d/` et des figures dans `figures/mne3sd/scenario_d/`. |
 | **Documentation détaillée** | Ce README résume les scénarios D1–D10, les paramètres communs et les commandes de génération. |
 
@@ -61,5 +61,5 @@ python -m pretest_campagne.scenario_d.plots.<figure_module> `
 ### Lanceur de batch
 
 ```powershell
-python -m scripts.mne3sd.run_all_scenario_exports --target scenario_d
+python -m scripts.mne3sd.run_all_campaign_outputs --campaign scenario_d
 ```

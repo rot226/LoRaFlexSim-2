@@ -7,7 +7,7 @@
 | **À quoi sert ce dossier ?** | Regrouper les scripts et figures du scénario A de la campagne MNE3SD, centrés sur densité, charge et profils énergétiques. |
 | **Quand l’utiliser ?** | Quand vous devez rejouer ou ajuster les expériences du scénario A et régénérer les CSV/figures associés. |
 | **Quand ne pas l’utiliser ?** | Ne l’utilisez pas pour une campagne standard `mobilesfrdth` ni pour un autre scénario MNE3SD. |
-| **Point d’entrée principal** | Les modules de `pretest_campagne.scenario_a.scenarios` et le batch `python -m scripts.mne3sd.run_all_scenario_exports --target scenario_a`. |
+| **Point d’entrée principal** | Les modules de `pretest_campagne.scenario_a.scenarios` et le batch `python -m scripts.mne3sd.run_all_campaign_outputs --campaign scenario_a`. |
 | **Sorties produites** | Des CSV dans `results/mne3sd/scenario_a/` et des figures dans `figures/mne3sd/scenario_a/`. |
 | **Documentation détaillée** | Ce README détaille les modules, paramètres et commandes ; voir aussi `docs/energy_profiles.md` pour la partie énergie. |
 
@@ -82,5 +82,5 @@ python -m pretest_campagne.scenario_a.plots.<figure_module> `
 ### Lanceur de batch
 
 ```powershell
-python -m scripts.mne3sd.run_all_scenario_exports --target scenario_a
+python -m scripts.mne3sd.run_all_campaign_outputs --campaign scenario_a
 ```
