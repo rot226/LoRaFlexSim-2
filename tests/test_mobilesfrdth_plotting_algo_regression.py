@@ -1,9 +1,6 @@
 import csv
 import pathlib
 import warnings
-import sys
-
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
 from mobilesfrdth.plotting import plots
 from mobilesfrdth.simulator.io import SUMMARY_COLUMNS, aggregate_runs

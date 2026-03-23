@@ -9,8 +9,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 def test_mobilesfrdth_unsupported_python_smoke() -> None:
     env = os.environ.copy()
-    src_path = str(ROOT / "src")
-    env["PYTHONPATH"] = src_path + os.pathsep + env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = str(ROOT) + os.pathsep + env.get("PYTHONPATH", "")
 
     code = (
         "import sys; "

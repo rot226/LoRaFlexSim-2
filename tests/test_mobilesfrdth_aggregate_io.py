@@ -1,12 +1,9 @@
 import csv
 import json
 import pathlib
-import sys
 import warnings
 
 import pytest
-
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
 from mobilesfrdth.simulator.io import SUMMARY_COLUMNS, aggregate_runs, write_run_outputs
 

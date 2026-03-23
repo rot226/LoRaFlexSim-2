@@ -32,15 +32,15 @@ show_run_command() {
   printf '\n==== Commande à utiliser ====\n'
   if [[ "${editable_installed}" == "true" ]]; then
     printf '%s\n' 'Point d\''entrée officiel recommandé installé :' \
-      '  mobilesfrdth --help' \
-      '  mobilesfrdth presets --list' \
-      '  # CLI avancée / spécialisée seulement si besoin identifié :' \
-      '  python -m sfrd.cli.run_campaign --help'
+      '  loraflexsim --help' \
+      '  loraflexsim presets --list' \
+      '  # Alias de compatibilité si nécessaire :' \
+      '  mobilesfrdth --help'
   else
     printf '%s\n' 'Mode fallback sans installation editable :' \
-      '  ./scripts/mobilesfrdth.sh --help' \
+      '  ./scripts/loraflexsim.sh --help' \
       '  # (équivalent direct)' \
-      '  PYTHONPATH=src python -m mobilesfrdth --help'
+      '  PYTHONPATH=. python -m mobilesfrdth --help'
   fi
 }
 
@@ -74,5 +74,5 @@ if python -m pip install -e . --no-build-isolation; then
 fi
 
 echo "Échec de 'pip install -e . --no-build-isolation'." >&2
-echo "Basculer en mode fallback PYTHONPATH=src pour conserver mobilesfrdth comme point d'entrée recommandé." >&2
+echo "Basculer en mode fallback dépôt pour conserver loraflexsim comme point d'entrée recommandé." >&2
 show_run_command false

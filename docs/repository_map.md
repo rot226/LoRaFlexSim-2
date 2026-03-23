@@ -26,15 +26,14 @@ Conséquence : tout langage présentant `mobilesfrdth` comme « CLI officielle r
 | Dossier | Catégorie | Statut | Rôle documentaire |
 | --- | --- | --- | --- |
 | `loraflexsim/` | produit principal | officiel | cœur historique du simulateur, dashboard et moteur |
-| `src/mobilesfrdth/` | backend officiel | officiel mais non public | implémente aujourd’hui la CLI exposée publiquement sous le nom `loraflexsim` |
+| `mobilesfrdth/` | backend officiel | officiel mais non public | implémente aujourd’hui l’alias de compatibilité derrière la CLI publique `loraflexsim` |
 | `docs/` | produit principal | officiel | documentation utilisateur et technique |
 | `scripts/` | outillage / packaging | officiel | bootstrap et wrappers, dont `scripts/loraflexsim.*` |
 | `config/` | produit principal | officiel | configuration partagée |
 | `docker/` | outillage / packaging | officiel | conteneurisation et CI locale |
 | `tests/` | produit principal | officiel | validation automatique |
-| `final/` | historique / spécialisé | non canonique | reproduction d’anciens pipelines |
+| `docs/archive_or_research/` | recherche / archive | non canonique | documentation des anciens pipelines, campagnes et reproductions |
 | `pretest_campagne/` | recherche / archive | non canonique | scénarios de recherche, comparaisons et archives |
-| `sfrd/` | historique / spécialisé | non canonique | pipeline avancé distinct du flux public |
 | `qos_cli/` | historique / spécialisé | non canonique | interface experte |
 | `results/`, `figures/`, `flora-master/` | recherche / archive | non canonique | artefacts et références |
 
@@ -44,7 +43,7 @@ Conséquence : tout langage présentant `mobilesfrdth` comme « CLI officielle r
 | --- | --- | --- |
 | `loraflexsim/launcher/` | officiel | point d’entrée du dashboard |
 | `loraflexsim/run.py` | historique | moteur CLI bas niveau, à ne pas présenter comme parcours grand public principal |
-| `src/mobilesfrdth/` | backend officiel | à conserver tant que la commande publique `loraflexsim` s’appuie dessus |
+| `mobilesfrdth/` | backend officiel | à conserver tant que l’alias de compatibilité `mobilesfrdth` est exposé |
 | `mobile-sfrd_th/` | legacy | archive, pas point d’entrée officiel |
 | `pretest_campagne/archive_or_mock/mobile-sfrd/` | archive | comparaison historique uniquement |
 

@@ -900,12 +900,12 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "CLI officielle `loraflexsim` pour les campagnes communauté (alias legacy : `mobilesfrdth`) : "
             "génération, agrégation, plots et validation. "
-            "Les workflows avancés/spécialisés relèvent de `sfrd`; "
-            "les flux `final` et `pretest_campagne/archive_or_mock/mobile-sfrd` sont historiques."
+            "Les workflows avancés/spécialisés relèvent de `qos_cli` ou `pretest_campagne`; "
+            "les anciens flux retirés sont décrits dans `docs/archive_or_research/`."
         ),
         epilog=(
             "Point d'entrée officiel recommandé : loraflexsim. Alias legacy : mobilesfrdth.\n"
-            "CLI avancée / spécialisée : sfrd. Flux historiques : final, pretest_campagne/archive_or_mock/mobile-sfrd.\n"
+            "CLI avancée / spécialisée : qos_cli / pretest_campagne. Archives : docs/archive_or_research, pretest_campagne/archive_or_mock/mobile-sfrd.\n"
             "Exemple grille: N=40,60,80,100,120,140,160,180,200;speed=1,3;reps=8;seed_base=1234\n"
             "Exemple run: loraflexsim run --config experiments/default.yaml --out runs --profile paper_core"
         ),

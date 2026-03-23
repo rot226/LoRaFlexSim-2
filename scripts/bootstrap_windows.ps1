@@ -20,16 +20,16 @@ function Show-RunCommand {
     Write-Host "==== Commande à utiliser ====" -ForegroundColor Cyan
 
     if ($EditableInstalled) {
-        Write-Host "Point d'entrée officiel recommandé installé (source canonique : src/mobilesfrdth) :" -ForegroundColor Green
+        Write-Host "Point d'entrée officiel recommandé installé :" -ForegroundColor Green
+        Write-Host "  loraflexsim --help"
+        Write-Host "  loraflexsim presets --list"
+        Write-Host "  # Alias de compatibilité si nécessaire :"
         Write-Host "  mobilesfrdth --help"
-        Write-Host "  mobilesfrdth presets --list"
-        Write-Host "  # CLI avancée / spécialisée seulement si besoin identifié :"
-        Write-Host "  python -m sfrd.cli.run_campaign --help"
     } else {
-        Write-Host "Mode fallback sans installation editable (toujours via le point d'entrée officiel recommandé src/mobilesfrdth) :" -ForegroundColor Yellow
-        Write-Host "  powershell -ExecutionPolicy Bypass -File scripts/mobilesfrdth.ps1 --help"
+        Write-Host "Mode fallback sans installation editable :" -ForegroundColor Yellow
+        Write-Host "  powershell -ExecutionPolicy Bypass -File scripts/loraflexsim.ps1 --help"
         Write-Host "  # (équivalent direct)"
-        Write-Host "  `$env:PYTHONPATH='src'; python -m mobilesfrdth --help"
+        Write-Host "  `$env:PYTHONPATH='.'; python -m mobilesfrdth --help"
     }
 }
 
@@ -96,7 +96,7 @@ if (-not $setuptoolsOk) {
     python -m pip install setuptools
     python -c "import setuptools"
     if ($LASTEXITCODE -ne 0) {
-        Write-Warning "setuptools reste indisponible : passage en mode fallback PYTHONPATH=src via `mobilesfrdth`."
+        Write-Warning "setuptools reste indisponible : passage en mode fallback via `loraflexsim` / `mobilesfrdth`."
         Show-RunCommand -EditableInstalled $false
         exit 0
     }
@@ -106,7 +106,7 @@ Write-Host "Installation du projet en mode editable (sans build isolation)..." -
 python -m pip install -e . --no-build-isolation
 if ($LASTEXITCODE -ne 0) {
     Write-Warning "Échec de 'pip install -e . --no-build-isolation'."
-    Write-Warning "Basculer automatiquement en mode PYTHONPATH=src pour conserver `mobilesfrdth` comme point d'entrée recommandé."
+    Write-Warning "Basculer automatiquement en mode fallback dépôt pour conserver `loraflexsim` comme point d'entrée recommandé."
     Show-RunCommand -EditableInstalled $false
     exit 0
 }

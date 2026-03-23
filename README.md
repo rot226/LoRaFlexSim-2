@@ -92,11 +92,11 @@ Sorties attendues :
 | Dossier | Rôle | Statut |
 | --- | --- | --- |
 | `loraflexsim/` | cœur historique du simulateur et dashboard | officiel pour le moteur et l’UI |
-| `src/mobilesfrdth/` | implémentation technique de la CLI packagée | officiel comme backend de la commande `loraflexsim` |
+| `mobilesfrdth/` | implémentation technique de la CLI packagée | backend de compatibilité derrière la commande publique `loraflexsim` |
 | `docs/` | documentation utilisateur et technique | officiel |
 | `scripts/` | wrappers et automatisation locale | officiel |
-| `final/`, `pretest_campagne/` | reproduction et workflows historiques | historique / recherche |
-| `sfrd/`, `qos_cli/` | CLIs spécialisées | avancé / non canonique |
+| `pretest_campagne/`, `docs/archive_or_research/` | reproduction, archives et workflows historiques | historique / recherche |
+| `qos_cli/`, `docs/archive_or_research/` | outils avancés et archives documentaires | avancé / non canonique |
 
 ## Compatibilité résumée
 

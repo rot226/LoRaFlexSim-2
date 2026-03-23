@@ -1,4 +1,4 @@
-name: mobilesfrdth smoke test
+name: loraflexsim smoke test
 
 on:
   push:
@@ -19,11 +19,11 @@ jobs:
       - name: Install package
         run: pip install -e .
 
-      - name: CLI smoke (mobilesfrdth --help == 0)
+      - name: CLI smoke (loraflexsim --help == 0)
         run: |
-          mobilesfrdth --help
-          mobilesfrdth run --help
-          python -m sfrd.cli.run_campaign --help
+          loraflexsim --help
+          loraflexsim run --help
+          python -m mobilesfrdth --help
 
   smoke-windows:
     runs-on: windows-latest
@@ -47,12 +47,12 @@ jobs:
       - name: Check Windows launcher exists
         shell: pwsh
         run: |
-          if (-not (Test-Path .\.venv\Scripts\mobilesfrdth.exe)) {
-            Write-Error "Launcher manquant: .venv\\Scripts\\mobilesfrdth.exe"
+          if (-not (Test-Path .\.venv\Scripts\loraflexsim.exe)) {
+            Write-Error "Launcher manquant: .venv\\Scripts\\loraflexsim.exe"
           }
 
-      - name: CLI smoke (mobilesfrdth --help == 0)
+      - name: CLI smoke (loraflexsim --help == 0)
         shell: pwsh
         run: |
-          .\.venv\Scripts\mobilesfrdth.exe --help
-          .\.venv\Scripts\python -m sfrd.cli.run_campaign --help
+          .\.venv\Scripts\loraflexsim.exe --help
+          .\.venv\Scripts\python -m mobilesfrdth --help
