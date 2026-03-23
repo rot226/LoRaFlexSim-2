@@ -3,10 +3,7 @@ from __future__ import annotations
 import csv
 import json
 import pathlib
-import sys
 from types import SimpleNamespace
-
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
 from mobilesfrdth import cli
 

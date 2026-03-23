@@ -16,7 +16,7 @@ $scriptDir = Split-Path -Parent -Path $MyInvocation.MyCommand.Path
 $repoRoot = Resolve-Path (Join-Path $scriptDir "../..")
 Set-Location $repoRoot
 
-$env:PYTHONPATH = (Resolve-Path (Join-Path $repoRoot "src")).Path
+$env:PYTHONPATH = $repoRoot.Path
 Write-Host "PYTHONPATH=$($env:PYTHONPATH)" -ForegroundColor Cyan
 
 if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
@@ -89,5 +89,5 @@ Write-Host "[4/4] validate" -ForegroundColor Cyan
 python -m mobilesfrdth.qa.validate_results --aggregates-dir $aggregatesDir --plots-summary (Join-Path $figuresDir "plots_summary.json")
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-Write-Host "Pipeline offline terminé avec succès via le point d’entrée officiel recommandé `mobilesfrdth`." -ForegroundColor Green
-Write-Host "Les flux `sfrd`, `final` et `pretest_campagne/archive_or_mock/mobile-sfrd` restent réservés aux cas avancés ou historiques." -ForegroundColor DarkYellow
+Write-Host "Pipeline offline terminé avec succès via le point d’entrée officiel recommandé `loraflexsim` (backend `mobilesfrdth`)." -ForegroundColor Green
+Write-Host "Les workflows de recherche vivent dans `pretest_campagne/` et les pipelines retirés sont documentés sous `docs/archive_or_research/`." -ForegroundColor DarkYellow

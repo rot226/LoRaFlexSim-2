@@ -5,14 +5,14 @@
 | Rubrique | Réponse rapide |
 | --- | --- |
 | **À quoi sert ce dossier ?** | Conserver une archive légère autour de l’ancien flux `mobile-sfrd_th` : presets historiques, exemples de commandes, contrats de tests et documentation de transition. |
-| **Quand l’utiliser ?** | Quand vous devez relire un workflow historique, comparer d’anciens presets ou comprendre la migration vers la CLI canonique `mobilesfrdth`. |
-| **Quand ne pas l’utiliser ?** | Ne l’utilisez pas comme source canonique du package Python ni comme point d’entrée principal pour une nouvelle campagne. Pour cela, utilisez `src/mobilesfrdth/` et la CLI `mobilesfrdth`. |
-| **Point d’entrée principal** | La CLI installée à la racine du dépôt : `mobilesfrdth` avec les presets archivés de `mobile-sfrd_th/experiments/`. |
+| **Quand l’utiliser ?** | Quand vous devez relire un workflow historique, comparer d’anciens presets ou comprendre la migration vers la CLI canonique `loraflexsim`. |
+| **Quand ne pas l’utiliser ?** | Ne l’utilisez pas comme source canonique du package Python ni comme point d’entrée principal pour une nouvelle campagne. Pour cela, utilisez `loraflexsim/`, le package `mobilesfrdth/` et la CLI `loraflexsim`. |
+| **Point d’entrée principal** | La CLI installée à la racine du dépôt : `loraflexsim` (alias de compatibilité : `mobilesfrdth`) avec les presets archivés de `mobile-sfrd_th/experiments/`. |
 | **Sorties produites** | Des dossiers de résultats de campagne (`runs/...`), des agrégats CSV (`aggregates/...`) et des figures (`plots/...`) lorsque vous rejouez l’ancien flux. |
 | **Documentation détaillée** | Voir le `README.md` racine pour le positionnement global, puis les sections ci-dessous pour les commandes historiques de `plots`, `presets` et `run → aggregate → plots → validate`. |
 
 > [!IMPORTANT]
-> Le **seul package Python canonique `mobilesfrdth`** vit désormais dans `src/mobilesfrdth/` à la racine du dépôt. Le doublon `mobile-sfrd_th/src/mobilesfrdth/` a été supprimé pour éviter toute ambiguïté lors du développement et de l'installation editable.
+> Le backend Python de compatibilité `mobilesfrdth` vit désormais directement dans `mobilesfrdth/` à la racine du dépôt. L’ancien doublon embarqué dans cette archive a été supprimé pour éviter toute ambiguïté lors du développement et de l'installation editable.
 
 Ce dossier est conservé uniquement comme archive documentaire légère autour des anciens presets, exemples et tests exploratoires.
 

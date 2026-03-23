@@ -2,9 +2,6 @@ from __future__ import annotations
 
 import csv
 import pathlib
-import sys
-
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
 from mobilesfrdth.simulator.engine import EventDrivenEngine, Node
 from mobilesfrdth.simulator.io import write_run_outputs

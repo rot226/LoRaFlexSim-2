@@ -1,8 +1,8 @@
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
-# Wrapper fallback Windows pour conserver `mobilesfrdth` comme point d’entrée officiel recommandé.
-# Les workflows `sfrd`, `final` et `pretest_campagne/archive_or_mock/mobile-sfrd` restent spécialisés ou historiques.
-$env:PYTHONPATH = (Resolve-Path (Join-Path $repoRoot 'src')).Path
+# Wrapper fallback Windows pour conserver `mobilesfrdth` comme alias de compatibilité.
+# Le point d’entrée officiel recommandé côté utilisateur est `loraflexsim`.
+$env:PYTHONPATH = (Resolve-Path $repoRoot).Path
 
 python -m mobilesfrdth @args
 exit $LASTEXITCODE

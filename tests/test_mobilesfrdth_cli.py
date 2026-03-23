@@ -5,9 +5,6 @@ from types import SimpleNamespace
 
 import pytest
 
-
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
-
 from mobilesfrdth import cli
 from mobilesfrdth.presets import get_preset, list_presets
 

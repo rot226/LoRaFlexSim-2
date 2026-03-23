@@ -16,7 +16,7 @@ L’ancien nom `mobilesfrdth` reste disponible comme **alias de compatibilité**
 - **CLI officielle recommandée** : `loraflexsim`
 - **Dashboard officiel** : `panel serve loraflexsim/launcher/dashboard.py --show`
 - **CLI technique / historique** : `python -m loraflexsim.run`
-- **Pipelines spécialisés** : `sfrd/`, `qos_cli/`, `final/`, `pretest_campagne/`
+- **Pipelines spécialisés / recherche** : `qos_cli/`, `pretest_campagne/`, `docs/archive_or_research/`
 
 Si vous ne savez pas quelle commande utiliser, **choisissez `loraflexsim`**.
 
@@ -111,12 +111,12 @@ mobilesfrdth --help
 python -m mobilesfrdth --help
 ```
 
-Le backend packagé vit toujours dans `src/mobilesfrdth/`, mais la surface publique documentée a été renommée côté utilisateur en `loraflexsim`.
+Le backend packagé de compatibilité vit désormais dans `mobilesfrdth/`, tandis que la surface publique documentée reste `loraflexsim`.
 
 ## Interfaces secondaires
 
 - `docs/user_guide_dashboard.md` : dashboard officiel ;
-- `sfrd/README.md` : pipeline SFRD spécialisé ;
+- `docs/archive_or_research/sfrd_legacy.md` : archive documentaire du pipeline SFRD retiré ;
 - `qos_cli/README.md` : CLI QoS spécialisée ;
-- `final/README.md` : pipelines historiques ;
+- `docs/archive_or_research/final_legacy.md` : archive documentaire des anciens exports CSV/figures ;
 - `pretest_campagne/` : campagnes de recherche et de reproduction.

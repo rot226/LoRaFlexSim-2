@@ -30,10 +30,7 @@ dependencies = [
 loraflexsim = "mobilesfrdth.cli:main"
 mobilesfrdth = "mobilesfrdth.cli:main"
 
-[tool.setuptools]
-package-dir = {"" = "src"}
-
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
 include = ["mobilesfrdth*"]
 exclude = ["tests*"]

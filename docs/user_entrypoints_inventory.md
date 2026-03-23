@@ -56,9 +56,9 @@ Les autres scripts de `scripts/` restent des outils d’automatisation, de valid
 
 | Zone | Statut | Remarque |
 | --- | --- | --- |
-| `final/` | historique | reproduction de pipelines anciens |
+| `docs/archive_or_research/final_legacy.md` | archive documentaire | description des anciens pipelines d’export CSV/figures |
 | `pretest_campagne/` | recherche / reproduction | campagnes scientifiques et archives |
-| `sfrd/` | spécialisé | pipeline avancé distinct du parcours canonique |
+| `docs/archive_or_research/sfrd_legacy.md` | archive documentaire | description du pipeline SFRD retiré du dépôt exécutable |
 | `qos_cli/` | spécialisé | interface experte |
 
 ## 5. Recommandation courte

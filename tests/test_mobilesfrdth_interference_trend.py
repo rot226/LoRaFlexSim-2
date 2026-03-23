@@ -2,9 +2,6 @@ from __future__ import annotations
 
 import pathlib
 import random
-import sys
-
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 
 from mobilesfrdth.simulator.channel import ChannelConfig, received_power_dbm
 from mobilesfrdth.simulator.interference import InterferenceConfig, transmission_success

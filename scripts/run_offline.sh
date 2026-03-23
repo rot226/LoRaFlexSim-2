@@ -81,7 +81,7 @@ done
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
-export PYTHONPATH="${ROOT_DIR}/src${PYTHONPATH:+:${PYTHONPATH}}"
+export PYTHONPATH="${ROOT_DIR}${PYTHONPATH:+:${PYTHONPATH}}"
 
 echo "PYTHONPATH=${PYTHONPATH}"
 
@@ -142,5 +142,5 @@ fi
 echo "[4/4] validate"
 "${PYTHON_BIN}" -m mobilesfrdth.qa.validate_results --aggregates-dir "${aggregates_dir}" --plots-summary "${figures_dir}/plots_summary.json"
 
-echo "Pipeline offline terminé avec succès via le point d’entrée officiel recommandé mobilesfrdth."
-echo "Les flux sfrd, final et pretest_campagne/archive_or_mock/mobile-sfrd restent réservés aux cas avancés ou historiques."
+echo "Pipeline offline terminé avec succès via le point d’entrée officiel recommandé loraflexsim (backend mobilesfrdth)."
+echo "Les workflows de recherche vivent dans pretest_campagne/ et les pipelines retirés sont documentés sous docs/archive_or_research/."

@@ -6,20 +6,20 @@ Ce document regroupe les pipelines complets utiles après la prise en main initi
 
 Avant de basculer vers un workflow avancé, gardez la règle suivante :
 
-- **Point d’entrée officiel recommandé** : `mobilesfrdth`
-- **Points d’entrée avancés / spécialisés** : `sfrd`
-- **Flux historiques / reproduction** : `final/`, `pretest_campagne/archive_or_mock/mobile-sfrd/`
+- **Point d’entrée officiel recommandé** : `loraflexsim`
+- **Points d’entrée avancés / spécialisés** : `qos_cli`, `pretest_campagne`
+- **Flux historiques / reproduction** : `pretest_campagne/`, `docs/archive_or_research/`, `pretest_campagne/archive_or_mock/mobile-sfrd/`
 - **Archives / anciens pipelines** : tout dossier déplacé sous l’espace d’archives
 
-Autrement dit : **si `mobilesfrdth` suffit, restez sur `mobilesfrdth`**.
+Autrement dit : **si `loraflexsim` suffit, restez sur `loraflexsim`**.
 
 ## Quand quitter le flux standard ?
 
-Le flux standard reste le dashboard et la CLI `mobilesfrdth`. Basculez seulement si votre besoin correspond clairement à l’un des cas suivants :
+Le flux standard reste le dashboard et la CLI `loraflexsim`. Basculez seulement si votre besoin correspond clairement à l’un des cas suivants :
 
-- **Vers [`sfrd/`](../sfrd/README.md)** : quand vous devez lancer une **CLI avancée / spécialisée** pour des campagnes SFRD, de la calibration UCB ou une validation/agrégation spécifique non couverte par `mobilesfrdth`. Voir aussi la section [Pipeline SFRD spécialisé](#3-pipeline-sfrd-spécialisé).
-- **Vers [`final/`](../final/README.md)** : quand vous devez rejouer un **pipeline historique d’export CSV/figures** avec des sorties attendues dans `final/data/` et `final/figures/`. Voir aussi la section [Pipeline historique d’export CSV/figures](#4-pipeline-historique-dexport-csvfigures).
-- **Vers `pretest_campagne/archive_or_mock/mobile-sfrd/`** : seulement pour rejouer un **mock historique** conservé à des fins pédagogiques ou de comparaison légère. Voir aussi la section [Où trouver l’historique et les campagnes de recherche ?](#5-où-trouver-lhistorique-et-les-campagnes-de-recherche-).
+- **Vers `docs/archive_or_research/sfrd_legacy.md`** : si vous devez relire la documentation d’un ancien pipeline SFRD désormais retiré du dépôt exécutable.
+- **Vers `docs/archive_or_research/final_legacy.md`** : si vous devez consulter l’ancien pipeline d’export CSV/figures conservé uniquement comme archive documentaire.
+- **Vers `pretest_campagne/archive_or_mock/mobile-sfrd/`** : seulement pour rejouer un **mock historique** conservé à des fins pédagogiques ou de comparaison légère. Voir aussi la section [Où trouver l’historique et les campagnes de recherche ?](#4-où-trouver-lhistorique-et-les-campagnes-de-recherche-).
 
 ## 1. Génération et export avancés de figures
 
@@ -77,53 +77,22 @@ Utilisez ce pipeline si vous devez :
 - générer des comparatifs détaillés ;
 - produire un manifeste de figures et des diagnostics scientifiques.
 
-## 3. Pipeline SFRD spécialisé
+## 3. Archives de pipelines retirés
 
-Le dossier `sfrd/` correspond à une CLI spécialisée, distincte de l’interface communauté `mobilesfrdth`.
+Les anciens pipelines `sfrd/` et `final/` ont été retirés de l’arbre exécutable. Leur valeur résiduelle est désormais documentaire uniquement.
 
-### Workflow standard
+### Où retrouver leur contexte ?
 
-```powershell
-python -m sfrd.cli.run_campaign --network-sizes 80 160 320 640 1280 --replications 5 --seeds-base 1 --snir OFF,ON --algos UCB ADR MixRA-H MixRA-Opt --warmup-s 0
-python -m sfrd.cli.validate_outputs --output-root sfrd/logs/<campaign_id>/output
-python -m sfrd.cli.plot_campaign --campaign-id <campaign_id>
-```
+- `docs/archive_or_research/sfrd_legacy.md` : description de l’ancienne CLI SFRD, de ses cas d’usage et de ses commandes historiques.
+- `docs/archive_or_research/final_legacy.md` : description du pipeline historique d’export CSV/figures et des sorties autrefois produites.
 
-### Cas d’usage
+### Que faire aujourd’hui à la place ?
 
-Ce flux est utile si vous travaillez spécifiquement sur :
+- Pour une campagne reproductible moderne : utilisez `loraflexsim run`, puis `loraflexsim aggregate`, `loraflexsim plots` et `loraflexsim validate`.
+- Pour la recherche et les reproductions enrichies : utilisez `pretest_campagne/` et les guides de `docs/archive_or_research/`.
+- Pour le moteur historique bas niveau : utilisez `python -m loraflexsim.run` si vous avez une contrainte technique spécifique.
 
-- les campagnes SFRD ;
-- l’agrégation avancée ;
-- l’analyse des récompenses UCB ;
-- la calibration de paramètres UCB.
-
-### Rappel de gouvernance
-
-Même si `sfrd` reste exécutable, **ce n’est pas la CLI principale recommandée pour un nouvel utilisateur**. Si vous lancez une nouvelle campagne standard et que vous n’avez pas besoin d’un pipeline SFRD identifié, revenez à `mobilesfrdth`.
-
-## 4. Pipeline historique d’export CSV/figures
-
-Le dossier [`final/`](../final/README.md) reste disponible pour un flux de reproduction simple centré sur les CSV et les figures.
-
-### Quand y passer ?
-
-Utilisez-le si vous avez déjà validé le flux standard et que vous devez ensuite :
-
-- écrire rapidement un CSV de simulation dans `final/data/` ;
-- produire des figures dans `final/figures/` avec les scripts historiques ;
-- conserver une arborescence de sortie alignée avec d’anciens exports ou documents.
-
-### Workflow Windows 11 recommandé
-
-```powershell
-python -m loraflexsim.run --nodes 30 --gateways 1 --mode random --interval 10 --steps 100 --output final/data/simulation.csv
-python examples/analyse_resultats.py final/data/simulation.csv --output-dir final/figures --basename pdr_by_nodes
-```
-
-Pour les détails, voir directement [`final/README.md`](../final/README.md).
-
-## 5. Où trouver l’historique et les campagnes de recherche ?
+## 4. Où trouver l’historique et les campagnes de recherche ?
 
 Les contenus hérités, de reproduction et d’archive sont maintenant regroupés sous `docs/archive_or_research/` et, pour les sources conservées dans l’arbre exécutable, sous `pretest_campagne/`.
 
@@ -137,4 +106,4 @@ Utilisez-le uniquement si vous devez :
 - rejouer les cinq expériences simplifiées qu’il produit ;
 - comparer un artefact pédagogique avec le flux standard.
 
-Ne l’utilisez pas pour une campagne standard, une validation produit ou un workflow communauté. Dans ces cas, l’entrée officielle reste `mobilesfrdth`.
+Ne l’utilisez pas pour une campagne standard, une validation produit ou un workflow communauté. Dans ces cas, l’entrée officielle reste `loraflexsim`.
