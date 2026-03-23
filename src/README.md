@@ -1,19 +1,23 @@
 # `src/`
 
-Ce dossier contient la **source Python packagée officiellement** par `pip install -e .`.
+## À quoi sert ce dossier ?
 
-## Point clé
+Ce dossier contient la source Python packagée officiellement du projet, en particulier le package `mobilesfrdth` distribué et installé via `pip install -e .`.
 
-Le package canonique mis en avant pour la CLI officielle est :
+## Quand l’utiliser ?
 
-- `src/mobilesfrdth/`
+- Quand vous développez ou corrigez la CLI officielle `mobilesfrdth`.
+- Quand un test ou une commande `python -m mobilesfrdth` renvoie vers ce package.
+- Quand vous devez faire évoluer l'API packagée exposée aux utilisateurs.
 
-C’est ici que vit l’implémentation à faire évoluer pour `mobilesfrdth`.
+## Quand ne pas l’utiliser ?
 
-## Quand l’ouvrir ?
+- Ne l'utilisez pas si vous travaillez uniquement sur le dashboard historique `loraflexsim/`.
+- Ne commencez pas ici si vous cherchez seulement comment lancer le projet en tant qu'utilisateur.
 
-- si vous développez la CLI officielle ;
-- si vous corrigez le moteur de simulation packagé ;
-- si un test ou une commande `python -m mobilesfrdth` vous y renvoie.
+## Point d’entrée / fichiers à ouvrir d’abord
 
-Pour l’usage standard, commencez plutôt par `README.md` puis `docs/user_guide_cli.md`.
+- `src/mobilesfrdth/__main__.py` : entrée d'exécution du package.
+- `src/mobilesfrdth/cli.py` : définition de la CLI officielle.
+- `src/mobilesfrdth/config.py` et `src/mobilesfrdth/scenarios.py` : configuration et scénarios.
+- `docs/user_guide_cli.md` : guide d'usage avant modification.
