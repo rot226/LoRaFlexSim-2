@@ -4,22 +4,141 @@ LoRaFlexSim est un simulateur LoRa/LoRaWAN en Python pour explorer des scénario
 
 Ce dépôt est destiné à la communauté : le simulateur peut être utilisé librement, la documentation privilégie une prise en main rapide, et le parcours de lecture distingue clairement l’usage standard recommandé des workflows avancés, de recherche ou de reproduction.
 
-## Démarrage immédiat
+## Commencer ici
 
-- **Installer** : suivez l’installation recommandée ci-dessous, puis revenez ici pour lancer vos premières commandes.
-- **Lancer le dashboard** : `panel serve loraflexsim/launcher/dashboard.py --show`
-- **Lancer une CLI** : `mobilesfrdth --help` puis `mobilesfrdth run --preset paper_fast --out runs/quickstart`
+Si vous découvrez le dépôt, retenez seulement ceci :
+
+- **Point d’entrée recommandé pour une campagne reproductible** : `mobilesfrdth`
+- **Point d’entrée recommandé pour un test visuel rapide** : `panel serve loraflexsim/launcher/dashboard.py --show`
+- **Documentation de premier niveau** : `docs/user_guide_dashboard.md` et `docs/user_guide_cli.md`
+
+### Mini-parcours décisionnel
+
+- **Je veux tester visuellement** → utilisez le **dashboard** : `panel serve loraflexsim/launcher/dashboard.py --show`
+- **Je veux lancer une campagne reproductible** → utilisez **`mobilesfrdth`**
+- **Je veux reproduire un ancien pipeline** → allez vers **`final/`** ou **`pretest_campagne/...`**
+- **Je veux une CLI spécialisée** → regardez **`sfrd/`** ou **`qos_cli/`**
+
+> [!TIP]
+> Si vous hésitez entre plusieurs entrées, commencez par **le dashboard** pour explorer, ou par **`mobilesfrdth`** pour une campagne standard. Les autres chemins sont surtout utiles pour des besoins spécialisés, historiques ou de reproduction.
+
+## Installation recommandée
+
+### Windows 11 / PowerShell
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e . --no-build-isolation
+```
+
+### Linux / macOS / bash
+
+```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e . --no-build-isolation
+```
+
+Repères utiles :
+
+- **Version recommandée** : Python 3.11
+- **Plage prise en charge par le packaging** : Python 3.11 à 3.12
+- **Wrappers de bootstrap** : `./scripts/bootstrap_windows.ps1` et `./scripts/bootstrap_unix.sh`
+- **Installation standard recommandée** : `python -m pip install -e . --no-build-isolation`
+
+> [!NOTE]
+> La matrice complète de compatibilité plateforme, les scripts par shell et les modes fallback détaillés sont regroupés plus bas dans ce document et dans `docs/installation.md`.
+
+## Première exécution
+
+Depuis la racine du dépôt, après activation de l’environnement :
+
+### 1. Vérifier rapidement l’installation avec le dashboard
+
+```powershell
+panel serve loraflexsim/launcher/dashboard.py --show
+```
+
+Le dashboard est le chemin le plus simple pour valider visuellement que l’environnement fonctionne.
+
+### 2. Lancer une première campagne CLI reproductible
+
+```powershell
+mobilesfrdth run --preset paper_fast --out runs/quickstart
+```
+
+### 3. Agréger puis générer une première figure
+
+```powershell
+mobilesfrdth aggregate --results runs/quickstart --out runs/quickstart
+mobilesfrdth plots --aggregates-dir runs/quickstart/aggregates --out runs/quickstart/plots --profile exploratory
+```
+
+### 4. Retrouver les sorties générées
+
+- **Résultats bruts** : `runs/quickstart/results/`
+- **Agrégats** : `runs/quickstart/aggregates/`
+- **Figures** : `runs/quickstart/plots/`
+
+## Comprendre la structure du dépôt
+
+Pour réduire la charge cognitive, vous pouvez lire le dépôt avec seulement ces repères :
+
+- **`loraflexsim/`** : cœur du simulateur et dashboard interactif.
+- **`src/`** : package Python officiel, notamment `src/mobilesfrdth/`.
+- **`docs/`** : documentation utilisateur, technique et workflows avancés.
+- **`final/`** et **`pretest_campagne/`** : reproduction, recherche et pipelines historiques.
+- **`sfrd/`** et **`qos_cli/`** : CLIs spécialisées pour besoins experts.
+
+### Tableau de lecture rapide
+
+| Besoin | Où aller d’abord ? | Pourquoi |
+| --- | --- | --- |
+| Tester visuellement | `loraflexsim/` puis `docs/user_guide_dashboard.md` | Le dashboard est la porte d’entrée la plus directe. |
+| Lancer une campagne standard | `src/mobilesfrdth/` puis `docs/user_guide_cli.md` | `mobilesfrdth` est l’entrée officielle recommandée. |
+| Reproduire un flux historique | `final/` ou `pretest_campagne/` | Ces dossiers regroupent les pipelines hérités et campagnes de reproduction. |
+| Utiliser une interface experte | `sfrd/` ou `qos_cli/` | Ces CLIs couvrent des besoins spécialisés, pas le parcours standard. |
+
+> [!TIP]
+> Le tableau détaillé dossier par dossier est conservé plus bas dans **« Structure du dépôt : à quoi sert chaque dossier ? »** pour éviter de surcharger la première page.
 
 ## Orientation rapide des points d’entrée
 
 Pour éviter toute hésitation entre plusieurs CLI ou dossiers :
 
 - **Point d’entrée officiel recommandé** : `mobilesfrdth`
-- **Points d’entrée avancés / spécialisés** : `sfrd`
-- **Flux historiques / reproduction** : `final/`, `pretest_campagne/archive_or_mock/mobile-sfrd/`
+- **Points d’entrée avancés / spécialisés** : `sfrd`, `qos_cli/`
+- **Flux historiques / reproduction** : `final/`, `pretest_campagne/`, `pretest_campagne/archive_or_mock/mobile-sfrd/`
 - **Archives / anciens pipelines** : tout dossier déplacé sous l’espace d’archives
 
 En pratique, **si vous débutez ou si vous lancez une nouvelle campagne, utilisez `mobilesfrdth`**. Les autres entrées ne doivent être utilisées que si vous savez déjà que votre besoin relève d’un workflow spécialisé, historique ou archivé.
+
+## Par où commencer ?
+
+### 1. Découvrir le dashboard
+
+Le dashboard est la meilleure porte d’entrée si vous voulez lancer un premier essai sans mémoriser beaucoup d’options.
+
+➡ Voir `docs/user_guide_dashboard.md`.
+
+### 2. Utiliser la CLI officielle
+
+La CLI `mobilesfrdth` couvre le flux stable recommandé pour les campagnes reproductibles.
+
+➡ Voir `docs/user_guide_cli.md`.
+
+### 3. Aller plus loin
+
+Pour les workflows complets, la génération/export de figures, les pipelines spécialisés et les interfaces secondaires, consultez :
+
+➡ `docs/advanced_workflows.md`
+
+### 4. Reproduction, campagnes historiques et recherche
+
+Les contenus de reproduction et les campagnes héritées sont maintenant regroupés sous :
+
+➡ `docs/archive_or_research/`
 
 ## Politique d’installation et d’exécution
 
@@ -126,7 +245,6 @@ panel serve loraflexsim/launcher/dashboard.py --show
 >
 > Les autres interfaces présentes dans le dépôt sont conservées pour des usages avancés, historiques ou d’archive. **Ne les considérez pas comme des “CLI principales” concurrentes de `mobilesfrdth`.**
 
-
 ## Premier succès en 5 minutes
 
 Depuis la **racine du dépôt** dans **PowerShell** :
@@ -229,32 +347,6 @@ mobilesfrdth plots --aggregates-dir runs/quickstart/aggregates --out runs/quicks
 - `docs/advanced_workflows.md` : workflows complets, génération de figures et pipelines spécialisés.
 - `docs/archive_or_research/` : documentation historique, campagnes de reproduction, comparatifs et archives.
 - `docker/README.md` : usage du runner CI local Docker et limites de ce support.
-
-## Par où commencer ?
-
-### 1. Découvrir le dashboard
-
-Le dashboard est la meilleure porte d’entrée si vous voulez lancer un premier essai sans mémoriser beaucoup d’options.
-
-➡ Voir `docs/user_guide_dashboard.md`.
-
-### 2. Utiliser la CLI officielle
-
-La CLI `mobilesfrdth` couvre le flux stable recommandé pour les campagnes reproductibles.
-
-➡ Voir `docs/user_guide_cli.md`.
-
-### 3. Aller plus loin
-
-Pour les workflows complets, la génération/export de figures, les pipelines spécialisés et les interfaces secondaires, consultez :
-
-➡ `docs/advanced_workflows.md`
-
-### 4. Reproduction, campagnes historiques et recherche
-
-Les contenus de reproduction et les campagnes héritées sont maintenant regroupés sous :
-
-➡ `docs/archive_or_research/`
 
 ## Documentation complémentaire
 
