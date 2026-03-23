@@ -5,11 +5,11 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mobilesfrdth"
 version = "1.0.1"
-description = "Distribution Python canonique fournissant le package et la CLI mobilesfrdth"
+description = "Package Python officiel de LoRaFlexSim pour exécuter des campagnes reproductibles via la CLI mobilesfrdth"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
 license = {file = "LICENSE"}
-authors = [{name = "Unknown"}]
+authors = [{name = "François d'Assise Sanou"}]
 
 
 # Dependencies from requirements.txt
