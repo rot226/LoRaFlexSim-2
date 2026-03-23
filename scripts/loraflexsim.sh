@@ -2,8 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-export PYTHONPATH="${ROOT_DIR}/src${PYTHONPATH:+:${PYTHONPATH}}"
+export PYTHONPATH="${ROOT_DIR}${PYTHONPATH:+:${PYTHONPATH}}"
 PYTHON_BIN=${PYTHON:-python}
 
 cd "${ROOT_DIR}"
-exec "${PYTHON_BIN}" -m mobilesfrdth "$@"
+exec "${PYTHON_BIN}" -m loraflexsim "$@"

@@ -4,12 +4,15 @@ Ce guide documente le parcours canonique de LoRaFlexSim.
 
 ## Décision officielle
 
+Le dépôt reste **packagé comme projet Python installable**, avec un packaging désormais centré sur le package public `loraflexsim/`.
+
 La surface publique du simulateur est désormais :
 
 - **dashboard** : `panel serve loraflexsim/launcher/dashboard.py --show`
 - **CLI officielle** : `loraflexsim ...`
+- **fallback Python direct** : `python -m loraflexsim ...`
 
-Les commandes `mobilesfrdth ...` et `python -m loraflexsim.run ...` restent disponibles pour compatibilité ou usage bas niveau, mais **ne sont plus le parcours recommandé**.
+La forme `python -m loraflexsim.run ...` reste disponible pour usage bas niveau, mais **ne constitue pas le parcours recommandé**.
 
 ## Matrice de compatibilité
 
@@ -18,6 +21,7 @@ Les commandes `mobilesfrdth ...` et `python -m loraflexsim.run ...` restent disp
 | Installation editable | **prioritaire** | documentée | documentée |
 | CLI `loraflexsim` | **prioritaire** | documentée | documentée |
 | Wrapper dépôt `scripts/loraflexsim.*` | **oui** | **oui** | **oui** |
+| Fallback `python -m loraflexsim` | **oui** | **oui** | **oui** |
 | Dashboard Panel | **prioritaire** | documenté | documenté |
 | `python -m loraflexsim.run` | historique | historique | historique |
 
@@ -65,6 +69,7 @@ Sous Linux/macOS, les mêmes commandes s’exécutent en bash/zsh.
 powershell -ExecutionPolicy Bypass -File scripts/loraflexsim.ps1 --help
 powershell -ExecutionPolicy Bypass -File scripts/loraflexsim.ps1 presets --list
 powershell -ExecutionPolicy Bypass -File scripts/loraflexsim.ps1 run --preset paper_fast --out runs/quickstart
+python -m loraflexsim --help
 ```
 
 #### Linux / macOS
@@ -73,19 +78,8 @@ powershell -ExecutionPolicy Bypass -File scripts/loraflexsim.ps1 run --preset pa
 ./scripts/loraflexsim.sh --help
 ./scripts/loraflexsim.sh presets --list
 ./scripts/loraflexsim.sh run --preset paper_fast --out runs/quickstart
+python -m loraflexsim --help
 ```
-
-### Compatibilité legacy
-
-Ces formes restent valides si vous maintenez un ancien script :
-
-```powershell
-mobilesfrdth --help
-python -m mobilesfrdth --help
-python -m loraflexsim.run --help
-```
-
-Mais, pour la documentation utilisateur, **préférez désormais `loraflexsim`**.
 
 ## Lancer le dashboard
 
@@ -103,14 +97,13 @@ Même commande sous bash/zsh.
 | `scripts/bootstrap_unix.sh` | bootstrap Unix | Linux, macOS |
 | `scripts/loraflexsim.ps1` | wrapper dépôt canonique | Windows 11 |
 | `scripts/loraflexsim.sh` | wrapper dépôt canonique | Linux, macOS |
-| `scripts/mobilesfrdth.ps1` | wrapper legacy | Windows 11 |
-| `scripts/mobilesfrdth.sh` | wrapper legacy | Linux, macOS |
+| `scripts/windows/run_offline.ps1` | pipeline offline Windows 11 | Windows 11 |
 
 ## Limitations connues
 
 - `panel serve ... --show` dépend de la capacité du système à ouvrir un navigateur par défaut.
 - `python -m loraflexsim.run` expose un niveau plus bas que la CLI officielle et n’offre pas le parcours `run -> aggregate -> plots -> validate` documenté pour la communauté.
-- Le nom de package interne reste `mobilesfrdth`, ce qui explique la présence de commandes de compatibilité.
+- Le dossier `mobilesfrdth/` reste présent dans le dépôt pendant la migration, mais il n’est plus l’ancre du packaging public.
 
 ## Parcours recommandé sans ambiguïté
 
@@ -121,6 +114,7 @@ py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -e . --no-build-isolation
 loraflexsim --help
+python -m loraflexsim --help
 panel serve loraflexsim/launcher/dashboard.py --show
 ```
 
@@ -131,5 +125,6 @@ python3.11 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e . --no-build-isolation
 loraflexsim --help
+python -m loraflexsim --help
 panel serve loraflexsim/launcher/dashboard.py --show
 ```

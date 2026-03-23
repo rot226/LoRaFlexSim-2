@@ -6,7 +6,7 @@ Ce document recense les points d’entrée encore visibles dans le dépôt et pr
 
 - **Dashboard public** : `panel serve loraflexsim/launcher/dashboard.py --show`
 - **CLI publique officielle** : `loraflexsim ...`
-- **Entrées legacy / techniques** : `mobilesfrdth ...`, `python -m loraflexsim.run ...`
+- **Entrées techniques conservées** : `python -m loraflexsim ...`, `python -m loraflexsim.run ...`
 
 ## Dépendances de base
 
@@ -24,16 +24,16 @@ Ce document recense les points d’entrée encore visibles dans le dépôt et pr
 | `loraflexsim` | **CLI officielle** | PowerShell, bash, zsh | Windows 11, Linux, macOS |
 | `scripts/loraflexsim.ps1` | **wrapper dépôt officiel** | PowerShell | Windows 11 |
 | `scripts/loraflexsim.sh` | **wrapper dépôt officiel** | bash | Linux, macOS |
+| `python -m loraflexsim` | **fallback Python direct** | PowerShell, bash, zsh | Windows 11, Linux, macOS |
 | `panel serve loraflexsim/launcher/dashboard.py --show` | **dashboard officiel** | PowerShell, bash, zsh | Windows 11, Linux, macOS |
 
 ## 2. Entrées conservées mais non canoniques
 
 | Entrée | Statut | Quand l’utiliser |
 | --- | --- | --- |
-| `mobilesfrdth` | alias legacy | maintenance d’anciens scripts ou habitudes locales |
-| `python -m mobilesfrdth` | fallback technique | environnement où l’entrypoint console n’est pas installé |
-| `scripts/mobilesfrdth.ps1` / `scripts/mobilesfrdth.sh` | wrappers legacy | compatibilité dépôt |
 | `python -m loraflexsim.run` | moteur historique bas niveau | tests ciblés, débogage ou documentation historique |
+| scripts ciblés dans `scripts/` | outillage local | automatisation, validation, campagnes spécialisées |
+| modules sous `mobilesfrdth/` | code historique interne | migration technique en cours, pas documentation utilisateur |
 
 ## 3. Dossier `scripts/`
 
@@ -43,10 +43,9 @@ Ce document recense les points d’entrée encore visibles dans le dépôt et pr
 | --- | --- | --- | --- |
 | `scripts/bootstrap_windows.ps1` | recommandé | Windows 11 | prépare l’environnement local |
 | `scripts/bootstrap_unix.sh` | recommandé | Linux, macOS | prépare l’environnement local |
-| `scripts/loraflexsim.ps1` | canonique | Windows 11 | wrapper dépôt vers `python -m mobilesfrdth` |
-| `scripts/loraflexsim.sh` | canonique | Linux, macOS | wrapper dépôt vers `python -m mobilesfrdth` |
-| `scripts/mobilesfrdth.ps1` | legacy | Windows 11 | conserve l’ancien nom public |
-| `scripts/mobilesfrdth.sh` | legacy | Linux, macOS | conserve l’ancien nom public |
+| `scripts/loraflexsim.ps1` | canonique | Windows 11 | wrapper dépôt vers `python -m loraflexsim` |
+| `scripts/loraflexsim.sh` | canonique | Linux, macOS | wrapper dépôt vers `python -m loraflexsim` |
+| `scripts/windows/run_offline.ps1` | recommandé pour l’offline Windows 11 | Windows 11 | pipeline `run -> aggregate -> plots -> validate` |
 
 ### Scripts spécialisés
 
@@ -66,4 +65,4 @@ Les autres scripts de `scripts/` restent des outils d’automatisation, de valid
 - **Nouveau point d’entrée CLI à documenter** : `loraflexsim`
 - **Nouveau point d’entrée visuel à documenter** : le dashboard Panel
 - **À éviter comme message public** : « CLI officielle recommandée `mobilesfrdth` »
-- **À garder comme note de compatibilité** : `mobilesfrdth` reste un alias legacy
+- **À garder comme note interne** : `mobilesfrdth/` reste un dossier de migration technique

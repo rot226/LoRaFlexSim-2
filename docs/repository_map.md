@@ -8,7 +8,7 @@ La surface publique de LoRaFlexSim est désormais :
 
 1. **dashboard** : `panel serve loraflexsim/launcher/dashboard.py --show`
 2. **CLI officielle** : `loraflexsim ...`
-3. **compatibilité** : `mobilesfrdth ...`
+3. **fallback Python direct** : `python -m loraflexsim ...`
 4. **moteur historique** : `python -m loraflexsim.run ...`
 
 Conséquence : tout langage présentant `mobilesfrdth` comme « CLI officielle recommandée » doit être considéré comme obsolète.
@@ -16,7 +16,7 @@ Conséquence : tout langage présentant `mobilesfrdth` comme « CLI officielle r
 ## Catégories utilisées
 
 - **produit principal** : à mettre en avant pour les utilisateurs et le développement courant ;
-- **backend officiel** : implémentation technique derrière la surface publique ;
+- **migration interne** : code conservé le temps de réaligner totalement le dépôt ;
 - **historique / spécialisé** : à conserver mais à ne plus promouvoir comme point d’entrée principal ;
 - **recherche / archive** : campagnes, reproductions et artefacts scientifiques ;
 - **outillage / packaging** : support d’installation, wrappers, CI et maintenance.
@@ -25,8 +25,8 @@ Conséquence : tout langage présentant `mobilesfrdth` comme « CLI officielle r
 
 | Dossier | Catégorie | Statut | Rôle documentaire |
 | --- | --- | --- | --- |
-| `loraflexsim/` | produit principal | officiel | cœur historique du simulateur, dashboard et moteur |
-| `mobilesfrdth/` | backend officiel | officiel mais non public | implémente aujourd’hui l’alias de compatibilité derrière la CLI publique `loraflexsim` |
+| `loraflexsim/` | produit principal | officiel | package public, simulateur, dashboard et moteur |
+| `mobilesfrdth/` | migration interne | transitoire | code historique encore présent pendant le réalignement |
 | `docs/` | produit principal | officiel | documentation utilisateur et technique |
 | `scripts/` | outillage / packaging | officiel | bootstrap et wrappers, dont `scripts/loraflexsim.*` |
 | `config/` | produit principal | officiel | configuration partagée |
@@ -43,7 +43,7 @@ Conséquence : tout langage présentant `mobilesfrdth` comme « CLI officielle r
 | --- | --- | --- |
 | `loraflexsim/launcher/` | officiel | point d’entrée du dashboard |
 | `loraflexsim/run.py` | historique | moteur CLI bas niveau, à ne pas présenter comme parcours grand public principal |
-| `mobilesfrdth/` | backend officiel | à conserver tant que l’alias de compatibilité `mobilesfrdth` est exposé |
+| `mobilesfrdth/` | migration interne | à ne plus présenter comme backend public |
 | `mobile-sfrd_th/` | legacy | archive, pas point d’entrée officiel |
 | `pretest_campagne/archive_or_mock/mobile-sfrd/` | archive | comparaison historique uniquement |
 
@@ -54,5 +54,5 @@ Le `README.md` et les guides utilisateur doivent désormais :
 - montrer **comment installer** ;
 - montrer **comment lancer le dashboard** ;
 - montrer **comment lancer `loraflexsim`** ;
-- reléguer `mobilesfrdth` au rang de compatibilité ;
+- utiliser `python -m loraflexsim` comme fallback Python direct ;
 - reléguer `python -m loraflexsim.run` au rang d’interface historique / technique.

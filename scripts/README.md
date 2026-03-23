@@ -19,6 +19,6 @@ Ce dossier regroupe les scripts d'automatisation, de bootstrap, de lancement de 
 
 - `scripts/bootstrap_windows.ps1` et `scripts/bootstrap_unix.sh` : préparation d'environnement.
 - `scripts/loraflexsim.ps1` et `scripts/loraflexsim.sh` : wrappers vers le point d’entrée officiel `loraflexsim`.
-- `scripts/mobilesfrdth.ps1` et `scripts/mobilesfrdth.sh` : wrappers legacy de compatibilité.
+- `scripts/windows/run_offline.ps1` : pipeline offline prioritaire pour Windows 11.
 - `scripts/run_ci_pipeline.sh` : repère utile pour la chaîne de checks.
 - `scripts/run_qos_comparison.py` ou les scripts `run_*.py` / `validate_*.py` pertinents selon le workflow ciblé.

@@ -1,6 +1,11 @@
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$env:PYTHONPATH = (Resolve-Path (Join-Path $repoRoot 'src')).Path
+$resolvedRoot = (Resolve-Path $repoRoot).Path
+if ($env:PYTHONPATH) {
+    $env:PYTHONPATH = "$resolvedRoot;$env:PYTHONPATH"
+} else {
+    $env:PYTHONPATH = $resolvedRoot
+}
 
-python -m mobilesfrdth @args
+python -m loraflexsim @args
 exit $LASTEXITCODE

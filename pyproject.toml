@@ -3,14 +3,16 @@ requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "mobilesfrdth"
+name = "loraflexsim"
 version = "1.0.1"
-description = "Package Python officiel de LoRaFlexSim pour exécuter des campagnes reproductibles via la CLI loraflexsim"
+description = "LoRaFlexSim : simulateur LoRa/LoRaWAN avec dashboard Panel et CLI loraflexsim pour campagnes reproductibles"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
 license = {file = "LICENSE"}
-authors = [{name = "François d'Assise Sanou"}]
-
+authors = [
+  {name = "François d'Assise Sanou"},
+  {name = "Contributeurs LoRaFlexSim"}
+]
 
 # Dependencies from requirements.txt
 dependencies = [
@@ -27,10 +29,12 @@ dependencies = [
 ]
 
 [project.scripts]
-loraflexsim = "mobilesfrdth.cli:main"
-mobilesfrdth = "mobilesfrdth.cli:main"
+loraflexsim = "loraflexsim.__main__:main"
+
+[tool.setuptools]
+package-dir = {"" = "."}
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["mobilesfrdth*"]
+include = ["loraflexsim*"]
 exclude = ["tests*"]
