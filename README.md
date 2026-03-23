@@ -88,7 +88,7 @@ Pour réduire la charge cognitive, vous pouvez lire le dépôt avec seulement ce
 - **`loraflexsim/`** : cœur du simulateur et dashboard interactif.
 - **`src/`** : package Python officiel, notamment `src/mobilesfrdth/`.
 - **`docs/`** : documentation utilisateur, technique et workflows avancés.
-- **`final/`** et **`pretest_campagne/`** : reproduction, recherche et pipelines historiques.
+- **`final/`** et **`pretest_campagne/`** : reproduction, recherche et pipelines historiques ; dans `final/`, les points d’entrée actuels sont `final/scenarios/`, `final/plots/` et `final/run_all.*`.
 - **`sfrd/`** et **`qos_cli/`** : CLIs spécialisées pour besoins experts.
 
 ### Tableau de lecture rapide
@@ -97,7 +97,7 @@ Pour réduire la charge cognitive, vous pouvez lire le dépôt avec seulement ce
 | --- | --- | --- |
 | Tester visuellement | `loraflexsim/` puis `docs/user_guide_dashboard.md` | Le dashboard est la porte d’entrée la plus directe. |
 | Lancer une campagne standard | `src/mobilesfrdth/` puis `docs/user_guide_cli.md` | `mobilesfrdth` est l’entrée officielle recommandée. |
-| Reproduire un flux historique | `final/` ou `pretest_campagne/` | Ces dossiers regroupent les pipelines hérités et campagnes de reproduction. |
+| Reproduire un flux historique | `final/README.md` ou `pretest_campagne/` | `final/README.md` renvoie vers les entrées encore actives (`final/scenarios/`, `final/plots/`, `final/run_all.*`) ; `pretest_campagne/` couvre les autres campagnes de reproduction. |
 | Utiliser une interface experte | `sfrd/` ou `qos_cli/` | Ces CLIs couvrent des besoins spécialisés, pas le parcours standard. |
 
 > [!TIP]
@@ -110,7 +110,7 @@ Les sections de démarrage redondantes ont été fusionnées dans les quatre blo
 - **Installation complète, compatibilité plateforme et fallbacks** : `docs/installation.md`
 - **Premier usage du dashboard** : `docs/user_guide_dashboard.md`
 - **Premier workflow CLI reproductible avec `mobilesfrdth`** : `docs/user_guide_cli.md`
-- **Workflows avancés, export et reproduction** : `docs/advanced_workflows.md` et `docs/archive_or_research/`
+- **Workflows avancés, export et reproduction** : `docs/advanced_workflows.md`, `docs/archive_or_research/` et `final/README.md` pour le pipeline historique `final/`
 
 ## Politique d’installation et d’exécution
 
@@ -204,7 +204,7 @@ Utilisez désormais ces références canoniques selon votre besoin :
 - **Réinstaller ou adapter les commandes à votre shell** : `docs/installation.md`
 - **Retrouver le lancement guidé du dashboard** : `docs/user_guide_dashboard.md`
 - **Retrouver le workflow CLI complet (`run`, `aggregate`, `plots`, `validate`)** : `docs/user_guide_cli.md`
-- **Consulter les flux historiques ou spécialisés** : `docs/archive_or_research/`, `final/README.md`, `sfrd/README.md` et `qos_cli/README.md`
+- **Consulter les flux historiques ou spécialisés** : `docs/archive_or_research/`, `final/README.md`, `sfrd/README.md` et `qos_cli/README.md` ; évitez d’inférer d’anciens sous-chemins documentaires comme `final/data/` ou `final/figures/`, remplacés par la documentation locale et les sous-dossiers actuels de `final/`.
 
 ## Arborescence documentaire recommandée
 
@@ -212,7 +212,7 @@ Utilisez désormais ces références canoniques selon votre besoin :
 - `docs/installation.md` : compatibilité plateforme, installation Python 3.11/3.12, scripts Bash/PowerShell et limitations connues.
 - `docs/user_guide_dashboard.md` : premier usage du dashboard.
 - `docs/user_guide_cli.md` : premier usage de la CLI `mobilesfrdth`.
-- `docs/advanced_workflows.md` : workflows complets, génération de figures et pipelines spécialisés.
+- `docs/advanced_workflows.md` : workflows complets, génération de figures et positionnement des pipelines spécialisés ; pour le détail opérationnel du pipeline historique `final/`, basculez vers `final/README.md`.
 - `docs/archive_or_research/` : documentation historique, campagnes de reproduction, comparatifs et archives.
 - `docker/README.md` : usage du runner CI local Docker et limites de ce support.
 
@@ -242,14 +242,14 @@ La référence détaillée reste `docs/repository_map.md`, mais le tableau ci-de
 | `examples/` | Exemples de lancement et scripts simples d’analyse ou de démonstration. | Nouveaux utilisateurs, formateurs | **Officiel / secondaire** | `examples/README.md` |
 | `pretest_campagne/` | Racine des campagnes de recherche, reproductions métier et archives associées. | Équipe recherche, reproduction, analyse métier | **Secondaire / recherche** | `pretest_campagne/README.md`, puis `docs/archive_or_research/README.md` |
 | `sfrd/` | CLI SFRD historique pour campagnes spécialisées distinctes du flux standard `mobilesfrdth`. | Utilisateurs experts SFRD, maintenance | **Historique / spécialisé** | `sfrd/README.md` |
-| `final/` | Pipeline historique d’export CSV et de génération de figures pour reproduction ou comparaison rapide. | Utilisateurs avancés, reproduction, documentation | **Historique / secondaire** | `final/README.md` |
+| `final/` | Pipeline historique de reproduction avec scripts de lancement (`run_all.*`), scénarios (`final/scenarios/`) et scripts de tracé (`final/plots/`) ; les anciennes références du type `final/data/` ou `final/figures/` ne correspondent plus à l’arborescence actuelle. | Utilisateurs avancés, reproduction, documentation | **Historique / secondaire** | `final/README.md` |
 | `qos_cli/` | CLI spécialisée pour campagnes QoS, métriques, figures et rapports dédiés. | Utilisateurs QoS avancés, recherche | **Secondaire / spécialisé** | `qos_cli/README.md` |
 | `experiments/` | Configurations d’expériences exploratoires conservées pour campagnes de recherche. | Recherche, benchmark, reproduction | **Secondaire / recherche** | `experiments/README.md`, puis le `README.md` du sous-dossier concerné |
 | `mobile-sfrd_th/` | Archive legacy autour d’anciens presets, résultats et exemples ; ce n’est plus la source canonique du package. | Mainteneurs, archivage, comparaison historique | **Historique** | `mobile-sfrd_th/README.md` |
 | `pretest_campagne/archive_or_mock/mobile-sfrd/` | Ancien mock pédagogique déplacé hors top-level pour éviter de le confondre avec le flux officiel. | Archivage, démonstration historique | **Historique / archive** | `pretest_campagne/archive_or_mock/mobile-sfrd/README.md` |
 | `docker/` | Runner CI local et environnement conteneurisé minimal pour vérifier installation et tests. | Contributeurs, CI locale, intégration | **Officiel / support** | `docker/README.md` |
 | `results/` | Résultats versionnés et sorties consolidées gardées comme références de reproduction. | Recherche, validation, comparaison | **Historique / archive** | `results/README.md` |
-| `figures/` | Figures versionnées servant surtout d’archives ou de références documentaires. | Documentation, comparaison, reproduction | **Historique / archive** | `figures/README.md` |
+| `figures/` | Figures versionnées conservées comme archives documentaires globales du dépôt ; ce dossier ne remplace pas `final/plots/` pour le pipeline historique `final/`. | Documentation, comparaison, reproduction | **Historique / archive** | `figures/README.md` |
 | `plots/` | Scripts ou artefacts de tracé transverses hors pipeline principal. | Développeurs, analyse technique | **Secondaire / support** | `plots/README.md`, puis `docs/advanced_workflows.md` |
 | `traffic/` | Composants et utilitaires liés au trafic réseau simulé. | Développeurs simulation, recherche | **Officiel / technique** | `traffic/README.md`, puis `docs/usage_scenarios.md` |
 | `flora-master/` | Copie de référence externe liée à FLoRa, conservée pour comparaison scientifique et archive. | Recherche, comparaison académique | **Historique / archive** | `flora-master/README.md` |
@@ -261,14 +261,14 @@ La référence détaillée reste `docs/repository_map.md`, mais le tableau ci-de
 - **Vous voulez utiliser le projet pour la première fois** : ouvrez `README.md`, puis `docs/user_guide_dashboard.md` ou `docs/user_guide_cli.md`.
 - **Vous voulez lancer une campagne CLI standard** : utilisez `mobilesfrdth`.
 - **Vous cherchez un pipeline SFRD spécialisé** : allez vers `sfrd/` en sachant qu’il s’agit d’une CLI avancée, pas de l’entrée officielle recommandée.
-- **Vous cherchez des campagnes de reproduction ou des archives métier** : commencez par `pretest_campagne/`, `final/`, `pretest_campagne/archive_or_mock/mobile-sfrd/` ou `docs/archive_or_research/` selon le pipeline visé.
+- **Vous cherchez des campagnes de reproduction ou des archives métier** : commencez par `final/README.md` pour le pipeline historique `final/`, puis `pretest_campagne/`, `pretest_campagne/archive_or_mock/mobile-sfrd/` ou `docs/archive_or_research/` selon le pipeline visé.
 - **Vous hésitez entre plusieurs interfaces** : privilégiez toujours `mobilesfrdth` et le dashboard `loraflexsim/`; les autres interfaces sont là pour des besoins avancés, historiques ou archivés.
 
 ## Notes de gouvernance utiles
 
 - **`src/mobilesfrdth/`** est **l’implémentation officielle** de la CLI `mobilesfrdth` à conserver et à faire évoluer.
 - **`sfrd/`** reste une CLI **avancée / spécialisée**.
-- **`final/`** et **`pretest_campagne/archive_or_mock/mobile-sfrd/`** relèvent des **flux historiques / reproduction**.
+- **`final/`** et **`pretest_campagne/archive_or_mock/mobile-sfrd/`** relèvent des **flux historiques / reproduction** ; pour `final/`, la documentation à jour pointe vers `final/run_all.*`, `final/scenarios/` et `final/plots/`, pas vers d’anciens chemins comme `final/data/` ou `final/figures/`.
 - **`mobile-sfrd_th/`** est **une archive legacy** : utile pour relire des artefacts historiques, mais pas comme source canonique du package.
 - **Tout dossier déplacé dans un espace d’archives** doit être compris comme **non prioritaire pour un nouvel utilisateur**.
 
