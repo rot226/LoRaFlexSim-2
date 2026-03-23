@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mobilesfrdth"
 version = "1.0.1"
-description = "Package Python officiel de LoRaFlexSim pour exécuter des campagnes reproductibles via la CLI mobilesfrdth"
+description = "Package Python officiel de LoRaFlexSim pour exécuter des campagnes reproductibles via la CLI loraflexsim"
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
 license = {file = "LICENSE"}
@@ -27,6 +27,7 @@ dependencies = [
 ]
 
 [project.scripts]
+loraflexsim = "mobilesfrdth.cli:main"
 mobilesfrdth = "mobilesfrdth.cli:main"
 
 [tool.setuptools]

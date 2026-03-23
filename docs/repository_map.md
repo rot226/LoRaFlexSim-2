@@ -1,67 +1,59 @@
 # Carte de référence du dépôt
 
-Ce document sert de **référence unique** pour statuer sur les dossiers structurants du dépôt. Il complète le `README.md` :
+Ce document fixe la lecture documentaire du dépôt après la décision de surface publique.
 
-- le `README.md` expose une vue courte et immédiatement visible ;
-- ce document fixe la **catégorie**, le **statut** et l'**action cible** de chaque dossier top-level ;
-- les décisions ci-dessous sont des **décisions de gouvernance documentaire** : elles clarifient la cible d'organisation ; pour `mobilesfrdth`, la convergence vers `src/mobilesfrdth/` est désormais matérialisée dans l'arbre du dépôt.
+## Décision structurante
+
+La surface publique de LoRaFlexSim est désormais :
+
+1. **dashboard** : `panel serve loraflexsim/launcher/dashboard.py --show`
+2. **CLI officielle** : `loraflexsim ...`
+3. **compatibilité** : `mobilesfrdth ...`
+4. **moteur historique** : `python -m loraflexsim.run ...`
+
+Conséquence : tout langage présentant `mobilesfrdth` comme « CLI officielle recommandée » doit être considéré comme obsolète.
 
 ## Catégories utilisées
 
-- **produit principal / flux standard** : chemins à privilégier pour un usage communauté ou pour le développement courant.
-- **compatibilité / legacy** : composants historiques, spécialisés ou maintenus pour compatibilité.
-- **recherche / archive** : campagnes de reproduction, artefacts scientifiques, jeux de résultats ou archives.
-- **outillage / packaging** : scripts, métadonnées, exemples et aides de packaging.
-- **conteneur / CI** : automatisation de build, intégration continue et conteneurisation.
+- **produit principal** : à mettre en avant pour les utilisateurs et le développement courant ;
+- **backend officiel** : implémentation technique derrière la surface publique ;
+- **historique / spécialisé** : à conserver mais à ne plus promouvoir comme point d’entrée principal ;
+- **recherche / archive** : campagnes, reproductions et artefacts scientifiques ;
+- **outillage / packaging** : support d’installation, wrappers, CI et maintenance.
 
-## Décisions dossier par dossier
+## Carte dossier par dossier
 
-| Dossier | Catégorie | Statut explicite | Action unique | Description visible / justification |
-| --- | --- | --- | --- | --- |
-| `.github/` | conteneur / CI | Support d'automatisation du dépôt. | conserver tel quel comme point d’entrée officiel | Centralise les workflows GitHub et la plomberie CI autour du dépôt. |
-| `config/` | produit principal / flux standard | Configuration partagée du simulateur. | conserver tel quel comme point d’entrée officiel | Porte les paramètres communs utilisés par le flux standard. |
-| `docker/` | conteneur / CI | Référence unique pour l'image conteneur. | conserver tel quel comme point d’entrée officiel | **Décision explicite** : `docker/` reste le point d'entrée officiel pour la conteneurisation et la CI locale. |
-| `docs/` | produit principal / flux standard | Documentation fonctionnelle et technique active. | conserver tel quel comme point d’entrée officiel | Rassemble les guides utilisateur, la validation et la gouvernance documentaire. |
-| `examples/` | outillage / packaging | Exemples d'exécution et scripts de démonstration. | conserver tel quel comme point d’entrée officiel | Sert de zone d'exemples reproductibles pour l'adoption du projet. |
-| `experiments/` | recherche / archive | Configurations de campagnes exploratoires. | déplacer sous `pretest_campagne/` | Les presets d'expériences avancées doivent converger avec les autres campagnes de recherche sous `pretest_campagne/`. |
-| `figures/` | recherche / archive | Réceptacle de figures générées et comparatifs. | convertir en simple archive/documentation | Les figures versionnées sont utiles comme référence, mais ne doivent pas être présentées comme point d'entrée fonctionnel. |
-| `final/` | compatibilité / legacy | Pipeline historique de CSV/figures, encore documenté pour reproduction. | convertir en simple archive/documentation | **Décision explicite** : `final/` n'est plus la voie recommandée pour l'usage standard ; il reste un flux historique de reproduction. |
-| `flora-master/` | recherche / archive | Copie de référence externe liée aux travaux FLoRa. | convertir en simple archive/documentation | Dossier conservé pour traçabilité scientifique et comparaison, pas comme point d'entrée courant. |
-| `loraflexsim/` | produit principal / flux standard | Cœur applicatif du dashboard et du simulateur. | conserver tel quel comme point d’entrée officiel | C'est l'un des deux socles techniques à privilégier pour le produit principal. |
-| `mobile-sfrd_th/` | compatibilité / legacy | Archive legacy documentée ; le doublon `src/mobilesfrdth/` interne a été retiré. | convertir en simple archive/documentation | **Décision explicite** : le code packagé `mobilesfrdth` vit uniquement sous `src/mobilesfrdth/`; `mobile-sfrd_th/` reste une archive de contexte. |
-| `numpy_stub/` | compatibilité / legacy | Compatibilité locale / stub minimal de dépendance. | conserver tel quel comme point d’entrée officiel | Utilitaire de compatibilité conservé tant qu'il répond à un besoin d'exécution/tests hors dépendances complètes. |
-| `plots/` | outillage / packaging | Scripts de tracé transverses hors pipeline principal. | conserver tel quel comme point d’entrée officiel | Zone d'outillage pour les graphes transverses et diagnostics. |
-| `pretest_campagne/` | recherche / archive | Racine canonique des campagnes de recherche et reproductions, y compris l’espace `archive_or_mock/`. | conserver tel quel comme point d’entrée officiel | Point d'ancrage officiel pour les scénarios historiques, migrations, reproductions scientifiques et contenus reclassés comme archives pédagogiques. |
-| `qos_cli/` | compatibilité / legacy | CLI spécialisée distincte du parcours communauté. | convertir en simple archive/documentation | Son rôle devient documentaire/avancé tant qu'aucune convergence produit n'est décidée. |
-| `results/` | recherche / archive | Résultats versionnés, rapports et sorties consolidées. | convertir en simple archive/documentation | Les résultats existants sont conservés comme référence ; la documentation doit primer sur l'usage direct du dossier. |
-| `scipy/` | compatibilité / legacy | Compatibilité locale / stub léger autour de SciPy. | conserver tel quel comme point d’entrée officiel | Conservé comme support technique tant que l'environnement du dépôt en dépend. |
-| `scripts/` | outillage / packaging | Scripts d'automatisation, bootstrap, validation et conversion. | conserver tel quel comme point d’entrée officiel | Dossier de référence pour l'automatisation locale et les tâches de maintenance. |
-| `sfrd/` | compatibilité / legacy | CLI SFRD spécialisée, séparée du flux standard `mobilesfrdth`. | convertir en simple archive/documentation | **Décision explicite** : `sfrd/` reste documenté pour campagnes avancées/historiques, mais n'est plus une entrée standard. |
-| `src/` | produit principal / flux standard | Racine du code packagé installé par `pip install -e .`. | conserver tel quel comme point d’entrée officiel | C'est la racine officielle du code Python packagé. |
-| `tests/` | produit principal / flux standard | Référentiel de validation automatique. | conserver tel quel comme point d’entrée officiel | La qualité du produit repose sur cette base de tests. |
-| `traffic/` | produit principal / flux standard | Composants trafic/utilitaires liés au comportement réseau. | conserver tel quel comme point d’entrée officiel | Contribue au flux standard de simulation et aux scénarios réseau. |
+| Dossier | Catégorie | Statut | Rôle documentaire |
+| --- | --- | --- | --- |
+| `loraflexsim/` | produit principal | officiel | cœur historique du simulateur, dashboard et moteur |
+| `src/mobilesfrdth/` | backend officiel | officiel mais non public | implémente aujourd’hui la CLI exposée publiquement sous le nom `loraflexsim` |
+| `docs/` | produit principal | officiel | documentation utilisateur et technique |
+| `scripts/` | outillage / packaging | officiel | bootstrap et wrappers, dont `scripts/loraflexsim.*` |
+| `config/` | produit principal | officiel | configuration partagée |
+| `docker/` | outillage / packaging | officiel | conteneurisation et CI locale |
+| `tests/` | produit principal | officiel | validation automatique |
+| `final/` | historique / spécialisé | non canonique | reproduction d’anciens pipelines |
+| `pretest_campagne/` | recherche / archive | non canonique | scénarios de recherche, comparaisons et archives |
+| `sfrd/` | historique / spécialisé | non canonique | pipeline avancé distinct du flux public |
+| `qos_cli/` | historique / spécialisé | non canonique | interface experte |
+| `results/`, `figures/`, `flora-master/` | recherche / archive | non canonique | artefacts et références |
 
-## Sous-dossier critique explicitement demandé
+## Sous-dossiers explicitement ambigus
 
-Même s'ils ne sont pas top-level, les dossiers ci-dessous doivent être statués explicitement car ils font partie des points d'ambiguïté du dépôt.
+| Dossier | Statut | Décision |
+| --- | --- | --- |
+| `loraflexsim/launcher/` | officiel | point d’entrée du dashboard |
+| `loraflexsim/run.py` | historique | moteur CLI bas niveau, à ne pas présenter comme parcours grand public principal |
+| `src/mobilesfrdth/` | backend officiel | à conserver tant que la commande publique `loraflexsim` s’appuie dessus |
+| `mobile-sfrd_th/` | legacy | archive, pas point d’entrée officiel |
+| `pretest_campagne/archive_or_mock/mobile-sfrd/` | archive | comparaison historique uniquement |
 
-| Dossier | Catégorie | Statut explicite | Action unique | Description visible / justification |
-| --- | --- | --- | --- | --- |
-| `src/mobilesfrdth/` | produit principal / flux standard | Implémentation canonique de la CLI `mobilesfrdth`. | conserver tel quel comme point d’entrée officiel | **Décision explicite** : `src/mobilesfrdth/` est la source officielle à conserver ; toute duplication depuis `mobile-sfrd_th/` doit être résorbée ici. |
-| `pretest_campagne/archive_or_mock/mobile-sfrd/` | recherche / archive | Archive d’un mock pédagogique historique séparé du simulateur principal. | conserver sous `pretest_campagne/archive_or_mock/` | **Décision explicite** : ce contenu n’a plus de rôle d’entrée officielle et reste disponible uniquement pour archive, démonstration légère et comparaison avec le flux standard `mobilesfrdth`. |
+## Conséquence pratique pour la documentation
 
-## Décisions structurantes à retenir
+Le `README.md` et les guides utilisateur doivent désormais :
 
-1. **Entrées officielles à privilégier** : `loraflexsim/`, `src/`, `src/mobilesfrdth/`, `docs/`, `config/`, `scripts/`, `docker/`.
-2. **Zone officielle de recherche / reproduction** : `pretest_campagne/`, avec convergence souhaitée des contenus exploratoires de `experiments/`.
-3. **Éléments à traiter comme historiques ou non prioritaires** : `pretest_campagne/archive_or_mock/mobile-sfrd/`, `sfrd/`, `final/`, `qos_cli/`, `flora-master/`, `figures/`, `results/`.
-4. **Chevauchement résorbé pour le package** : le seul code source canonique de `mobilesfrdth` est `src/mobilesfrdth/`; `mobile-sfrd_th/` ne contient plus de package Python actif.
-
-## Conséquence documentaire
-
-Le `README.md` doit toujours refléter au minimum :
-
-- la catégorie du dossier ;
-- son statut lisible ;
-- l'action cible décidée ;
-- et, pour les cas ambigus, le dossier de référence vers lequel l'équipe doit converger.
+- montrer **comment installer** ;
+- montrer **comment lancer le dashboard** ;
+- montrer **comment lancer `loraflexsim`** ;
+- reléguer `mobilesfrdth` au rang de compatibilité ;
+- reléguer `python -m loraflexsim.run` au rang d’interface historique / technique.

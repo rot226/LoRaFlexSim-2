@@ -1,119 +1,122 @@
-# Guide utilisateur — CLI communauté
+# Guide utilisateur — CLI officielle `loraflexsim`
 
-La CLI officielle mise en avant pour la communauté est **`mobilesfrdth`**. Elle couvre le flux stable recommandé pour lancer une campagne, agréger les résultats, générer des figures puis valider les sorties.
+La CLI officielle mise en avant pour la communauté est désormais **`loraflexsim`**.
+
+Elle correspond au parcours canonique pour :
+
+- lancer une campagne ;
+- agréger les résultats ;
+- générer des figures ;
+- valider les agrégats.
+
+L’ancien nom `mobilesfrdth` reste disponible comme **alias de compatibilité**, mais n’est plus la surface publique recommandée.
 
 ## Positionnement des points d’entrée
 
-Pour éviter toute ambiguïté entre plusieurs CLI présentes dans le dépôt :
+- **CLI officielle recommandée** : `loraflexsim`
+- **Dashboard officiel** : `panel serve loraflexsim/launcher/dashboard.py --show`
+- **CLI technique / historique** : `python -m loraflexsim.run`
+- **Pipelines spécialisés** : `sfrd/`, `qos_cli/`, `final/`, `pretest_campagne/`
 
-- **Point d’entrée officiel recommandé** : `mobilesfrdth`
-- **Points d’entrée avancés / spécialisés** : `sfrd`
-- **Flux historiques / reproduction** : `final/`, `pretest_campagne/archive_or_mock/mobile-sfrd/`
-- **Archives / anciens pipelines** : tout dossier déplacé sous l’espace d’archives
-
-Si vous ne savez pas encore quelle commande utiliser, **choisissez `mobilesfrdth`**.
+Si vous ne savez pas quelle commande utiliser, **choisissez `loraflexsim`**.
 
 ## Vérifier l’installation
 
 ### Windows 11 / PowerShell
 
 ```powershell
-mobilesfrdth --help
+loraflexsim --help
 ```
 
 ### Linux / macOS / bash
 
 ```bash
-mobilesfrdth --help
+loraflexsim --help
 ```
 
-Si l’entrypoint n’est pas encore disponible, utilisez l’un des fallbacks suivants :
+## Fallbacks si l’entrypoint console n’est pas disponible
+
+### Windows 11
 
 ```powershell
+powershell -ExecutionPolicy Bypass -File scripts/loraflexsim.ps1 --help
 python -m mobilesfrdth --help
-powershell -ExecutionPolicy Bypass -File scripts/mobilesfrdth.ps1 --help
 ```
+
+### Linux / macOS
 
 ```bash
+./scripts/loraflexsim.sh --help
 python -m mobilesfrdth --help
-./scripts/mobilesfrdth.sh --help
 ```
-
-Pour la matrice plateforme complète et les scripts par shell, voir `docs/installation.md`.
 
 ## Workflow minimal recommandé
 
-### 1. Lister les presets disponibles
+### 1. Lister les presets
 
 ```powershell
-mobilesfrdth presets --list
+loraflexsim presets --list
 ```
 
-### 2. Lancer une simulation
-
-Option preset canonique :
+### 2. Lancer une campagne
 
 ```powershell
-mobilesfrdth run --preset paper_fast --out runs/quickstart
+loraflexsim run --preset paper_fast --out runs/quickstart
 ```
 
-Option explicite avec config + profil :
+Alternative explicite :
 
 ```powershell
-mobilesfrdth run --config experiments/default.yaml --out runs/quickstart --profile smoke
+loraflexsim run --config experiments/default.yaml --out runs/quickstart --profile smoke
 ```
 
 ### 3. Agréger les résultats
 
 ```powershell
-mobilesfrdth aggregate --results runs/quickstart --out runs/quickstart
+loraflexsim aggregate --results runs/quickstart --out runs/quickstart
 ```
 
 ### 4. Générer les figures
 
 ```powershell
-mobilesfrdth plots --aggregates-dir runs/quickstart/aggregates --out runs/quickstart/plots --profile exploratory
+loraflexsim plots --aggregates-dir runs/quickstart/aggregates --out runs/quickstart/plots --profile exploratory
 ```
 
 ### 5. Valider les agrégats
 
 ```powershell
-mobilesfrdth validate --aggregates-dir runs/quickstart/aggregates
+loraflexsim validate --aggregates-dir runs/quickstart/aggregates
 ```
 
 ## Rôle de chaque étape
 
-- **presets** : affiche les presets canonisés de campagne ;
-- **run** : exécute la campagne et écrit les sorties dans `runs/quickstart/` ;
-- **aggregate** : consolide les résultats bruts dans `runs/quickstart/aggregates/` ;
-- **plots** : génère les figures dans `runs/quickstart/plots/` ;
-- **validate** : contrôle la cohérence des agrégats.
+- `presets` : liste les presets disponibles ;
+- `run` : exécute la campagne ;
+- `aggregate` : consolide les résultats ;
+- `plots` : génère les figures ;
+- `validate` : vérifie la cohérence des agrégats.
 
-## Quand utiliser la CLI ?
+## Quand utiliser `python -m loraflexsim.run` ?
 
-Utilisez cette CLI si vous voulez :
+Utilisez `python -m loraflexsim.run` seulement si vous avez un besoin **historique**, **bas niveau** ou **de débogage moteur**.
 
-- rejouer exactement une campagne ;
-- enchaîner plusieurs traitements de façon reproductible ;
-- automatiser un protocole expérimental ;
-- intégrer le flux à un script Windows, à CI ou à un pipeline d’analyse.
+Pour la documentation utilisateur générale, le chemin canonique reste **`loraflexsim`**.
 
-Le package Python canonique est `mobilesfrdth` et son unique arborescence source est `src/mobilesfrdth/`. L'ancien doublon `mobile-sfrd_th/src/mobilesfrdth/` ne fait plus partie du flux d'installation editable.
+## Compatibilité legacy
 
-## Que faire si vous hésitez avec une autre CLI ?
+Les commandes suivantes restent valides, mais doivent être lues comme des chemins de compatibilité :
 
-- **Vous voyez `sfrd`** : gardez-le pour un pipeline avancé / spécialisé déjà identifié.
-- **Vous voyez `final`** : gardez-le pour un flux historique de reproduction ou de comparaison.
-- **Vous voyez `mobile-sfrd`** : comprenez qu’il s’agit désormais de l’archive `pretest_campagne/archive_or_mock/mobile-sfrd/`, conservée pour reproduction légère et comparaison historique.
-- **Vous tombez sur un dossier d’archives** : ne l’utilisez pas comme point de départ pour une nouvelle campagne.
+```powershell
+mobilesfrdth --help
+python -m mobilesfrdth --help
+```
+
+Le backend packagé vit toujours dans `src/mobilesfrdth/`, mais la surface publique documentée a été renommée côté utilisateur en `loraflexsim`.
 
 ## Interfaces secondaires
 
-Les interfaces ci-dessous existent toujours mais ne sont pas nécessaires pour un premier usage :
-
-- `qos_cli/README.md` pour la CLI QoS spécialisée ;
-- `sfrd/README.md` pour le pipeline SFRD avancé ;
-- `final/README.md` pour des scripts historiques d’export/reproduction ;
-- `pretest_campagne/archive_or_mock/mobile-sfrd/README.md` pour le mock historique `mobile-sfrd` ;
-- `docs/archive_or_research/` pour les contenus archivés, de reproduction et de recherche ;
-- `pretest_campagne/scenario_c/README.md` pour le pipeline de reproduction du scénario C.
+- `docs/user_guide_dashboard.md` : dashboard officiel ;
+- `sfrd/README.md` : pipeline SFRD spécialisé ;
+- `qos_cli/README.md` : CLI QoS spécialisée ;
+- `final/README.md` : pipelines historiques ;
+- `pretest_campagne/` : campagnes de recherche et de reproduction.

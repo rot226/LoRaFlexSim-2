@@ -1,23 +1,45 @@
 # `loraflexsim/`
 
-## À quoi sert ce dossier ?
+## Rôle de ce dossier
 
-Ce dossier contient le cœur applicatif historique de LoRaFlexSim, y compris le moteur de simulation Python, le dashboard et les modules de scénarios/validation associés.
+Ce dossier contient le cœur historique de LoRaFlexSim :
 
-## Quand l’utiliser ?
+- le moteur de simulation ;
+- le dashboard Panel ;
+- les modules de scénarios et de validation associés.
 
-- Quand vous devez modifier le moteur historique LoRaFlexSim.
-- Quand vous travaillez sur le dashboard ou les modules de `loraflexsim/launcher/`.
-- Quand une commande ou un test pointe explicitement vers `loraflexsim.run` ou un module interne de ce dossier.
+## Position dans la surface publique
 
-## Quand ne pas l’utiliser ?
+Après décision documentaire, la surface publique du simulateur est :
 
-- Ne l'utilisez pas comme premier point d'entrée pour un nouvel utilisateur.
-- Ne privilégiez pas ce dossier si votre besoin relève uniquement de la CLI packagée `src/mobilesfrdth/`.
+- **dashboard** : `panel serve loraflexsim/launcher/dashboard.py --show`
+- **CLI officielle** : `loraflexsim ...`
 
-## Point d’entrée / fichiers à ouvrir d’abord
+Dans ce schéma, `loraflexsim/` reste central pour le **dashboard** et pour le **moteur historique**, mais ce dossier n’est pas lui-même la CLI packagée de haut niveau.
 
-- `loraflexsim/run.py` : point d'entrée de lancement historique.
-- `loraflexsim/launcher/dashboard.py` : entrée principale du dashboard.
-- `loraflexsim/launcher/simulator.py` : orchestration centrale des simulations.
-- `docs/user_guide_dashboard.md` : guide d'usage avant toute modification orientée dashboard.
+## Quand utiliser ce dossier ?
+
+Utilisez `loraflexsim/` quand vous devez :
+
+- modifier le dashboard ;
+- intervenir sur le moteur historique ;
+- déboguer `python -m loraflexsim.run` ;
+- travailler sur les modules de `loraflexsim/launcher/`.
+
+## Quand ne pas l’utiliser comme point de départ ?
+
+Ne partez pas de ce dossier si votre besoin est seulement :
+
+- lancer la CLI officielle utilisateur ;
+- suivre le parcours communautaire standard ;
+- documenter un premier usage.
+
+Dans ces cas, orientez d’abord vers `README.md`, `docs/installation.md` et `docs/user_guide_cli.md`.
+
+## Fichiers à ouvrir d’abord
+
+- `loraflexsim/launcher/dashboard.py` : entrée principale du dashboard ;
+- `loraflexsim/run.py` : entrée historique du moteur ;
+- `loraflexsim/launcher/simulator.py` : orchestration centrale ;
+- `docs/user_guide_dashboard.md` : guide du dashboard ;
+- `docs/user_guide_cli.md` : guide de la CLI publique `loraflexsim`.
