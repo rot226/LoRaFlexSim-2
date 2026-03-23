@@ -9,11 +9,12 @@ Elle correspond au parcours canonique pour :
 - générer des figures ;
 - valider les agrégats.
 
-L’ancien nom `mobilesfrdth` reste disponible comme **alias de compatibilité**, mais n’est plus la surface publique recommandée.
+Le code historique `mobilesfrdth/` reste présent dans le dépôt pendant la migration, mais n’est plus une surface publique à recommander.
 
 ## Positionnement des points d’entrée
 
 - **CLI officielle recommandée** : `loraflexsim`
+- **Fallback Python direct** : `python -m loraflexsim`
 - **Dashboard officiel** : `panel serve loraflexsim/launcher/dashboard.py --show`
 - **CLI technique / historique** : `python -m loraflexsim.run`
 - **Pipelines spécialisés / recherche** : `qos_cli/`, `pretest_campagne/`, `docs/archive_or_research/`
@@ -26,12 +27,14 @@ Si vous ne savez pas quelle commande utiliser, **choisissez `loraflexsim`**.
 
 ```powershell
 loraflexsim --help
+python -m loraflexsim --help
 ```
 
 ### Linux / macOS / bash
 
 ```bash
 loraflexsim --help
+python -m loraflexsim --help
 ```
 
 ## Fallbacks si l’entrypoint console n’est pas disponible
@@ -40,14 +43,14 @@ loraflexsim --help
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/loraflexsim.ps1 --help
-python -m mobilesfrdth --help
+python -m loraflexsim --help
 ```
 
 ### Linux / macOS
 
 ```bash
 ./scripts/loraflexsim.sh --help
-python -m mobilesfrdth --help
+python -m loraflexsim --help
 ```
 
 ## Workflow minimal recommandé
@@ -102,16 +105,9 @@ Utilisez `python -m loraflexsim.run` seulement si vous avez un besoin **historiq
 
 Pour la documentation utilisateur générale, le chemin canonique reste **`loraflexsim`**.
 
-## Compatibilité legacy
+## Compatibilité interne
 
-Les commandes suivantes restent valides, mais doivent être lues comme des chemins de compatibilité :
-
-```powershell
-mobilesfrdth --help
-python -m mobilesfrdth --help
-```
-
-Le backend packagé de compatibilité vit désormais dans `mobilesfrdth/`, tandis que la surface publique documentée reste `loraflexsim`.
+Le dossier `mobilesfrdth/` reste un support de migration interne. Il ne doit plus apparaître comme fallback recommandé ni comme nom public à présenter aux nouveaux utilisateurs.
 
 ## Interfaces secondaires
 

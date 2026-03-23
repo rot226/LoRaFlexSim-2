@@ -31,16 +31,15 @@ show_run_command() {
 
   printf '\n==== Commande à utiliser ====\n'
   if [[ "${editable_installed}" == "true" ]]; then
-    printf '%s\n' 'Point d\''entrée officiel recommandé installé :' \
+    printf '%s\n' 'Point d'\''entrée officiel recommandé installé :' \
       '  loraflexsim --help' \
       '  loraflexsim presets --list' \
-      '  # Alias de compatibilité si nécessaire :' \
-      '  mobilesfrdth --help'
+      '  python -m loraflexsim --help'
   else
     printf '%s\n' 'Mode fallback sans installation editable :' \
       '  ./scripts/loraflexsim.sh --help' \
       '  # (équivalent direct)' \
-      '  PYTHONPATH=. python -m mobilesfrdth --help'
+      '  PYTHONPATH=. python -m loraflexsim --help'
   fi
 }
 

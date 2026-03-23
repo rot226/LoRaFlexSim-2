@@ -1,11 +1,11 @@
 # LoRaFlexSim 1.0.1
 
-LoRaFlexSim est un simulateur LoRa/LoRaWAN en Python avec deux surfaces publiques désormais **canoniques** :
+LoRaFlexSim est un simulateur LoRa/LoRaWAN en Python avec deux surfaces publiques canoniques :
 
 - le **dashboard Panel** pour l’exploration visuelle ;
 - la **CLI officielle `loraflexsim`** pour les campagnes reproductibles.
 
-L’ancienne CLI `mobilesfrdth` reste disponible uniquement comme **alias de compatibilité** et ne doit plus être présentée comme parcours recommandé.
+Le dépôt reste **packagé comme projet Python installable**, mais le packaging est désormais réaligné sur le package public `loraflexsim/`. L’ancien package `mobilesfrdth/` n’est plus exposé comme surface d’entrée documentée ni comme point d’installation à promouvoir.
 
 ## Installer
 
@@ -45,7 +45,7 @@ loraflexsim run --preset paper_fast --out runs/quickstart
 
 - **Windows 11** : `powershell -ExecutionPolicy Bypass -File scripts/loraflexsim.ps1 --help`
 - **Linux / macOS** : `./scripts/loraflexsim.sh --help`
-- **Fallback Python direct** : `python -m mobilesfrdth --help`
+- **Fallback Python direct** : `python -m loraflexsim --help`
 
 ## Décision de surface publique
 
@@ -53,15 +53,13 @@ La surface publique du simulateur est fixée explicitement comme suit :
 
 1. **Dashboard public** : `panel serve loraflexsim/launcher/dashboard.py --show`
 2. **CLI publique officielle** : `loraflexsim ...`
-3. **Entrées non canoniques mais conservées** :
-   - `python -m loraflexsim.run` pour le moteur historique ;
-   - `mobilesfrdth` pour compatibilité avec des scripts existants.
+3. **Entrée bas niveau conservée** : `python -m loraflexsim.run`
 
 Autrement dit :
 
-- un **nouvel utilisateur** doit commencer par le dashboard ou par `loraflexsim` ;
-- `python -m loraflexsim.run` est un chemin **historique / bas niveau** ;
-- `mobilesfrdth` n’est plus la CLI mise en avant dans la documentation.
+- un **nouvel utilisateur**, en particulier sous **Windows 11**, doit commencer par le dashboard ou par `loraflexsim` ;
+- `python -m loraflexsim` est le fallback Python direct aligné sur le nom public du projet ;
+- `python -m loraflexsim.run` reste un chemin **historique / bas niveau**.
 
 ## Premier workflow CLI recommandé
 
@@ -91,8 +89,8 @@ Sorties attendues :
 
 | Dossier | Rôle | Statut |
 | --- | --- | --- |
-| `loraflexsim/` | cœur historique du simulateur et dashboard | officiel pour le moteur et l’UI |
-| `mobilesfrdth/` | implémentation technique de la CLI packagée | backend de compatibilité derrière la commande publique `loraflexsim` |
+| `loraflexsim/` | package Python public, cœur du simulateur et dashboard | officiel |
+| `mobilesfrdth/` | code historique encore présent dans le dépôt pendant la migration | interne / transitoire |
 | `docs/` | documentation utilisateur et technique | officiel |
 | `scripts/` | wrappers et automatisation locale | officiel |
 | `pretest_campagne/`, `docs/archive_or_research/` | reproduction, archives et workflows historiques | historique / recherche |
@@ -104,11 +102,12 @@ Sorties attendues :
 | --- | --- | --- | --- |
 | CLI `loraflexsim` | documentée et prioritaire | documentée | documentée |
 | Dashboard Panel | documenté et prioritaire | documenté | documenté |
+| `python -m loraflexsim` | fallback dépôt/documentation | fallback dépôt/documentation | fallback dépôt/documentation |
 | `python -m loraflexsim.run` | support historique | support historique | support historique |
 
 ## Notes de compatibilité
 
 - L’installation editable reste la méthode recommandée.
 - Le packaging du dépôt cible **Python 3.11 à 3.12**.
-- Le nom interne du package packagé reste `mobilesfrdth`, mais la **surface publique documentée** est désormais `loraflexsim`.
+- Le packaging publié par `pyproject.toml` est désormais aligné sur `loraflexsim`.
 - Si `panel serve ... --show` n’ouvre pas automatiquement le navigateur, copiez l’URL affichée dans votre navigateur.

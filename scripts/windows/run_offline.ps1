@@ -64,18 +64,18 @@ if ($missing.Count -gt 0) {
 }
 
 Write-Host "[1/4] run" -ForegroundColor Cyan
-python -m mobilesfrdth run --config $Config --out $OutRoot --grid $Grid --reps $Reps --seed $Seed --sf-range $SfRange
+python -m loraflexsim run --config $Config --out $OutRoot --grid $Grid --reps $Reps --seed $Seed --sf-range $SfRange
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 $aggregatesDir = Join-Path $OutRoot "aggregates"
 $figuresDir = Join-Path $OutRoot "figures"
 
 Write-Host "[2/4] aggregate" -ForegroundColor Cyan
-python -m mobilesfrdth aggregate --results $OutRoot --out $aggregatesDir
+python -m loraflexsim aggregate --results $OutRoot --out $aggregatesDir
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "[3/4] plots" -ForegroundColor Cyan
-$plotArgs = @("-m", "mobilesfrdth", "plots", "--aggregates-dir", $aggregatesDir, "--out", $figuresDir)
+$plotArgs = @("-m", "loraflexsim", "plots", "--aggregates-dir", $aggregatesDir, "--out", $figuresDir)
 foreach ($filter in $ScenarioFilter) {
     $plotArgs += @("--scenario-filter", $filter)
 }
@@ -86,8 +86,8 @@ python @plotArgs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "[4/4] validate" -ForegroundColor Cyan
-python -m mobilesfrdth.qa.validate_results --aggregates-dir $aggregatesDir --plots-summary (Join-Path $figuresDir "plots_summary.json")
+python -m loraflexsim validate --aggregates-dir $aggregatesDir --plots-summary (Join-Path $figuresDir "plots_summary.json")
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-Write-Host "Pipeline offline terminé avec succès via le point d’entrée officiel recommandé `loraflexsim` (backend `mobilesfrdth`)." -ForegroundColor Green
+Write-Host "Pipeline offline terminé avec succès via le point d’entrée officiel recommandé loraflexsim." -ForegroundColor Green
 Write-Host "Les workflows de recherche vivent dans `pretest_campagne/` et les pipelines retirés sont documentés sous `docs/archive_or_research/`." -ForegroundColor DarkYellow
