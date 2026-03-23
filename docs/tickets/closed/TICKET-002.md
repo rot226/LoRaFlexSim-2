@@ -1,8 +1,9 @@
 # TICKET-002 – SNIR passerelle pour l’ADR serveur
 
-> ✅ Fermeture : résolu via [PR #241](https://github.com/rot226/LoRaFlexSim/pull/241)
+> ✅ Fermeture : archive historique, résolu via [PR #241](https://github.com/rot226/LoRaFlexSim/pull/241)
 > (merge commit [`9298575`](https://github.com/rot226/LoRaFlexSim/commit/92985757d6b24685abf50c96c5bfee23750831d7))
 > incluant la mise à jour principale [`71598d2`](https://github.com/rot226/LoRaFlexSim/commit/71598d21fe66032fda055dd2f0109f6b545e16fb).
+> ℹ️ Références historiques GitHub conservées telles quelles pour pointer vers les commits/PR d’origine publiés sous l’ancienne identité du dépôt.
 
 ## Description
 Lors de la réception d’un uplink, le serveur ADR estime le SNR en soustrayant un bruit moyen global `Channel.noise_floor_dBm()` au RSSI remonté par la passerelle.【F:loraflexsim/launcher/server.py†L524-L604】 Dans FLoRa, l’information SNIR par passerelle est transmise directement au serveur (`NetworkServerApp::evaluateADR`), ce qui reflète les conditions radio locales.【F:flora-master/src/LoRa/NetworkServerApp.cc†L300-L370】
