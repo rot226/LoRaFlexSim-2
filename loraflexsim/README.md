@@ -1,19 +1,23 @@
 # `loraflexsim/`
 
-Ce dossier contient le **cœur applicatif historique du simulateur** et du **dashboard interactif**.
+## À quoi sert ce dossier ?
 
-## Ce qu’on y trouve
-
-- `launcher/` : composants du dashboard, chargement de configuration et orchestration ;
-- modules cœur du simulateur (`application.py`, `gateway.py`, etc.) ;
-- sous-espaces de validation et de scénarios côté simulateur.
+Ce dossier contient le cœur applicatif historique de LoRaFlexSim, y compris le moteur de simulation Python, le dashboard et les modules de scénarios/validation associés.
 
 ## Quand l’utiliser ?
 
-- si vous travaillez sur le dashboard ;
-- si vous devez modifier le moteur historique LoRaFlexSim ;
-- si la documentation vous renvoie explicitement vers un module `loraflexsim`.
+- Quand vous devez modifier le moteur historique LoRaFlexSim.
+- Quand vous travaillez sur le dashboard ou les modules de `loraflexsim/launcher/`.
+- Quand une commande ou un test pointe explicitement vers `loraflexsim.run` ou un module interne de ce dossier.
 
-## Point d’entrée utilisateur
+## Quand ne pas l’utiliser ?
 
-Pour un premier usage, n’ouvrez pas ce dossier en premier : commencez par le `README.md` racine puis `docs/user_guide_dashboard.md`.
+- Ne l'utilisez pas comme premier point d'entrée pour un nouvel utilisateur.
+- Ne privilégiez pas ce dossier si votre besoin relève uniquement de la CLI packagée `src/mobilesfrdth/`.
+
+## Point d’entrée / fichiers à ouvrir d’abord
+
+- `loraflexsim/run.py` : point d'entrée de lancement historique.
+- `loraflexsim/launcher/dashboard.py` : entrée principale du dashboard.
+- `loraflexsim/launcher/simulator.py` : orchestration centrale des simulations.
+- `docs/user_guide_dashboard.md` : guide d'usage avant toute modification orientée dashboard.

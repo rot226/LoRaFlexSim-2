@@ -1,16 +1,24 @@
 # `docs/`
 
-Ce dossier regroupe la **documentation active** du projet.
+## À quoi sert ce dossier ?
 
-## Commencer ici
+Ce dossier regroupe la documentation active du projet : installation, guides d'usage, workflows avancés, validation et carte de lecture du dépôt.
 
-- `installation.md` : installation Windows 11, Linux, macOS.
-- `user_guide_dashboard.md` : premier usage du dashboard.
-- `user_guide_cli.md` : premier usage de la CLI `mobilesfrdth`.
-- `advanced_workflows.md` : workflows avancés, spécialisés ou historiques.
-- `archive_or_research/README.md` : documentation d’archives, de reproduction et de recherche.
-- `repository_map.md` : carte de lecture du dépôt top-level.
+## Quand l’utiliser ?
 
-## Règle de lecture
+- Quand vous découvrez le projet et cherchez le bon guide pour votre besoin.
+- Quand vous devez installer l'environnement sous Windows 11 ou exécuter un flux documenté.
+- Quand vous cherchez la documentation de référence d'une CLI, d'un pipeline ou d'une campagne.
 
-Si vous découvrez le projet, commencez par le `README.md` racine puis revenez ici seulement pour le guide correspondant à votre besoin.
+## Quand ne pas l’utiliser ?
+
+- Ne l'utilisez pas pour modifier directement le moteur de simulation ou les scripts d'automatisation.
+- Ne restez pas dans `docs/` si vous avez déjà identifié le module ou la commande cible à modifier.
+
+## Point d’entrée / fichiers à ouvrir d’abord
+
+- `docs/installation.md` : installation et environnement local.
+- `docs/user_guide_cli.md` : flux standard via `mobilesfrdth`.
+- `docs/user_guide_dashboard.md` : usage du dashboard historique.
+- `docs/advanced_workflows.md` : cas avancés, historiques ou spécialisés.
+- `docs/repository_map.md` : carte de lecture du dépôt top-level.

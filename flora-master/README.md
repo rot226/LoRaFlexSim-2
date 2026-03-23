@@ -1,9 +1,24 @@
-# FLoRa
+# `flora-master/`
 
-FLoRa (Framework for LoRa) est un framework de simulation pour réseaux LoRaWAN de bout en bout.
-Il est construit au-dessus du simulateur réseau OMNeT++ et réutilise des composants du framework INET.
-Le projet fournit des modules pour les nœuds LoRa, les passerelles et un serveur réseau afin de modéliser des déploiements LoRa complets.
-La logique applicative peut être ajoutée sous forme de modules distincts communiquant avec le serveur, et l'ADR est pris en charge pour gérer dynamiquement les paramètres radio.
+## À quoi sert ce dossier ?
 
-Des statistiques de consommation d'énergie sont collectées pour chaque nœud et plusieurs scénarios d'exemple sont inclus.
-Pour des instructions détaillées et le code source, consultez le site officiel : <http://flora.aalto.fi/>
+Ce dossier embarque une copie du framework FLoRa utilisé comme référence, comparaison ou base de reproduction autour d'OMNeT++ et LoRaWAN.
+
+## Quand l’utiliser ?
+
+- Quand vous devez comparer LoRaFlexSim à FLoRa.
+- Quand une documentation ou un script de validation mentionne explicitement des fichiers FLoRa.
+- Quand vous travaillez sur une reproduction ou un alignement avec le comportement du framework amont.
+
+## Quand ne pas l’utiliser ?
+
+- Ne l'utilisez pas pour le flux standard `mobilesfrdth`.
+- Ne commencez pas ici pour découvrir le dépôt ou modifier la CLI Python principale.
+- N'y ajoutez pas de logique spécifique au projet sans raison claire de compatibilité ou de reproduction.
+
+## Point d’entrée / fichiers à ouvrir d’abord
+
+- `flora-master/README.md` : ce mini-guide.
+- `flora-master/simulations/omnetpp.ini` : configuration de simulation FLoRa.
+- `flora-master/src/` : sources FLoRa si vous devez inspecter l'implémentation.
+- `docs/reproduction_flora.md` et `scripts/compare_flora_channel.py` : points de raccord avec le reste du dépôt.

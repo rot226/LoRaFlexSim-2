@@ -1,20 +1,22 @@
 # `experiments/`
 
-Ce dossier regroupe des **configurations et sous-campagnes exploratoires**.
+## À quoi sert ce dossier ?
 
-## Statut
+Ce dossier regroupe des configurations, presets et sous-campagnes exploratoires utilisés pour la recherche, les comparaisons et certains essais reproductibles.
 
-- **Secondaire / recherche**.
-- Ce dossier n’est **pas** le premier point d’entrée pour un nouvel utilisateur.
-- Les campagnes historiques plus structurées vivent surtout dans `pretest_campagne/`.
+## Quand l’utiliser ?
 
-## Comment s’orienter ?
+- Quand vous devez charger un preset comme `default.yaml`, `paper_fast.yaml` ou `paper_core.yaml`.
+- Quand vous travaillez sur une sous-campagne de recherche avec son propre README.
+- Quand une validation ou une expérience renvoie explicitement vers `experiments/`.
 
-- `default.yaml`, `paper_fast.yaml`, `paper_core.yaml` : presets/configurations réutilisées par les commandes de simulation.
-- `snir_stage1/`, `snir_stage1_compare/`, `ucb1/` : sous-dossiers de recherche avec leur propre README.
+## Quand ne pas l’utiliser ?
 
-## Parcours conseillé
+- Ne l'utilisez pas comme premier point d'entrée pour un nouvel utilisateur.
+- Ne l'utilisez pas pour le flux standard si la documentation principale suffit.
 
-1. Ouvrez d’abord le `README.md` racine.
-2. Utilisez `docs/user_guide_cli.md` pour le flux standard.
-3. Revenez ici seulement si un preset ou un workflow de recherche vous y envoie explicitement.
+## Point d’entrée / fichiers à ouvrir d’abord
+
+- `experiments/default.yaml`, `experiments/paper_fast.yaml`, `experiments/paper_core.yaml` : presets principaux.
+- `experiments/snir_stage1/README.md` et `experiments/ucb1/README.md` : guides locaux de sous-campagnes.
+- `docs/advanced_workflows.md` : contexte de ces expériences dans l'ensemble du dépôt.
