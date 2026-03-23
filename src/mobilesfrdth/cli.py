@@ -896,18 +896,18 @@ def cmd_plots(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="mobilesfrdth",
+        prog="loraflexsim",
         description=(
-            "CLI officielle recommandée `mobilesfrdth` pour les campagnes communauté : "
+            "CLI officielle `loraflexsim` pour les campagnes communauté (alias legacy : `mobilesfrdth`) : "
             "génération, agrégation, plots et validation. "
             "Les workflows avancés/spécialisés relèvent de `sfrd`; "
             "les flux `final` et `pretest_campagne/archive_or_mock/mobile-sfrd` sont historiques."
         ),
         epilog=(
-            "Point d'entrée officiel recommandé : mobilesfrdth.\n"
+            "Point d'entrée officiel recommandé : loraflexsim. Alias legacy : mobilesfrdth.\n"
             "CLI avancée / spécialisée : sfrd. Flux historiques : final, pretest_campagne/archive_or_mock/mobile-sfrd.\n"
             "Exemple grille: N=40,60,80,100,120,140,160,180,200;speed=1,3;reps=8;seed_base=1234\n"
-            "Exemple run: mobilesfrdth run --config experiments/default.yaml --out runs --profile paper_core"
+            "Exemple run: loraflexsim run --config experiments/default.yaml --out runs --profile paper_core"
         ),
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
