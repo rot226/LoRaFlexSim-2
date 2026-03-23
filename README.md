@@ -4,6 +4,12 @@ LoRaFlexSim est un simulateur LoRa/LoRaWAN en Python pour explorer des scénario
 
 Ce dépôt est destiné à la communauté : le simulateur peut être utilisé librement, la documentation privilégie une prise en main rapide, et le parcours de lecture distingue clairement l’usage standard recommandé des workflows avancés, de recherche ou de reproduction.
 
+## Démarrage immédiat
+
+- **Installer** : suivez l’installation recommandée ci-dessous, puis revenez ici pour lancer vos premières commandes.
+- **Lancer le dashboard** : `panel serve loraflexsim/launcher/dashboard.py --show`
+- **Lancer une CLI** : `mobilesfrdth --help` puis `mobilesfrdth run --preset paper_fast --out runs/quickstart`
+
 ## Orientation rapide des points d’entrée
 
 Pour éviter toute hésitation entre plusieurs CLI ou dossiers :
