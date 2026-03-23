@@ -103,42 +103,14 @@ Pour réduire la charge cognitive, vous pouvez lire le dépôt avec seulement ce
 > [!TIP]
 > Le tableau détaillé dossier par dossier est conservé plus bas dans **« Structure du dépôt : à quoi sert chaque dossier ? »** pour éviter de surcharger la première page.
 
-## Orientation rapide des points d’entrée
+## Références détaillées de démarrage
 
-Pour éviter toute hésitation entre plusieurs CLI ou dossiers :
+Les sections de démarrage redondantes ont été fusionnées dans les quatre blocs ci-dessus. Pour le détail selon votre usage, utilisez directement les guides de référence :
 
-- **Point d’entrée officiel recommandé** : `mobilesfrdth`
-- **Points d’entrée avancés / spécialisés** : `sfrd`, `qos_cli/`
-- **Flux historiques / reproduction** : `final/`, `pretest_campagne/`, `pretest_campagne/archive_or_mock/mobile-sfrd/`
-- **Archives / anciens pipelines** : tout dossier déplacé sous l’espace d’archives
-
-En pratique, **si vous débutez ou si vous lancez une nouvelle campagne, utilisez `mobilesfrdth`**. Les autres entrées ne doivent être utilisées que si vous savez déjà que votre besoin relève d’un workflow spécialisé, historique ou archivé.
-
-## Par où commencer ?
-
-### 1. Découvrir le dashboard
-
-Le dashboard est la meilleure porte d’entrée si vous voulez lancer un premier essai sans mémoriser beaucoup d’options.
-
-➡ Voir `docs/user_guide_dashboard.md`.
-
-### 2. Utiliser la CLI officielle
-
-La CLI `mobilesfrdth` couvre le flux stable recommandé pour les campagnes reproductibles.
-
-➡ Voir `docs/user_guide_cli.md`.
-
-### 3. Aller plus loin
-
-Pour les workflows complets, la génération/export de figures, les pipelines spécialisés et les interfaces secondaires, consultez :
-
-➡ `docs/advanced_workflows.md`
-
-### 4. Reproduction, campagnes historiques et recherche
-
-Les contenus de reproduction et les campagnes héritées sont maintenant regroupés sous :
-
-➡ `docs/archive_or_research/`
+- **Installation complète, compatibilité plateforme et fallbacks** : `docs/installation.md`
+- **Premier usage du dashboard** : `docs/user_guide_dashboard.md`
+- **Premier workflow CLI reproductible avec `mobilesfrdth`** : `docs/user_guide_cli.md`
+- **Workflows avancés, export et reproduction** : `docs/advanced_workflows.md` et `docs/archive_or_research/`
 
 ## Politique d’installation et d’exécution
 
@@ -223,120 +195,16 @@ Dans ce mode seulement, certains scripts positionnent **`PYTHONPATH=src`** autom
 
 ➡ Voir `docs/installation.md` pour la matrice complète, les scripts par shell et les limitations connues.
 
-## Démarrage rapide Windows 11
+## Références ciblées après le premier démarrage
 
-Depuis la **racine du dépôt** dans **PowerShell** :
+Les anciennes sections **« Démarrage rapide Windows 11 »**, **« Premier succès en 5 minutes »** et **« FAQ de démarrage »** ont été volontairement fusionnées avec **« Installation recommandée »** et **« Première exécution »** pour éviter les doublons.
 
-```powershell
-py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -e . --no-build-isolation
-mobilesfrdth --help
-mobilesfrdth presets --list
-panel serve loraflexsim/launcher/dashboard.py --show
-```
+Utilisez désormais ces références canoniques selon votre besoin :
 
-> [!IMPORTANT]
-> **Entrées recommandées pour un premier usage**
-> - **Dashboard** : `panel serve loraflexsim/launcher/dashboard.py --show`
-> - **CLI officielle recommandée** : `mobilesfrdth --help`
-> - **CLI avancée / spécialisée** : `python -m sfrd.cli.run_campaign` seulement si vous travaillez déjà sur un pipeline SFRD identifié
-> - **Flux historiques / reproduction** : `final/README.md` et `pretest_campagne/archive_or_mock/mobile-sfrd/README.md`
->
-> Les autres interfaces présentes dans le dépôt sont conservées pour des usages avancés, historiques ou d’archive. **Ne les considérez pas comme des “CLI principales” concurrentes de `mobilesfrdth`.**
-
-## Premier succès en 5 minutes
-
-Depuis la **racine du dépôt** dans **PowerShell** :
-
-```powershell
-py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -e . --no-build-isolation
-```
-
-### 1. Lancer le dashboard
-
-```powershell
-panel serve loraflexsim/launcher/dashboard.py --show
-```
-
-Le dashboard est la voie la plus simple pour vérifier rapidement que l'environnement est prêt et explorer un premier scénario interactif.
-
-### 2. Lancer une campagne CLI minimale recommandée
-
-```powershell
-mobilesfrdth run --preset paper_fast --out runs/quickstart
-```
-
-Cette commande utilise **le point d’entrée officiel recommandé** pour produire une première campagne reproductible.
-
-### 3. Agréger les résultats
-
-```powershell
-mobilesfrdth aggregate --results runs/quickstart --out runs/quickstart
-```
-
-### 4. Générer une première figure
-
-```powershell
-mobilesfrdth plots --aggregates-dir runs/quickstart/aggregates --out runs/quickstart/plots --profile exploratory
-```
-
-### 5. Retrouver les sorties générées
-
-- **Résultats bruts** : `runs/quickstart/results/`
-- **Agrégats** : `runs/quickstart/aggregates/`
-- **Figures** : `runs/quickstart/plots/`
-
-> [!TIP]
-> Si vous voulez simplement valider une première exécution sous Windows 11, ce parcours suffit : créer l'environnement, ouvrir le dashboard, lancer `mobilesfrdth run`, puis agréger et tracer les résultats.
-
-## FAQ de démarrage
-
-### Comment installer sous Windows 11 ?
-
-Depuis la racine du dépôt dans **PowerShell**, créez un environnement virtuel puis installez le projet en mode editable :
-
-```powershell
-py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -e . --no-build-isolation
-```
-
-Cette procédure correspond au parcours standard documenté pour Windows 11.
-
-### Comment lancer le dashboard ?
-
-Activez l’environnement, puis exécutez :
-
-```powershell
-panel serve loraflexsim/launcher/dashboard.py --show
-```
-
-Le dashboard est l’entrée recommandée pour un premier usage interactif.
-
-### Comment lancer une simulation en CLI ?
-
-Pour une première campagne reproductible en ligne de commande, utilisez la CLI officielle recommandée :
-
-```powershell
-mobilesfrdth run --preset paper_fast --out runs/quickstart
-```
-
-Complétez ensuite avec :
-
-```powershell
-mobilesfrdth aggregate --results runs/quickstart --out runs/quickstart
-mobilesfrdth plots --aggregates-dir runs/quickstart/aggregates --out runs/quickstart/plots --profile exploratory
-```
-
-### Où récupérer les CSV et les figures ?
-
-- Les **résultats bruts** d’un premier essai `mobilesfrdth` sont placés dans `runs/quickstart/results/`.
-- Les **CSV agrégés** sont écrits dans `runs/quickstart/aggregates/`.
-- Les **figures** générées sont écrites dans `runs/quickstart/plots/`.
-- Les flux historiques `final/data/` et `final/figures/` restent disponibles seulement pour la reproduction ou la comparaison avec d’anciens exports.
+- **Réinstaller ou adapter les commandes à votre shell** : `docs/installation.md`
+- **Retrouver le lancement guidé du dashboard** : `docs/user_guide_dashboard.md`
+- **Retrouver le workflow CLI complet (`run`, `aggregate`, `plots`, `validate`)** : `docs/user_guide_cli.md`
+- **Consulter les flux historiques ou spécialisés** : `docs/archive_or_research/`, `final/README.md`, `sfrd/README.md` et `qos_cli/README.md`
 
 ## Arborescence documentaire recommandée
 
