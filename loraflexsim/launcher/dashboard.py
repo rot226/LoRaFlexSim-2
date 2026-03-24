@@ -373,8 +373,8 @@ adr_select = pn.widgets.Select(
 )
 
 # --- Choix SF et puissance initiaux identiques ---
-fixed_sf_checkbox = pn.widgets.Checkbox(name="Use single SF", value=False)
-sf_value_input = pn.widgets.IntSlider(name="Initial SF", start=7, end=12, value=7, step=1, disabled=True)
+fixed_sf_checkbox = pn.widgets.Checkbox(name="Use Single Spreading Factor (SF)", value=False)
+sf_value_input = pn.widgets.IntSlider(name="Initial Spreading Factor (SF)", start=7, end=12, value=7, step=1, disabled=True)
 
 fixed_power_checkbox = pn.widgets.Checkbox(name="Use single TX power", value=False)
 tx_power_input = pn.widgets.FloatSlider(name="TX power (dBm)", start=2, end=20, value=14, step=1, disabled=True)
@@ -457,7 +457,7 @@ qos_algorithm_select = pn.widgets.RadioButtonGroup(
 )
 qos_algorithm_select.visible = False
 qos_snir_toggle = pn.widgets.Toggle(
-    name="Enable SNIR", button_type="default", value=False
+    name="Enable Signal-to-Noise-and-Interference Ratio (SNIR)", button_type="default", value=False
 )
 qos_inter_sf_coupling_input = pn.widgets.FloatInput(
     name="Inter-SF coupling (α)",
@@ -487,7 +487,7 @@ qos_cluster_arrival_rates_input = pn.widgets.TextInput(
     placeholder="0.1",
 )
 qos_cluster_pdr_targets_input = pn.widgets.TextInput(
-    name="PDR targets (0-1)",
+    name="Packet Delivery Ratio (PDR) Targets (0-1)",
     value="",
     placeholder="0.9",
 )
@@ -516,14 +516,14 @@ export_button = pn.widgets.Button(name="Export results", button_type="primary", 
 export_message = pn.pane.HTML("Click Export to generate the CSV file after simulation.")
 
 # --- Indicateurs de métriques ---
-pdr_indicator = pn.indicators.Number(name="PDR", value=0, format="{value:.1%}")
+pdr_indicator = pn.indicators.Number(name="Packet Delivery Ratio (PDR)", value=0, format="{value:.1%}")
 # Display collisions as a float in case multiple runs are averaged
 collisions_indicator = pn.indicators.Number(
     name="Collisions", value=0.0, format="{value:.1f}"
 )
-energy_indicator = pn.indicators.Number(name="Tx energy (J)", value=0.0, format="{value:.3f}")
-delay_indicator = pn.indicators.Number(name="Average delay (s)", value=0.0, format="{value:.3f}")
-throughput_indicator = pn.indicators.Number(name="Throughput (bps)", value=0.0, format="{value:.2f}")
+energy_indicator = pn.indicators.Number(name="Transmission Energy (J)", value=0.0, format="{value:.3f}")
+delay_indicator = pn.indicators.Number(name="Mean Delay (s)", value=0.0, format="{value:.3f}")
+throughput_indicator = pn.indicators.Number(name="Throughput (bit/s)", value=0.0, format="{value:.2f}")
 
 # Indicateur de retransmissions
 # Same for retransmissions which may also be averaged across runs
@@ -539,7 +539,7 @@ fast_forward_progress = pn.indicators.Progress(name="Progress", value=0, width=2
 
 # Tableau récapitulatif du PDR par nœud (global et récent)
 pdr_table = pn.pane.DataFrame(
-    pd.DataFrame(columns=["Node", "PDR", "Recent PDR"]),
+    pd.DataFrame(columns=["Node", "Packet Delivery Ratio (PDR)", "Recent Packet Delivery Ratio (PDR)"]),
     height=200,
     width=220,
 )
@@ -868,8 +868,8 @@ def step_simulation():
     table_df = pd.DataFrame(
         {
             "Node": list(metrics["pdr_by_node"].keys()),
-            "PDR": list(metrics["pdr_by_node"].values()),
-            "Recent PDR": [
+            "Packet Delivery Ratio (PDR)": list(metrics["pdr_by_node"].values()),
+            "Recent Packet Delivery Ratio (PDR)": [
                 metrics["recent_pdr_by_node"][nid]
                 for nid in metrics["pdr_by_node"].keys()
             ],
@@ -1260,8 +1260,8 @@ def on_stop(event):
         table_df = pd.DataFrame(
             {
                 "Node": list(last["pdr_by_node"].keys()),
-                "PDR": list(last["pdr_by_node"].values()),
-                "Recent PDR": [
+                "Packet Delivery Ratio (PDR)": list(last["pdr_by_node"].values()),
+                "Recent Packet Delivery Ratio (PDR)": [
                     last["recent_pdr_by_node"][nid]
                     for nid in last["pdr_by_node"].keys()
                 ],
