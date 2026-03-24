@@ -25,6 +25,9 @@ jobs:
           loraflexsim run --help
           python -m loraflexsim.run --help
 
+      - name: Check public surfaces are English-only
+        run: python scripts/check_english_docs.py --warn-threshold 0 --fail-threshold 160
+
   smoke-windows:
     runs-on: windows-latest
     steps:
@@ -57,3 +60,7 @@ jobs:
           .\.venv\Scripts\loraflexsim.exe --help
           .\.venv\Scripts\loraflexsim.exe run --help
           .\.venv\Scripts\python -m loraflexsim.run --help
+
+      - name: Check public surfaces are English-only
+        shell: pwsh
+        run: .\.venv\Scripts\python scripts/check_english_docs.py --warn-threshold 0 --fail-threshold 160
