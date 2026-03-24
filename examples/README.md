@@ -1,18 +1,18 @@
 # `examples/`
 
-Ce dossier contient des **exemples simples** pour découvrir le dépôt sans passer par les workflows historiques.
+This directory provides **minimal examples** to explore the repository without using historical workflows.
 
-## Contenu
+## Contents
 
-- scripts de lancement minimal ;
-- exemples d’analyse de résultats ;
-- exemples de tracés ;
-- un exemple de configuration YAML (`long_range.yaml`).
+- minimal launch scripts;
+- result-analysis examples;
+- plotting examples;
+- one YAML configuration example (`long_range.yaml`).
 
-## Quand l’utiliser ?
+## When to use it
 
-Utilisez ce dossier pour une démonstration, une formation ou une exploration rapide du code.
+Use this directory for demonstrations, training sessions, or quick code exploration.
 
-## Quand ne pas l’utiliser ?
+## When not to use it
 
-Pour un parcours utilisateur standard documenté, le point d’entrée recommandé reste le `README.md` racine puis `mobilesfrdth` / le dashboard.
+For the standard user journey, start from the root `README.md` and then follow `mobilesfrdth` / dashboard documentation.

@@ -1,17 +1,17 @@
 # `tests/`
 
-Ce dossier rassemble les **tests automatisés** du dépôt.
+This directory contains the repository **automated tests**.
 
-## Contenu
+## Contents
 
-- `integration/` : tests de flux bout en bout et de non-régression ;
-- `qos/`, `learning/`, `pretest_campagne/` : familles de tests spécialisées ;
-- `data/` et `stubs/` : données et doublures de test.
+- `integration/`: end-to-end and non-regression tests;
+- `qos/`, `learning/`, `pretest_campagne/`: specialized test families;
+- `data/` and `stubs/`: test datasets and stubs.
 
-## Quand l’utiliser ?
+## When to use it
 
-- pour vérifier une modification ;
-- pour comprendre le comportement attendu d’un module ;
-- pour retrouver les jeux de données de validation.
+- to validate a change;
+- to inspect expected module behavior;
+- to locate validation datasets.
 
-Référence documentaire associée : `docs/test_plan.md`.
+Related documentation reference: `docs/test_plan.md`.

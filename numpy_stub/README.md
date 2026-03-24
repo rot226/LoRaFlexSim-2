@@ -1,10 +1,10 @@
 # `numpy_stub/`
 
-Ce dossier fournit une **couche de compatibilité légère** autour de `numpy` pour certains environnements de test ou d’exécution contraints.
+This directory provides a **lightweight compatibility layer** around `numpy` for selected test or constrained runtime environments.
 
-## Statut
+## Status
 
-- **Support technique**.
-- Dossier utile surtout aux mainteneurs et à la CI.
+- **Technical support**.
+- Mostly useful for maintainers and CI.
 
-Si vous découvrez le projet côté utilisateur, vous pouvez généralement l’ignorer.
+If you are onboarding as an end user, you can usually ignore this directory.

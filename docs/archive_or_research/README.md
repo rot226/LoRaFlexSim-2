@@ -1,15 +1,15 @@
 # Archive / Research
 
-Ce dossier regroupe les contenus **historiques** et **recherche** de LoRaFlexSim-2.
+This directory groups **historical** and **research-oriented** LoRaFlexSim-2 content.
 
-## À quoi sert cette zone ?
+## Purpose
 
-- Conserver la traçabilité des migrations documentaires.
-- Garder les guides de reproduction qui ne sont pas le parcours utilisateur principal.
-- Isoler clairement ce qui n’est plus une surface vivante.
+- Preserve traceability for documentation migrations.
+- Keep reproduction guides outside the main user path.
+- Clearly isolate non-active surfaces.
 
-## Index minimal
+## Minimal index
 
-- `migration_legacy_surfaces.md` : statut des anciennes surfaces (`mobilesfrdth`, `sfrd`, `src`, `final`).
-- `iwcmc_archive.md` : archive métier des expériences héritées.
-- `scenario_c_reproduction.md` : guide de reproduction scénario C.
+- `migration_legacy_surfaces.md`: status of legacy surfaces (`mobilesfrdth`, `sfrd`, `src`, `final`).
+- `iwcmc_archive.md`: domain archive of inherited experiments.
+- `scenario_c_reproduction.md`: Scenario C reproduction guide.

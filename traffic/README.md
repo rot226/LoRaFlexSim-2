@@ -1,16 +1,16 @@
 # `traffic/`
 
-Ce dossier contient des **composants utilitaires liés au trafic réseau simulé**.
+This directory contains **utility components for simulated network traffic**.
 
-## Ce qu’on y trouve
+## What you can find here
 
-- gestion aléatoire (`rng_manager.py`) ;
-- compatibilité `numpy` (`numpy_compat.py`) ;
-- modèles de trafic, par exemple exponentiels (`exponential.py`).
+- random management (`rng_manager.py`);
+- `numpy` compatibility helpers (`numpy_compat.py`);
+- traffic models, including exponential traffic (`exponential.py`).
 
-## Statut
+## Status
 
-- **Technique / support du simulateur**.
-- Utile surtout aux développeurs simulation et aux mainteneurs.
+- **Technical simulator support**.
+- Mainly useful for simulation developers and maintainers.
 
-Pour une découverte fonctionnelle du projet, le point d’entrée reste le `README.md` racine.
+For general project onboarding, use the root `README.md` as the primary entry point.

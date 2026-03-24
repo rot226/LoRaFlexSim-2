@@ -1,38 +1,38 @@
-# Language Migration Status
+# Language migration status and style guide
 
-This checklist tracks the prioritized migration of French-language surfaces to English.
+## Target register
 
-## Status legend
-- `todo`: not started
-- `in_progress`: currently being migrated
-- `done`: migration finished and validated
+All technical documentation must use **scientific/technical English**:
 
-## Batch backlog (priority order)
+- precise, testable, and reproducible wording;
+- explicit assumptions, units, and variable names;
+- neutral tone (no marketing or colloquial style);
+- stable terminology across modules, CLI guides, and validation notes.
 
-| Priority | Batch | Scope | Migration steps (must be completed in order) | Status |
-|---|---|---|---|---|
-| 1 | Entry docs | `README.md`, `docs/README.md`, `docs/installation.md`, `docs/user_entrypoints_inventory.md` | 1) Translate to English. 2) Run `python scripts/check_english_surface.py`. 3) Confirm no new French strings were introduced. | `todo` |
-| 2 | UI/dashboard | `loraflexsim/launcher/dashboard.py` | 1) Translate user-facing strings to English. 2) Run `python scripts/check_english_surface.py`. 3) Confirm no new French strings were introduced. | `done` |
-| 3 | CLI messages and operational scripts | `loraflexsim/run.py`, `scripts/run_offline.sh`, `scripts/windows/run_offline.ps1`, `scripts/bootstrap_*` | 1) Translate messages/comments/help surfaces to English. 2) Run `python scripts/check_english_surface.py`. 3) Confirm no new French strings were introduced. | `todo` |
-| 4 | Research/archive zones | `pretest_campagne/**`, `experiments/**`, `docs/archive_or_research/**` | 1) Translate to English. 2) Run `python scripts/check_english_surface.py`. 3) Confirm no new French strings were introduced. | `todo` |
+## Terminology rules
 
-## Folder-level migration checklist
+Use the following canonical terms consistently:
 
-- [ ] `README.md` — `todo`
-- [ ] `docs/` — `todo`
-- [x] `loraflexsim/launcher/` — `done`
-- [ ] `loraflexsim/` (CLI surfaces) — `todo`
-- [ ] `scripts/` (offline + bootstrap surfaces) — `todo`
-- [ ] `pretest_campagne/` — `todo`
-- [ ] `experiments/` — `todo`
-- [ ] `docs/archive_or_research/` — `todo`
+- **node** (not "end-device" unless protocol-specific detail is required);
+- **gateway** (for LoRaWAN gateway entities);
+- **uplink / downlink** (directional radio traffic);
+- **propagation** (radio/channel propagation models and conditions);
+- **validation** (for checks against requirements, baselines, or references).
 
-## Validation log
+Recommended patterns:
 
-- Baseline executed before migration batches:
-  - `python scripts/check_english_surface.py` → fails with existing violations in current repository baseline.
-- After each batch, append a new log entry with:
-  - date/time,
-  - files touched,
-  - checker result,
-  - explicit statement: "No new French strings introduced".
+- "node density", "gateway density", "uplink success rate", "downlink latency";
+- "propagation model", "path-loss model", "fading profile";
+- "validation profile", "validation matrix", "validation baseline".
+
+## Language-mixing policy
+
+- FR/EN mixing is **forbidden** in standard technical documentation.
+- French is allowed only in explicitly localized content (e.g., `*.fr.md` or a clearly marked localization section).
+- Code blocks, command examples, and protocol literals must stay unchanged unless a functional correction is required.
+
+## Operational checklist for maintainers
+
+1. Scan edited Markdown files for non-English prose before merge.
+2. Keep headings, captions, and callouts in English.
+3. If localized content is added intentionally, mark it explicitly and isolate it from canonical docs.

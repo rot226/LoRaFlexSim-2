@@ -1,7 +1,7 @@
-# Tests archivés
+# Archived tests
 
-Ce dossier de tests unitaires historiques a été retiré du flux actif.
+This historical unit-test directory has been removed from the active workflow.
 
-Statut : **archive technique** (non exécutée en CI, non maintenue).
+Status: **technical archive** (not executed in CI, not maintained).
 
-Référence de migration : `docs/archive_or_research/migration_legacy_surfaces.md`.
+Migration reference: `docs/archive_or_research/migration_legacy_surfaces.md`.

@@ -1,10 +1,10 @@
 # `scipy/`
 
-Ce dossier correspond à une **couche locale de compatibilité** liée à `scipy`.
+This directory provides a **local compatibility layer** related to `scipy`.
 
-## Statut
+## Status
 
-- **Support technique**.
-- Pertinent surtout pour la maintenance, certains tests ou des environnements limités.
+- **Technical support**.
+- Mainly relevant for maintenance, specific tests, or constrained environments.
 
-Un utilisateur qui découvre le projet peut en pratique l’ignorer et suivre le `README.md` racine.
+Most end users can ignore this folder and follow the root `README.md`.
