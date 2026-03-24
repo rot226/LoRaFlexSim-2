@@ -15,4 +15,4 @@ Invoke-Expression "python -m loraflexsim aggregate $AggregateArgs"
 Write-Host "[3/3] loraflexsim plots $PlotsArgs"
 Invoke-Expression "python -m loraflexsim plots $PlotsArgs"
 
-Write-Host "Pipeline loraflexsim terminé (point d’entrée officiel recommandé)."
+Write-Host "loraflexsim pipeline finished (recommended official entry point)."

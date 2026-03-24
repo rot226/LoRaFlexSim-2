@@ -46,23 +46,23 @@ def _run_snir_matrix(
         "--results-dir",
         str(results_dir),
     ]
-    print("[RUN] Matrice SNIR on/off minimale via run_step1_matrix.py …")
+    print("[RUN] Minimal SNIR on/off matrix via run_step1_matrix.py...")
     run_step1_matrix(argv)
     generated = sorted(results_dir.rglob("*_snir-*.csv"))
     if generated:
         for path in generated:
-            print(f"[OK] CSV généré : {path.relative_to(ROOT_DIR)}")
+            print(f"[OK] CSV generated: {path.relative_to(ROOT_DIR)}")
     else:
-        print("[WARN] Aucun CSV SNIR détecté après l'exécution ; vérifiez les paramètres.")
+        print("[WARN] No SNIR CSV detected after execution; check parameters.")
 
 
 def _aggregate_results(results_dir: Path) -> None:
-    print("[RUN] Agrégation des CSV …")
+    print("[RUN] Aggregating CSVs...")
     aggregate_step1_results(results_dir, strict_snir_detection=True, split_snir=False)
 
 
 def _generate_plots(results_dir: Path, figures_dir: Path) -> Path:
-    print("[RUN] Génération des figures …")
+    print("[RUN] Generating figures...")
     generate_step1_figures(
         results_dir,
         figures_dir,
@@ -77,10 +77,10 @@ def _assert_compare_plots(figures_dir: Path) -> None:
     compare_plots = list(figures_dir.glob("*_snir-compare_*.png"))
     if not compare_plots:
         raise RuntimeError(
-            f"Aucune figure SNIR combinée trouvée dans {figures_dir};"
-            " vérifiez l'agrégation ou le tracé."
+            f"No combined SNIR figure found in {figures_dir};"
+            " check aggregation or plotting."
         )
-    print(f"[OK] {len(compare_plots)} figure(s) SNIR combinées détectées dans {figures_dir}")
+    print(f"[OK] {len(compare_plots)} combined SNIR figure(s) detected in {figures_dir}")
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -89,33 +89,33 @@ def _build_parser() -> argparse.ArgumentParser:
         "--results-dir",
         type=Path,
         default=DEFAULT_RESULTS_DIR,
-        help="Répertoire de sortie pour les CSV SNIR on/off",
+        help="Output directory for SNIR on/off CSVs",
     )
     parser.add_argument(
         "--figures-dir",
         type=Path,
         default=DEFAULT_FIGURES_DIR,
-        help="Répertoire racine pour les figures générées",
+        help="Root directory for generated figures",
     )
-    parser.add_argument("--nodes", type=int, default=10, help="Nombre de nœuds pour le test rapide")
+    parser.add_argument("--nodes", type=int, default=10, help="Number of nodes for the quick test")
     parser.add_argument(
         "--packet-interval",
         type=float,
         default=60.0,
-        help="Intervalle moyen d'émission (secondes)",
+        help="Average transmission interval (seconds)",
     )
     parser.add_argument(
         "--duration",
         type=float,
         default=180.0,
-        help="Durée maximale de simulation (secondes)",
+        help="Maximum simulation duration (seconds)",
     )
-    parser.add_argument("--seed", type=int, default=42, help="Graine de simulation")
+    parser.add_argument("--seed", type=int, default=42, help="Simulation seed")
     parser.add_argument(
         "--algorithm",
         choices=["adr", "apra", "mixra_h", "mixra_opt"],
         default="adr",
-        help="Algorithme QoS à tester",
+        help="QoS algorithm to test",
     )
     return parser
 

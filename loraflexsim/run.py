@@ -266,12 +266,12 @@ def simulate(
                     delivered += 1
                     delays.append(0)
                     if debug_rx:
-                        logging.debug(f"t={t:.3f} Node {n} GW {gw} CH {ch} reçu")
+                        logging.debug(f"t={t:.3f} Node {n} GW {gw} CH {ch} received")
                 else:
                     collisions += 1
                     if debug_rx:
                         logging.debug(
-                            f"t={t:.3f} Node {n} GW {gw} CH {ch} rejeté (bruit)"
+                            f"t={t:.3f} Node {n} GW {gw} CH {ch} rejected (noise)"
                         )
                         diag_logger.info(
                             f"t={t:.3f} gw={gw} ch={ch} collision=[{n}] cause=noise"
@@ -323,7 +323,7 @@ def simulate(
                             for n in nodes_on_ch:
                                 if n == winner:
                                     logging.debug(
-                                        f"t={t:.3f} Node {n} GW {gw} CH {ch} reçu après collision"
+                                        f"t={t:.3f} Node {n} GW {gw} CH {ch} received after collision"
                                     )
                                 else:
                                     logging.debug(
@@ -337,7 +337,7 @@ def simulate(
                         if debug_rx:
                             for n in nodes_on_ch:
                                 logging.debug(
-                                    f"t={t:.3f} Node {n} GW {gw} CH {ch} perdu (collision/bruit)"
+                                    f"t={t:.3f} Node {n} GW {gw} CH {ch} lost (collision/noise)"
                                 )
                         diag_logger.info(
                             f"t={t:.3f} gw={gw} ch={ch} collision={nodes_on_ch} none"
@@ -368,14 +368,14 @@ def simulate(
 def main(argv=None):
     argv_list = list(argv) if argv is not None else sys.argv[1:]
     parser = argparse.ArgumentParser(
-        description="LoRaFlexSim – Mode CLI",
+        description="LoRaFlexSim - CLI mode",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
-            "Exemples :\n"
-            "  # Scénario urbain calé sur FLoRa\n"
+            "Examples:\n"
+            "  # Urban scenario aligned with FLoRa\n"
             "  python run.py --nodes 100 --gateways 1 --channels 3 --mode random \\\n"
             "    --interval 100 --first-interval 100 --steps 7200 --phy-model flora --seed 42\n\n"
-            "  # Scénario 15 km avec le preset longue portée\n"
+            "  # 15 km scenario with long-range preset\n"
             "  python run.py --long-range-demo very_long_range --seed 3\n"
         ),
     )
@@ -383,67 +383,67 @@ def main(argv=None):
         "--config",
         type=str,
         default="config.ini",
-        help="Fichier INI de configuration des paramètres",
+        help="INI configuration file",
     )
-    parser.add_argument("--nodes", type=int, default=10, help="Nombre de nœuds")
-    parser.add_argument("--gateways", type=int, default=1, help="Nombre de gateways")
+    parser.add_argument("--nodes", type=int, default=10, help="Number of nodes")
+    parser.add_argument("--gateways", type=int, default=1, help="Number of gateways")
     parser.add_argument(
-        "--channels", type=int, default=1, help="Nombre de canaux radio"
+        "--channels", type=int, default=1, help="Number of radio channels"
     )
     parser.add_argument(
         "--mode",
         choices=["random", "periodic"],
         default="random",
         type=str.lower,
-        help="Mode de transmission",
+        help="Transmission mode",
     )
     parser.add_argument(
         "--interval",
         type=float,
         default=10.0,
-        help="Intervalle moyen ou fixe entre transmissions",
+        help="Average or fixed interval between transmissions",
     )
     parser.add_argument(
         "--first-interval",
         type=float,
         default=None,
-        help="Moyenne exponentielle pour la première transmission",
+        help="Exponential mean for first transmission",
     )
     parser.add_argument(
         "--steps",
         type=int,
         default=100,
-        help="Nombre de pas de temps de la simulation",
+        help="Number of simulation time steps",
     )
     parser.add_argument(
         "--fast",
         action="store_true",
         help=(
-            "Exécute un run tronqué (10 %% des pas de temps, au moins 600 s) et "
-            "réduit le nombre de nœuds de moitié pour les tests rapides."
+            "Runs a truncated pass (10%% of time steps, at least 600 s) and "
+            "halves the number of nodes for quick tests."
         ),
     )
     parser.add_argument(
         "--sample-size",
         type=float,
         default=None,
-        help="Fraction (0-1] de la durée totale à simuler pour un run exploratoire",
+        help="Fraction (0-1] of total duration to simulate for an exploratory run",
     )
     parser.add_argument(
         "--runs",
         type=int,
         default=1,
-        help="Nombre d'exécutions à réaliser",
+        help="Number of runs to execute",
     )
     parser.add_argument(
         "--output",
         type=str,
-        help="Fichier CSV pour sauvegarder les résultats (optionnel)",
+        help="CSV file to save results (optional)",
     )
     parser.add_argument(
         "--lorawan-demo",
         action="store_true",
-        help="Exécute un exemple LoRaWAN",
+        help="Run a LoRaWAN example",
     )
     parser.add_argument(
         "--long-range-demo",
@@ -451,8 +451,8 @@ def main(argv=None):
         const="flora_hata",
         choices=["flora", "flora_hata", "rural_long_range", "very_long_range"],
         help=(
-            "Exécute un scénario longue portée reproductible. "
-            "Optionnellement, préciser le preset (flora, flora_hata, rural_long_range, very_long_range)."
+            "Runs a reproducible long-range scenario. "
+            "Optionally specify preset (flora, flora_hata, rural_long_range, very_long_range)."
         ),
     )
     parser.add_argument(
@@ -461,71 +461,71 @@ def main(argv=None):
         type=float,
         metavar=("AREA_KM2", "MAX_DISTANCE_KM"),
         help=(
-            "Estime un scénario longue portée à partir d'une surface cible (km²) et "
-            "d'une distance maximale (km). La distance est optionnelle et vaut la moitié "
-            "du côté si omise."
+            "Estimates a long-range scenario from a target area (km²) and "
+            "a maximum distance (km). Distance is optional and defaults to half "
+            "the side length if omitted."
         ),
     )
     parser.add_argument(
         "--seed",
         type=int,
-        help="Graine aléatoire pour reproduire les résultats",
+        help="Random seed for reproducibility",
     )
     parser.add_argument(
         "--fine-fading",
         type=float,
         default=0.0,
-        help="Écart-type du fading fin (dB)",
+        help="Fine fading standard deviation (dB)",
     )
     parser.add_argument(
         "--noise-std",
         type=float,
         default=0.0,
-        help="Écart-type du bruit thermique variable (dB)",
+        help="Variable thermal noise standard deviation (dB)",
     )
     parser.add_argument(
         "--phy-model",
         choices=["omnet", "flora", "flora_cpp"],
         default="omnet",
-        help="Modèle physique à utiliser (omnet, flora ou flora_cpp)",
+        help="Physical model to use (omnet, flora, or flora_cpp)",
     )
     parser.add_argument(
         "--voltage",
         type=float,
         default=3.3,
-        help="Tension d'alimentation du transceiver (V)",
+        help="Transceiver supply voltage (V)",
     )
     parser.add_argument(
         "--tx-current",
         type=float,
         default=0.06,
-        help="Courant en émission (A)",
+        help="TX current (A)",
     )
     parser.add_argument(
         "--rx-current",
         type=float,
         default=0.011,
-        help="Courant en réception (A)",
+        help="RX current (A)",
     )
     parser.add_argument(
         "--idle-current",
         type=float,
         default=1e-6,
-        help="Courant en veille (A)",
+        help="Idle current (A)",
     )
     parser.add_argument(
         "--debug-rx",
         action="store_true",
-        help="Trace chaque paquet reçu ou rejeté",
+        help="Log each received or rejected packet",
     )
     parser.add_argument(
         "--non-orth-matrix",
         dest="non_orth_matrix",
         action="append",
         help=(
-            "Chemin vers un fichier JSON/INI décrivant la matrice "
-            "NON_ORTH_DELTA. Peut être fourni plusieurs fois pour comparer l'impact "
-            "de différentes matrices."
+            "Path to a JSON/INI file describing matrix "
+            "NON_ORTH_DELTA. Can be provided multiple times to compare the impact "
+            "of different matrices."
         ),
     )
 
@@ -547,10 +547,10 @@ def main(argv=None):
         args.first_interval = args.interval
 
     if args.long_range_auto and not (1 <= len(args.long_range_auto) <= 2):
-        parser.error("--long-range-auto attend 1 ou 2 valeurs (surface, distance optionnelle)")
+        parser.error("--long-range-auto expects 1 or 2 values (area, optional distance)")
 
     if args.long_range_auto and args.long_range_demo:
-        parser.error("--long-range-auto est incompatible avec --long-range-demo")
+        parser.error("--long-range-auto is incompatible with --long-range-demo")
 
     if args.runs < 1:
         parser.error("--runs must be >= 1")
@@ -566,7 +566,7 @@ def main(argv=None):
         parser.error(str(exc))
     if (adjusted_nodes, adjusted_steps) != (args.nodes, args.steps):
         logging.info(
-            "Mode rapide activé : %d nœuds -> %d, durée %d s -> %d s",
+            "Fast mode enabled: %d nodes -> %d, duration %d s -> %d s",
             args.nodes,
             adjusted_nodes,
             args.steps,
@@ -606,7 +606,7 @@ def main(argv=None):
             max_snr = max(ev["snr_dB"] for ev in successful_sf12)
 
         logging.info(
-            "Scénario longue portée (%s) : %d nœuds sur %.1f km², TX=%.1f dBm, "
+            "Long-range scenario (%s): %d nodes over %.1f km², TX=%.1f dBm, "
             "gains TX/RX=%.1f/%.1f dBi",
             label,
             len(simulator.nodes),
@@ -683,8 +683,8 @@ def main(argv=None):
         simulator.run()
 
         logging.info(
-            "Suggestion longue portée : surface demandée=%.2f km², surface appliquée=%.2f km², "
-            "distance max=%.2f km (références %s → %s, facteur %.2f)",
+            "Long-range suggestion: requested area=%.2f km², applied area=%.2f km², "
+            "max distance=%.2f km (references %s -> %s, factor %.2f)",
             area_km2,
             suggestion.area_km2,
             suggestion.max_distance_km,
@@ -726,9 +726,9 @@ def main(argv=None):
         return
 
     logging.info(
-        f"Simulation d'un réseau LoRa : {args.nodes} nœuds, {args.gateways} gateways, "
-        f"{args.channels} canaux, mode={args.mode}, "
-        f"intervalle={args.interval}, steps={args.steps}, "
+        f"LoRa network simulation: {args.nodes} nodes, {args.gateways} gateways, "
+        f"{args.channels} channels, mode={args.mode}, "
+        f"interval={args.interval}, steps={args.steps}, "
         f"first_interval={args.first_interval}"
     )
     if args.lorawan_demo:
@@ -744,7 +744,7 @@ def main(argv=None):
         ns.send_downlink(node, b"ack")
         rx1, _ = node.schedule_receive_windows(0)
         gw.pop_downlink(node.id)  # illustration (frame, data_rate, tx_power, channel)
-        logging.info(f"Exemple LoRaWAN : trame uplink FCnt={frame.fcnt}, RX1={rx1}s")
+        logging.info(f"LoRaWAN example: uplink frame FCnt={frame.fcnt}, RX1={rx1}s")
         sys.exit()
 
     matrices = args.non_orth_matrix or [None]
@@ -752,7 +752,7 @@ def main(argv=None):
     for matrix_path in matrices:
         matrix = load_non_orth_delta(matrix_path) if matrix_path else None
         if matrix_path:
-            logging.info(f"Utilisation de la matrice {matrix_path}")
+            logging.info(f"Using matrix {matrix_path}")
         results = []
         for i in range(args.runs):
             seed = args.seed + i if args.seed is not None else i
@@ -789,18 +789,18 @@ def main(argv=None):
                 (delivered, collisions, pdr, energy, avg_delay, throughput, channel_loss)
             )
             logging.info(
-                f"Run {i + 1}/{args.runs} : PDR={pdr:.2f}% , Paquets livrés={delivered}, Collisions={collisions}, "
-                f"Énergie consommée={energy:.3f} J, Délai moyen={avg_delay:.2f} unités de temps, "
-                f"Débit moyen={throughput:.2f} bps"
+                f"Run {i + 1}/{args.runs}: PDR={pdr:.2f}% , Delivered packets={delivered}, Collisions={collisions}, "
+                f"Consumed energy={energy:.3f} J, Average delay={avg_delay:.2f} time units, "
+                f"Average throughput={throughput:.2f} bps"
             )
 
         averages = [
             sum(r[i] for r in results) / len(results) for i in range(len(results[0]))
         ]
         logging.info(
-            f"Moyenne : PDR={averages[2]:.2f}% , Paquets livrés={averages[0]:.2f}, Collisions={averages[1]:.2f}, "
-            f"Énergie consommée={averages[3]:.3f} J, Délai moyen={averages[4]:.2f} unités de temps, "
-            f"Débit moyen={averages[5]:.2f} bps",
+            f"Average: PDR={averages[2]:.2f}% , Delivered packets={averages[0]:.2f}, Collisions={averages[1]:.2f}, "
+            f"Consumed energy={averages[3]:.3f} J, Average delay={averages[4]:.2f} time units, "
+            f"Average throughput={averages[5]:.2f} bps",
         )
         all_results.append((matrix_path, results, tuple(averages)))
 
@@ -850,7 +850,7 @@ def main(argv=None):
                             f"{blr:.6f}",
                         ]
                     )
-            logging.info(f"Résultats enregistrés dans {out_path}")
+            logging.info(f"Results saved to {out_path}")
 
     return all_results
 

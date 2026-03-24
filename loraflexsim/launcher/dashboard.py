@@ -114,13 +114,13 @@ def _cleanup_callbacks() -> None:
 def _validate_positive_inputs() -> bool:
     """Return False and display a warning if key parameters are not positive."""
     if int(num_nodes_input.value) <= 0:
-        export_message.object = "⚠️ Le nombre de nœuds doit être supérieur à 0 !"
+        export_message.object = "⚠️ The number of nodes must be greater than 0!"
         return False
     if float(area_input.value) <= 0:
-        export_message.object = "⚠️ La taille de l'aire doit être supérieure à 0 !"
+        export_message.object = "⚠️ The area size must be greater than 0!"
         return False
     if float(interval_input.value) <= 0:
-        export_message.object = "⚠️ L'intervalle doit être supérieur à 0 !"
+        export_message.object = "⚠️ The interval must be greater than 0!"
         return False
     return True
 
@@ -129,18 +129,18 @@ def _validate_critical_launch_inputs() -> bool:
     """Validate critical parameters required to produce meaningful uplinks."""
 
     if int(num_gateways_input.value) <= 0:
-        export_message.object = "⚠️ Au moins une gateway est requise pour lancer la simulation !"
+        export_message.object = "⚠️ At least one gateway is required to start the simulation!"
         return False
 
     if int(packets_input.value) <= 0:
         export_message.object = (
-            "⚠️ Uplink désactivé : définissez un nombre de paquets par nœud strictement positif."
+            "⚠️ Uplink disabled: set a strictly positive number of packets per node."
         )
         return False
 
     if float(real_time_duration_input.value) <= 0:
         export_message.object = (
-            "⚠️ Durée de simulation invalide : la durée réelle doit être strictement positive."
+            "⚠️ Invalid simulation duration: real duration must be strictly positive."
         )
         return False
 
@@ -161,7 +161,7 @@ def _build_run_config(seed_offset: int = 0) -> dict:
         "simulation_duration_s": float(real_time_duration_input.value),
         "uplink_enabled": int(packets_input.value) > 0,
         "traffic": {
-            "mode": "Random" if mode_select.value == "Aléatoire" else "Periodic",
+            "mode": "Random" if mode_select.value == "Random" else "Periodic",
             "packet_interval_s": float(interval_input.value),
             "first_packet_interval_s": float(first_packet_input.value),
             "packets_per_node": int(packets_input.value),
@@ -174,7 +174,7 @@ def _build_run_config(seed_offset: int = 0) -> dict:
             "fixed_sf": int(sf_value_input.value) if fixed_sf_checkbox.value else None,
             "fixed_tx_power_dbm": float(tx_power_input.value) if fixed_power_checkbox.value else None,
             "num_channels": int(num_channels_input.value),
-            "channel_distribution": "random" if channel_dist_select.value == "Aléatoire" else "round-robin",
+            "channel_distribution": "random" if channel_dist_select.value == "Random" else "round-robin",
         },
         "topology": {
             "num_nodes": int(num_nodes_input.value),
@@ -205,12 +205,12 @@ def _parse_cluster_field(
     ]
     if len(parts) != count:
         raise ValueError(
-            f"{field_label} doit contenir {count} valeur(s) séparée(s) par des virgules."
+            f"{field_label} must contain {count} comma-separated value(s)."
         )
     try:
         return [float(part) for part in parts]
     except ValueError as exc:  # pragma: no cover - validation utilisateur
-        raise ValueError(f"Valeurs numériques invalides pour {field_label}.") from exc
+        raise ValueError(f"Invalid numeric values for {field_label}.") from exc
 
 
 def _configure_qos_clusters_from_widgets() -> None:
@@ -219,9 +219,9 @@ def _configure_qos_clusters_from_widgets() -> None:
     try:
         cluster_count = int(qos_cluster_count_input.value)
     except (TypeError, ValueError) as exc:  # pragma: no cover - défense
-        raise ValueError("Le nombre de clusters QoS doit être un entier valide.") from exc
+        raise ValueError("QoS cluster count must be a valid integer.") from exc
     if cluster_count <= 0:
-        raise ValueError("Le nombre de clusters QoS doit être supérieur à 0.")
+        raise ValueError("QoS cluster count must be greater than 0.")
 
     def _default_proportions() -> list[float]:
         return [1.0 / cluster_count] * cluster_count
@@ -233,9 +233,9 @@ def _configure_qos_clusters_from_widgets() -> None:
         default_factory=_default_proportions,
     )
     if any(p <= 0 for p in proportions):
-        raise ValueError("Les proportions doivent être strictement positives.")
+        raise ValueError("Proportions must be strictly positive.")
     if not math.isclose(sum(proportions), 1.0, rel_tol=1e-6, abs_tol=1e-6):
-        raise ValueError("La somme des proportions doit être égale à 1.")
+        raise ValueError("Sum of proportions must be equal to 1.")
 
     def _default_lambdas() -> list[float]:
         return [_DEFAULT_QOS_LAMBDA] * cluster_count
@@ -243,11 +243,11 @@ def _configure_qos_clusters_from_widgets() -> None:
     arrival_rates = _parse_cluster_field(
         qos_cluster_arrival_rates_input.value,
         cluster_count,
-        field_label="Les taux d'arrivée",
+        field_label="Arrival rates",
         default_factory=_default_lambdas,
     )
     if any(rate <= 0 for rate in arrival_rates):
-        raise ValueError("Les taux d'arrivée doivent être strictement positifs.")
+        raise ValueError("Arrival rates must be strictly positive.")
 
     def _default_pdr() -> list[float]:
         return [_DEFAULT_QOS_PDR] * cluster_count
@@ -259,24 +259,24 @@ def _configure_qos_clusters_from_widgets() -> None:
         default_factory=_default_pdr,
     )
     if any(target <= 0 or target > 1 for target in pdr_targets):
-        raise ValueError("Les cibles PDR doivent être comprises entre 0 et 1.")
+        raise ValueError("PDR targets must be between 0 and 1.")
 
     try:
         raw_channel_limit = qos_cluster_channel_limit_input.value
         channel_limit_value = int(raw_channel_limit) if raw_channel_limit is not None else 0
     except (TypeError, ValueError) as exc:  # pragma: no cover - validation utilisateur
-        raise ValueError("La borne D doit être un entier valide.") from exc
+        raise ValueError("D bound must be a valid integer.") from exc
     if channel_limit_value < 0:
-        raise ValueError("La borne D doit être positive ou nulle.")
+        raise ValueError("D bound must be non-negative.")
     channel_limit = channel_limit_value if channel_limit_value > 0 else None
 
     try:
         raw_sf_limit = qos_cluster_min_sf_limit_input.value
         sf_limit_value = int(raw_sf_limit) if raw_sf_limit is not None else 0
     except (TypeError, ValueError) as exc:  # pragma: no cover - validation utilisateur
-        raise ValueError("La borne F doit être un entier valide.") from exc
+        raise ValueError("F bound must be a valid integer.") from exc
     if sf_limit_value < 0:
-        raise ValueError("La borne F doit être positive ou nulle.")
+        raise ValueError("F bound must be non-negative.")
     sf_limit = sf_limit_value if sf_limit_value > 0 else None
 
     qos_manager.configure_clusters(
@@ -304,9 +304,9 @@ def _parse_capture_thresholds(raw_value: str) -> list[float] | None:
         try:
             value = float(part)
         except ValueError as exc:  # pragma: no cover - validation utilisateur
-            raise ValueError("Les seuils de capture doivent être numériques.") from exc
+            raise ValueError("Capture thresholds must be numeric.") from exc
         if not math.isfinite(value):
-            raise ValueError("Les seuils de capture doivent être finis.")
+            raise ValueError("Capture thresholds must be finite.")
         thresholds.append(value)
     return thresholds or None
 
@@ -342,47 +342,47 @@ def _apply_radio_model_from_widgets() -> None:
 
 
 # --- Widgets de configuration ---
-num_nodes_input = pn.widgets.IntInput(name="Nombre de nœuds", value=2, step=1, start=1)
-num_gateways_input = pn.widgets.IntInput(name="Nombre de passerelles", value=1, step=1, start=1)
-area_input = pn.widgets.FloatInput(name="Taille de l'aire (m)", value=1000.0, step=100.0, start=100.0)
+num_nodes_input = pn.widgets.IntInput(name="Number of nodes", value=2, step=1, start=1)
+num_gateways_input = pn.widgets.IntInput(name="Number of gateways", value=1, step=1, start=1)
+area_input = pn.widgets.FloatInput(name="Area size (m)", value=1000.0, step=100.0, start=100.0)
 mode_select = pn.widgets.RadioButtonGroup(
-    name="Mode d'émission", options=["Aléatoire", "Périodique"], value="Aléatoire"
+    name="Transmission mode", options=["Random", "Periodic"], value="Random"
 )
-interval_input = pn.widgets.FloatInput(name="Intervalle moyen (s)", value=100.0, step=1.0, start=0.1)
+interval_input = pn.widgets.FloatInput(name="Average interval (s)", value=100.0, step=1.0, start=0.1)
 first_packet_input = pn.widgets.FloatInput(
-    name="Intervalle premier paquet (s)",
+    name="First-packet interval (s)",
     value=100.0,
     step=1.0,
     start=0.1,
 )
 packets_input = pn.widgets.IntInput(
-    name="Nombre de paquets par nœud (0=infin)", value=80, step=1, start=0
+    name="Packets per node (0=infinite)", value=80, step=1, start=0
 )
 seed_input = pn.widgets.IntInput(
-    name="Graine (0 = aléatoire)", value=0, step=1, start=0
+    name="Seed (0 = random)", value=0, step=1, start=0
 )
-num_runs_input = pn.widgets.IntInput(name="Nombre de runs", value=1, start=1)
-adr_node_checkbox = pn.widgets.Checkbox(name="ADR nœud", value=True)
-adr_server_checkbox = pn.widgets.Checkbox(name="ADR serveur", value=True)
+num_runs_input = pn.widgets.IntInput(name="Number of runs", value=1, start=1)
+adr_node_checkbox = pn.widgets.Checkbox(name="Node ADR", value=True)
+adr_server_checkbox = pn.widgets.Checkbox(name="Server ADR", value=True)
 
 # --- Sélecteur du protocole ADR ---
 adr_select = pn.widgets.Select(
-    name="Protocole ADR",
+    name="ADR protocol",
     options=list(ADR_MODULES.keys()),
     value=_DEFAULT_ADR_NAME,
 )
 
 # --- Choix SF et puissance initiaux identiques ---
-fixed_sf_checkbox = pn.widgets.Checkbox(name="Choisir SF unique", value=False)
-sf_value_input = pn.widgets.IntSlider(name="SF initial", start=7, end=12, value=7, step=1, disabled=True)
+fixed_sf_checkbox = pn.widgets.Checkbox(name="Use single SF", value=False)
+sf_value_input = pn.widgets.IntSlider(name="Initial SF", start=7, end=12, value=7, step=1, disabled=True)
 
-fixed_power_checkbox = pn.widgets.Checkbox(name="Choisir puissance unique", value=False)
-tx_power_input = pn.widgets.FloatSlider(name="Puissance Tx (dBm)", start=2, end=20, value=14, step=1, disabled=True)
+fixed_power_checkbox = pn.widgets.Checkbox(name="Use single TX power", value=False)
+tx_power_input = pn.widgets.FloatSlider(name="TX power (dBm)", start=2, end=20, value=14, step=1, disabled=True)
 
 # --- Multi-canaux ---
-num_channels_input = pn.widgets.IntInput(name="Nb sous-canaux", value=1, step=1, start=1)
+num_channels_input = pn.widgets.IntInput(name="Number of subchannels", value=1, step=1, start=1)
 channel_dist_select = pn.widgets.RadioButtonGroup(
-    name="Répartition canaux", options=["Round-robin", "Aléatoire"], value="Round-robin"
+    name="Channel distribution", options=["Round-robin", "Random"], value="Round-robin"
 )
 
 # -- Options de couche physique --
@@ -390,35 +390,35 @@ fine_fading_input = pn.widgets.FloatInput(
     name="Fine fading std (dB)", value=0.0, step=0.1, start=0.0
 )
 noise_std_input = pn.widgets.FloatInput(
-    name="Bruit thermique variable (dB)", value=0.0, step=0.1, start=0.0
+    name="Variable thermal noise (dB)", value=0.0, step=0.1, start=0.0
 )
 
 # --- Widget pour activer/désactiver la mobilité des nœuds ---
-mobility_checkbox = pn.widgets.Checkbox(name="Activer la mobilité des nœuds", value=False)
+mobility_checkbox = pn.widgets.Checkbox(name="Enable node mobility", value=False)
 
 # Widgets pour régler la vitesse minimale et maximale des nœuds mobiles
 mobility_speed_min_input = pn.widgets.FloatInput(name="Vitesse min (m/s)", value=2.0, step=0.5, start=0.1)
 mobility_speed_max_input = pn.widgets.FloatInput(name="Vitesse max (m/s)", value=10.0, step=0.5, start=0.1)
-show_paths_checkbox = pn.widgets.Checkbox(name="Afficher trajectoires", value=False)
+show_paths_checkbox = pn.widgets.Checkbox(name="Show trajectories", value=False)
 
 # Choix du modèle de mobilité
 mobility_model_select = pn.widgets.Select(
-    name="Modèle de mobilité",
+    name="Mobility model",
     options=["Smooth", "RandomWaypoint", "Path"],
     value="Smooth",
 )
 
 # --- Durée réelle de simulation et bouton d'accélération ---
-real_time_duration_input = pn.widgets.FloatInput(name="Durée réelle max (s)", value=86400.0, step=1.0, start=0.0)
+real_time_duration_input = pn.widgets.FloatInput(name="Max real duration (s)", value=86400.0, step=1.0, start=0.0)
 fast_forward_button = pn.widgets.Button(
-    name="Accélérer jusqu'à la fin", button_type="primary", disabled=True
+    name="Fast-forward to end", button_type="primary", disabled=True
 )
 fast_forward_button.disabled = int(packets_input.value) <= 0
 
 # --- Paramètres radio FLoRa ---
-flora_mode_toggle = pn.widgets.Toggle(name="Mode FLoRa complet", button_type="primary", value=True)
+flora_mode_toggle = pn.widgets.Toggle(name="Full FLoRa mode", button_type="primary", value=True)
 detection_threshold_input = pn.widgets.FloatInput(
-    name="Seuil détection (dBm)", value=-110.0, step=1.0, start=-150.0
+    name="Detection threshold (dBm)", value=-110.0, step=1.0, start=-150.0
 )
 detection_threshold_input.disabled = True
 min_interference_input = pn.widgets.FloatInput(
@@ -428,20 +428,20 @@ min_interference_input = pn.widgets.FloatInput(
 min_interference_input.disabled = True
 # --- Paramètres supplémentaires ---
 battery_capacity_input = pn.widgets.FloatInput(
-    name="Capacité batterie (J)", value=0.0, step=10.0, start=0.0
+    name="Battery capacity (J)", value=0.0, step=10.0, start=0.0
 )
 payload_size_input = pn.widgets.IntInput(
-    name="Taille payload (o)", value=20, step=1, start=1
+    name="Payload size (B)", value=20, step=1, start=1
 )
 node_class_select = pn.widgets.RadioButtonGroup(
-    name="Classe LoRaWAN", options=["A", "B", "C"], value="A"
+    name="LoRaWAN class", options=["A", "B", "C"], value="A"
 )
 # Lorsque le mode FLoRa est activé, cette valeur est fixée à 5 s
 
 # --- Positions manuelles ---
-manual_pos_toggle = pn.widgets.Checkbox(name="Positions manuelles")
+manual_pos_toggle = pn.widgets.Checkbox(name="Manual positions")
 position_textarea = pn.widgets.TextAreaInput(
-    name="Coordonnées",
+    name="Coordinates",
     height=100,
     visible=False,
     width=650,
@@ -451,54 +451,54 @@ position_textarea = pn.widgets.TextAreaInput(
 # --- QoS ---
 qos_toggle = pn.widgets.Toggle(name="QoS", button_type="default", value=False)
 qos_algorithm_select = pn.widgets.RadioButtonGroup(
-    name="Algorithme QoS",
+    name="QoS algorithm",
     options=list(QOS_ALGORITHMS.keys()),
     value="MixRA-Opt",
 )
 qos_algorithm_select.visible = False
 qos_snir_toggle = pn.widgets.Toggle(
-    name="Activer SNIR", button_type="default", value=False
+    name="Enable SNIR", button_type="default", value=False
 )
 qos_inter_sf_coupling_input = pn.widgets.FloatInput(
-    name="Couplage inter-SF (α)",
+    name="Inter-SF coupling (α)",
     value=0.0,
     step=0.1,
     start=0.0,
 )
 qos_capture_thresholds_input = pn.widgets.TextInput(
-    name="Seuils de capture SNIR (dB)",
+    name="SNIR capture thresholds (dB)",
     value="",
     placeholder="Ex.: 6, 6, 6",
 )
 qos_cluster_count_input = pn.widgets.IntInput(
-    name="Nombre de clusters QoS",
+    name="Number of QoS clusters",
     value=_DEFAULT_QOS_CLUSTER_COUNT,
     step=1,
     start=1,
 )
 qos_cluster_proportions_input = pn.widgets.TextInput(
-    name="Proportions (séparées par des virgules)",
+    name="Proportions (comma-separated)",
     value="",
     placeholder="1.0",
 )
 qos_cluster_arrival_rates_input = pn.widgets.TextInput(
-    name="Taux d'arrivée λ (par cluster)",
+    name="Arrival rate λ (per cluster)",
     value="",
     placeholder="0.1",
 )
 qos_cluster_pdr_targets_input = pn.widgets.TextInput(
-    name="Cibles PDR (0-1)",
+    name="PDR targets (0-1)",
     value="",
     placeholder="0.9",
 )
 qos_cluster_channel_limit_input = pn.widgets.IntInput(
-    name="Limite D (clusters par canal)",
+    name="D limit (clusters per channel)",
     value=0,
     step=1,
     start=0,
 )
 qos_cluster_min_sf_limit_input = pn.widgets.IntInput(
-    name="Limite F (clusters par SF minimal)",
+    name="F limit (clusters per minimum SF)",
     value=0,
     step=1,
     start=0,
@@ -506,14 +506,14 @@ qos_cluster_min_sf_limit_input = pn.widgets.IntInput(
 
 
 # --- Boutons de contrôle ---
-start_button = pn.widgets.Button(name="Lancer la simulation", button_type="success")
-stop_button = pn.widgets.Button(name="Arrêter la simulation", button_type="warning", disabled=True)
+start_button = pn.widgets.Button(name="Start simulation", button_type="success")
+stop_button = pn.widgets.Button(name="Stop simulation", button_type="warning", disabled=True)
 # Icône ajoutée pour mieux distinguer l'état du bouton Pause/Reprendre
 pause_button = pn.widgets.Button(name="⏸ Pause", button_type="primary", disabled=True)
 
 # --- Nouveau bouton d'export et message d'état ---
-export_button = pn.widgets.Button(name="Exporter résultats", button_type="primary", disabled=True)
-export_message = pn.pane.HTML("Cliquez sur Exporter pour générer le fichier CSV après la simulation.")
+export_button = pn.widgets.Button(name="Export results", button_type="primary", disabled=True)
+export_message = pn.pane.HTML("Click Export to generate the CSV file after simulation.")
 
 # --- Indicateurs de métriques ---
 pdr_indicator = pn.indicators.Number(name="PDR", value=0, format="{value:.1%}")
@@ -521,9 +521,9 @@ pdr_indicator = pn.indicators.Number(name="PDR", value=0, format="{value:.1%}")
 collisions_indicator = pn.indicators.Number(
     name="Collisions", value=0.0, format="{value:.1f}"
 )
-energy_indicator = pn.indicators.Number(name="Énergie Tx (J)", value=0.0, format="{value:.3f}")
-delay_indicator = pn.indicators.Number(name="Délai moyen (s)", value=0.0, format="{value:.3f}")
-throughput_indicator = pn.indicators.Number(name="Débit (bps)", value=0.0, format="{value:.2f}")
+energy_indicator = pn.indicators.Number(name="Tx energy (J)", value=0.0, format="{value:.3f}")
+delay_indicator = pn.indicators.Number(name="Average delay (s)", value=0.0, format="{value:.3f}")
+throughput_indicator = pn.indicators.Number(name="Throughput (bps)", value=0.0, format="{value:.2f}")
 
 # Indicateur de retransmissions
 # Same for retransmissions which may also be averaged across runs
@@ -532,7 +532,7 @@ retrans_indicator = pn.indicators.Number(
 )
 
 # Barre de progression pour l'accélération
-fast_forward_progress = pn.indicators.Progress(name="Avancement", value=0, width=200, visible=False)
+fast_forward_progress = pn.indicators.Progress(name="Progress", value=0, width=200, visible=False)
 
 # Les tableaux de PDR détaillés ne sont plus affichés dans le tableau de bord
 # mais les données sont conservées pour être exportées en fin de simulation.
@@ -545,7 +545,7 @@ pdr_table = pn.pane.DataFrame(
 )
 
 # --- Chronomètre ---
-chrono_indicator = pn.indicators.Number(name="Durée simulation (s)", value=0, format="{value:.1f}")
+chrono_indicator = pn.indicators.Number(name="Simulation duration (s)", value=0, format="{value:.1f}")
 
 
 # --- Pane pour la carte des nœuds/passerelles ---
@@ -554,15 +554,15 @@ map_pane = pn.pane.Plotly(height=600, sizing_mode="stretch_width")
 
 # --- Pane pour l'histogramme SF ---
 sf_hist_pane = pn.pane.Plotly(height=250, sizing_mode="stretch_width")
-hist_metric_select = pn.widgets.Select(name="Histogramme", options=["SF", "D\u00e9lais"], value="SF")
+hist_metric_select = pn.widgets.Select(name="Histogram", options=["SF", "Delays"], value="SF")
 
 # --- Timeline des paquets ---
 timeline_pane = pn.pane.Plotly(height=250, sizing_mode="stretch_width")
 
 # --- Heatmap de couverture ---
-heatmap_button = pn.widgets.Button(name="Afficher la heatmap", button_type="primary")
+heatmap_button = pn.widgets.Button(name="Show heatmap", button_type="primary")
 heatmap_pane = pn.pane.Plotly(height=600, sizing_mode="stretch_width", visible=False)
-heatmap_res_slider = pn.widgets.IntSlider(name="Résolution heatmap", start=10, end=100, step=10, value=30)
+heatmap_res_slider = pn.widgets.IntSlider(name="Heatmap resolution", start=10, end=100, step=10, value=30)
 
 
 # --- Mise à jour de la carte ---
@@ -644,7 +644,7 @@ def update_map():
             showlegend=False,
         )
     fig.update_layout(
-        title="Position des nœuds et passerelles",
+        title="Node and gateway positions",
         xaxis_title="X (m)",
         yaxis_title="Y (m)",
         xaxis_range=[0, area],
@@ -691,9 +691,9 @@ def update_timeline():
     last_event_index = len(sim.events_log)
 
     timeline_fig.update_layout(
-        title="Timeline des paquets",
-        xaxis_title="Temps (s)",
-        yaxis_title="ID nœud",
+        title="Packet timeline",
+        xaxis_title="Time (s)",
+        yaxis_title="Node ID",
         xaxis_range=[0, sim.current_time],
         margin=dict(l=20, r=20, t=40, b=20),
     )
@@ -711,9 +711,9 @@ def update_histogram(metrics: dict | None = None) -> None:
         sf_dist = metrics["sf_distribution"]
         fig = go.Figure(data=[go.Bar(x=[f"SF{sf}" for sf in sf_dist.keys()], y=list(sf_dist.values()))])
         fig.update_layout(
-            title="Répartition des SF par nœud",
+            title="SF distribution by node",
             xaxis_title="SF",
-            yaxis_title="Nombre de nœuds",
+            yaxis_title="Number of nodes",
             yaxis_range=[0, sim.num_nodes],
         )
     else:
@@ -725,8 +725,8 @@ def update_histogram(metrics: dict | None = None) -> None:
             centers = 0.5 * (edges[:-1] + edges[1:])
             fig = go.Figure(data=[go.Bar(x=centers, y=hist, width=np.diff(edges))])
             fig.update_layout(
-                title="Distribution des délais",
-                xaxis_title="Délai (s)",
+                title="Delay distribution",
+                xaxis_title="Delay (s)",
                 yaxis_title="Occurrences",
             )
     sf_hist_pane.object = fig
@@ -756,7 +756,7 @@ def update_heatmap(event=None):
         y=[gw.y for gw in sim.gateways],
         mode="markers",
         marker=dict(symbol="star", color="red", size=28, line=dict(width=1, color="black")),
-        name="Passerelles",
+        name="Gateways",
     )
     fig.update_layout(
         title="Heatmap couverture (RSSI)",
@@ -778,17 +778,17 @@ def toggle_heatmap(event=None):
         return
     update_heatmap()
     heatmap_pane.visible = True
-    heatmap_button.name = "Masquer la heatmap"
+    heatmap_button.name = "Hide heatmap"
     heatmap_pane.visible = True
-    heatmap_button.name = "Masquer la heatmap"
+    heatmap_button.name = "Hide heatmap"
 
 
 # --- Callback pour changer le label de l'intervalle selon le mode d'émission ---
 def on_mode_change(event):
-    if event.new == "Aléatoire":
-        interval_input.name = "Intervalle moyen (s)"
+    if event.new == "Random":
+        interval_input.name = "Average interval (s)"
     else:
-        interval_input.name = "Période (s)"
+        interval_input.name = "Period (s)"
 
 
 mode_select.param.watch(on_mode_change, "value")
@@ -893,7 +893,7 @@ def setup_simulation(seed_offset: int = 0):
 
     # Empêcher de relancer si une simulation est déjà en cours
     if sim is not None and getattr(sim, "running", False):
-        export_message.object = "⚠️ Simulation déjà en cours !"
+        export_message.object = "⚠️ Simulation already running!"
         return
 
     if not _validate_positive_inputs():
@@ -957,7 +957,7 @@ def setup_simulation(seed_offset: int = 0):
         num_nodes=int(num_nodes_input.value),
         num_gateways=int(num_gateways_input.value),
         area_size=float(area_input.value),
-        transmission_mode="Random" if mode_select.value == "Aléatoire" else "Periodic",
+        transmission_mode="Random" if mode_select.value == "Random" else "Periodic",
         packet_interval=float(interval_input.value),
         first_packet_interval=float(first_packet_input.value),
         packets_to_send=int(packets_input.value),
@@ -976,7 +976,7 @@ def setup_simulation(seed_offset: int = 0):
             )
             for i in range(num_channels_input.value)
         ],
-        channel_distribution="random" if channel_dist_select.value == "Aléatoire" else "round-robin",
+        channel_distribution="random" if channel_dist_select.value == "Random" else "round-robin",
         fixed_sf=int(sf_value_input.value) if fixed_sf_checkbox.value else None,
         fixed_tx_power=float(tx_power_input.value) if fixed_power_checkbox.value else None,
         battery_capacity_j=float(battery_capacity_input.value) if battery_capacity_input.value > 0 else None,
@@ -1106,7 +1106,7 @@ def setup_simulation(seed_offset: int = 0):
     pause_button.button_type = "primary"
     paused = False
     export_button.disabled = True
-    export_message.object = "Cliquez sur Exporter pour générer le fichier CSV après la simulation."
+    export_message.object = "Click Export to generate the CSV file after simulation."
 
     sim.running = True
     sim_callback = pn.state.add_periodic_callback(step_simulation, period=100, timeout=None)
@@ -1125,7 +1125,7 @@ def on_start(event):
 
     # Vérifier qu'une simulation n'est pas déjà en cours
     if sim is not None and getattr(sim, "running", False):
-        export_message.object = "⚠️ Simulation déjà en cours !"
+        export_message.object = "⚠️ Simulation already running!"
         return
 
     if not _validate_positive_inputs():
@@ -1269,7 +1269,7 @@ def on_stop(event):
         )
         pdr_table.object = table_df
         # Les tableaux détaillés ne sont plus mis à jour ici
-    export_message.object = "✅ Simulation terminée. Tu peux exporter les résultats."
+    export_message.object = "✅ Simulation finished. You can export the results."
     export_button.disabled = False
     global pause_prev_disabled
     pause_button.disabled = pause_prev_disabled
@@ -1282,13 +1282,13 @@ def exporter_csv(event=None):
     global runs_events, runs_metrics, runs_configs
 
     if not runs_events:
-        export_message.object = "⚠️ Lance la simulation d'abord !"
+        export_message.object = "⚠️ Start the simulation first!"
         return
 
     try:
         df = pd.concat(runs_events, ignore_index=True)
         if df.empty:
-            export_message.object = "⚠️ Aucune donnée à exporter !"
+            export_message.object = "⚠️ No data to export!"
             return
 
         payload_bytes = int(getattr(sim, "payload_size_bytes", 0) or 0)
@@ -1355,8 +1355,8 @@ def exporter_csv(event=None):
             cfg_links = "<br>".join(f"Config run {i + 1}: <b>{path}</b>" for i, path in enumerate(written_configs))
             config_summary = f"<br>{cfg_links}"
         export_message.object = (
-            f"✅ Résultats exportés : <b>{packets_path}</b><br>"
-            f"Métriques : <b>{metrics_path}</b>{config_summary}<br>(Ouvre-les avec Excel ou pandas)"
+            f"✅ Exported results: <b>{packets_path}</b><br>"
+            f"Metrics: <b>{metrics_path}</b>{config_summary}<br>(Open them with Excel or pandas)"
         )
 
         try:
@@ -1369,7 +1369,7 @@ def exporter_csv(event=None):
         except Exception:
             pass
     except Exception as e:
-        export_message.object = f"❌ Erreur lors de l'export : {e}"
+        export_message.object = f"❌ Error while exporting: {e}"
 
 
 export_button.on_click(exporter_csv)
@@ -1382,7 +1382,7 @@ def fast_forward(event=None):
     doc = pn.state.curdoc
     if sim and sim.running:
         if paused:
-            export_message.object = "⚠️ Impossible d'accélérer pendant la pause."
+            export_message.object = "⚠️ Cannot fast-forward while paused."
             return
         # If no events remain, finalise immediately without spawning a thread
         if not sim.event_queue:
@@ -1393,8 +1393,8 @@ def fast_forward(event=None):
         auto_fast_forward = True
         if sim.packets_to_send == 0:
             export_message.object = (
-                "⚠️ Définissez un nombre de paquets par nœud supérieur à 0 "
-                "pour utiliser l'accélération."
+                "⚠️ Set the number of packets per node above 0 "
+                "to use fast-forward."
             )
             return
 
@@ -1463,9 +1463,9 @@ def fast_forward(event=None):
                     data=[go.Bar(x=[f"SF{sf}" for sf in sf_dist.keys()], y=list(sf_dist.values()))]
                 )
                 sf_fig.update_layout(
-                    title="Répartition des SF par nœud",
+                    title="SF distribution by node",
                     xaxis_title="SF",
-                    yaxis_title="Nombre de nœuds",
+                    yaxis_title="Number of nodes",
                     yaxis_range=[0, sim.num_nodes],
                 )
                 sf_hist_pane.object = sf_fig
@@ -1511,7 +1511,7 @@ def on_pause(event=None):
         if start_time is not None:
             elapsed_time = time.time() - start_time
         start_time = None  # Freeze chrono while paused
-        pause_button.name = "▶ Reprendre"
+        pause_button.name = "▶ Resume"
         pause_button.button_type = "success"
         fast_forward_button.disabled = True
         paused = True
