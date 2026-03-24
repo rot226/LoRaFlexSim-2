@@ -44,7 +44,7 @@ pn.extension("plotly", raw_css=[
 ])
 # Définition du titre de la page via le document Bokeh directement
 if pn.state.curdoc:
-    pn.state.curdoc.title = "Simulateur LoRa"
+    pn.state.curdoc.title = "LoRaFlexSim"
 
 # --- Variables globales ---
 sim = None
@@ -1773,5 +1773,5 @@ dashboard = pn.Row(
     metrics_col,
     sizing_mode="stretch_width",
 )
-dashboard.servable(title="Simulateur LoRa")
+dashboard.servable(title="LoRaFlexSim")
 pn.state.on_session_destroyed(lambda session_context: _cleanup_callbacks())
