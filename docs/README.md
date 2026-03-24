@@ -4,6 +4,8 @@
 
 This folder contains the project's active documentation: installation, usage guides, advanced workflows, validation, and a top-level repository reading map.
 
+> Language reminder: active project documentation is maintained in **English** by default.
+
 ## When should you use it?
 
 - When discovering the project and looking for the right guide.
