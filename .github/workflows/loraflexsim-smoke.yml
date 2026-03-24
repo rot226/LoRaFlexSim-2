@@ -14,16 +14,16 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install package
         run: pip install -e .
 
-      - name: CLI smoke (loraflexsim --help == 0)
+      - name: CLI smoke
         run: |
           loraflexsim --help
           loraflexsim run --help
-          python -m mobilesfrdth --help
+          python -m loraflexsim.run --help
 
   smoke-windows:
     runs-on: windows-latest
@@ -34,7 +34,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Create virtual environment
         shell: pwsh
@@ -51,8 +51,9 @@ jobs:
             Write-Error "Launcher manquant: .venv\\Scripts\\loraflexsim.exe"
           }
 
-      - name: CLI smoke (loraflexsim --help == 0)
+      - name: CLI smoke
         shell: pwsh
         run: |
           .\.venv\Scripts\loraflexsim.exe --help
-          .\.venv\Scripts\python -m mobilesfrdth --help
+          .\.venv\Scripts\loraflexsim.exe run --help
+          .\.venv\Scripts\python -m loraflexsim.run --help

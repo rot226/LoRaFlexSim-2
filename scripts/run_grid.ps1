@@ -6,13 +6,13 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-Write-Host "[1/3] mobilesfrdth run $RunArgs"
-Invoke-Expression "mobilesfrdth run $RunArgs"
+Write-Host "[1/3] loraflexsim run $RunArgs"
+Invoke-Expression "python -m loraflexsim run $RunArgs"
 
-Write-Host "[2/3] mobilesfrdth aggregate $AggregateArgs"
-Invoke-Expression "mobilesfrdth aggregate $AggregateArgs"
+Write-Host "[2/3] loraflexsim aggregate $AggregateArgs"
+Invoke-Expression "python -m loraflexsim aggregate $AggregateArgs"
 
-Write-Host "[3/3] mobilesfrdth plots $PlotsArgs"
-Invoke-Expression "mobilesfrdth plots $PlotsArgs"
+Write-Host "[3/3] loraflexsim plots $PlotsArgs"
+Invoke-Expression "python -m loraflexsim plots $PlotsArgs"
 
-Write-Host "Pipeline mobilesfrdth terminé (point d’entrée officiel recommandé)."
+Write-Host "Pipeline loraflexsim terminé (point d’entrée officiel recommandé)."

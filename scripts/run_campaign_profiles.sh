@@ -7,7 +7,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PYTHON_BIN=${PYTHON:-python}
 
 cd "${ROOT_DIR}"
-export PYTHONPATH="${ROOT_DIR}/src${PYTHONPATH:+:${PYTHONPATH}}"
+export PYTHONPATH="${ROOT_DIR}${PYTHONPATH:+:${PYTHONPATH}}"
 
 base_args=(
   run
@@ -37,9 +37,9 @@ esac
 
 cmd=("${base_args[@]}" --grid "${grid}" "${extra[@]}")
 
-echo "[mobilesfrdth] Point d'entrée officiel recommandé"
-echo "[mobilesfrdth] Profil=${PROFILE}"
-echo "[mobilesfrdth] Sortie=${OUT}"
-echo "[mobilesfrdth] Commande: ${PYTHON_BIN} -m mobilesfrdth ${cmd[*]}"
+echo "[loraflexsim] Point d'entrée officiel recommandé"
+echo "[loraflexsim] Profil=${PROFILE}"
+echo "[loraflexsim] Sortie=${OUT}"
+echo "[loraflexsim] Commande: ${PYTHON_BIN} -m loraflexsim ${cmd[*]}"
 
-"${PYTHON_BIN}" -m mobilesfrdth "${cmd[@]}"
+"${PYTHON_BIN}" -m loraflexsim "${cmd[@]}"

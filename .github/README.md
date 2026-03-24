@@ -17,5 +17,5 @@ Ce dossier centralise l'automatisation GitHub du dépôt, en particulier les wor
 
 ## Point d’entrée / fichiers à ouvrir d’abord
 
-- `.github/workflows/mobilesfrdth-smoke.yml` : workflow CI actuellement versionné dans ce dossier.
+- `.github/workflows/loraflexsim-smoke.yml` : workflow smoke de la CLI publique `loraflexsim`.
 - `README.md` racine : vue d'ensemble du dépôt avant de modifier l'automatisation.
