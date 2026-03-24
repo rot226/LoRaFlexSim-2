@@ -1,10 +1,15 @@
-# Archive / research
+# Archive / Research
 
-Ce dossier regroupe les contenus historiques, campagnes de reproduction, comparatifs et documents de recherche conservés dans le dépôt.
+Ce dossier regroupe les contenus **historiques** et **recherche** de LoRaFlexSim-2.
 
-## Index
+## À quoi sert cette zone ?
 
-- `iwcmc_archive.md` : archive métier `iwcmc_archive` et structure des expériences héritées.
-- `scenario_c_reproduction.md` : guide de reproduction du pipeline scénario C.
+- Conserver la traçabilité des migrations documentaires.
+- Garder les guides de reproduction qui ne sont pas le parcours utilisateur principal.
+- Isoler clairement ce qui n’est plus une surface vivante.
 
-Les README secondaires des dossiers concernés restent présents dans leur emplacement d’origine comme points de redirection, avec un statut explicite.
+## Index minimal
+
+- `migration_legacy_surfaces.md` : statut des anciennes surfaces (`mobilesfrdth`, `sfrd`, `src`, `final`).
+- `iwcmc_archive.md` : archive métier des expériences héritées.
+- `scenario_c_reproduction.md` : guide de reproduction scénario C.

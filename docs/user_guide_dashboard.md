@@ -1,65 +1,25 @@
-# Guide utilisateur — dashboard
+# Guide utilisateur — Dashboard (voie principale)
 
-Ce guide présente le chemin le plus simple pour un premier usage de LoRaFlexSim via l’interface graphique Panel.
+Le dashboard est la voie principale pour utiliser LoRaFlexSim-2.
 
-## Lancement
-
-Depuis la racine du dépôt :
-
-### Windows 11 / PowerShell
+## Lancement (Windows 11)
 
 ```powershell
 panel serve loraflexsim/launcher/dashboard.py --show
 ```
 
-### Linux / macOS / bash
-
-```bash
-panel serve loraflexsim/launcher/dashboard.py --show
-```
-
-Si le navigateur ne s’ouvre pas automatiquement, récupérez l’URL affichée dans le terminal puis ouvrez-la manuellement.
-
-Pour les limitations liées à `--show`, `xdg-open` et `open`, voir `docs/installation.md`.
-
-## Réglages minimaux pour un premier test
-
-Pour un premier essai, gardez les valeurs par défaut et modifiez seulement :
-
-- **Nombre de nœuds**
-- **Nombre de passerelles**
-- **Mode d’émission**
-- **Intervalle moyen (s)**
-- **Nombre de paquets par nœud**
-- **Graine** pour reproduire le test
-
-Les paramètres avancés (mobilité, QoS, SNIR, batterie, positions manuelles, heatmap, réglages FLoRa) peuvent être laissés inchangés au début.
-
 ## Premier essai recommandé
 
-1. Lancez `panel serve loraflexsim/launcher/dashboard.py --show`.
-2. Réglez par exemple **Nombre de nœuds = 10** et **Nombre de passerelles = 1**.
-3. Choisissez **Mode d’émission = Aléatoire**.
-4. Fixez **Nombre de paquets par nœud = 20**.
-5. Cliquez sur **Lancer la simulation**.
-6. Consultez les indicateurs visibles : PDR, collisions, énergie, délai, débit.
-7. Utilisez **Exporter résultats** si vous souhaitez conserver une sortie.
+1. Lancer la commande ci-dessus.
+2. Régler un petit scénario (ex. 10 nœuds, 1 passerelle).
+3. Cliquer sur **Lancer la simulation**.
+4. Lire les indicateurs (PDR, collisions, énergie, délai, débit).
+5. Exporter les résultats si nécessaire.
 
-## Quand utiliser le dashboard ?
+## Quand passer à la CLI ?
 
-Le dashboard est adapté si vous voulez :
+Passez à `loraflexsim` si vous devez enchaîner automatiquement `run -> aggregate -> plots -> validate`.
 
-- découvrir rapidement le simulateur ;
-- démontrer un scénario de façon visuelle ;
-- tester des paramètres sans écrire une commande complète ;
-- obtenir une première intuition avant de passer à une campagne CLI.
+## Ce qui n’est plus une surface vivante
 
-## Limites du dashboard
-
-Le dashboard est moins pratique pour :
-
-- exécuter beaucoup de variantes ;
-- archiver systématiquement des campagnes ;
-- automatiser un pipeline complet de simulation, agrégation, figures et validation.
-
-Dans ces cas, utilisez plutôt `docs/user_guide_cli.md`.
+Les anciens espaces `mobilesfrdth`, `sfrd/`, `src/` et `final/` ne sont plus des points d’entrée à documenter pour les nouveaux utilisateurs.

@@ -1,24 +1,16 @@
 # `scripts/`
 
-## À quoi sert ce dossier ?
+Ce dossier regroupe les scripts d’automatisation et de bootstrap.
 
-Ce dossier regroupe les scripts d'automatisation, de bootstrap, de lancement de campagnes, de génération de figures et de validation du dépôt.
+## Scripts à connaître en priorité
 
-## Quand l’utiliser ?
+- `scripts/bootstrap_windows.ps1` : préparation environnement Windows 11.
+- `scripts/loraflexsim.ps1` : wrapper Windows pour la CLI publique.
+- `scripts/loraflexsim.sh` : wrapper Linux/macOS.
+- `scripts/windows/run_offline.ps1` : pipeline offline Windows.
 
-- Quand la documentation vous demande d'exécuter un script précis.
-- Quand vous automatisez un workflow local, CI ou de campagne reproductible.
-- Quand vous cherchez un utilitaire de tracé, de validation ou de comparaison déjà existant.
+## Positionnement
 
-## Quand ne pas l’utiliser ?
-
-- Ne l'utilisez pas au hasard pour découvrir le projet.
-- Ne dupliquez pas ici une logique qui devrait vivre dans un package Python réutilisable.
-
-## Point d’entrée / fichiers à ouvrir d’abord
-
-- `scripts/bootstrap_windows.ps1` et `scripts/bootstrap_unix.sh` : préparation d'environnement.
-- `scripts/loraflexsim.ps1` et `scripts/loraflexsim.sh` : wrappers vers le point d’entrée officiel `loraflexsim`.
-- `scripts/windows/run_offline.ps1` : pipeline offline prioritaire pour Windows 11.
-- `scripts/run_ci_pipeline.sh` : repère utile pour la chaîne de checks.
-- `scripts/run_qos_comparison.py` ou les scripts `run_*.py` / `validate_*.py` pertinents selon le workflow ciblé.
+- Les scripts complètent la surface publique.
+- La surface publique reste : dashboard + `loraflexsim`.
+- Les références aux anciennes surfaces (`mobilesfrdth`, `sfrd`, `src`, `final`) sont historiques uniquement.
