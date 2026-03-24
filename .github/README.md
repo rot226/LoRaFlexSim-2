@@ -1,21 +1,21 @@
 # `.github/`
 
-## À quoi sert ce dossier ?
+## Purpose of this folder
 
-Ce dossier centralise l'automatisation GitHub du dépôt, en particulier les workflows CI/CD exécutés par GitHub Actions.
+This folder centralizes the repository's GitHub automation, especially CI/CD workflows executed by GitHub Actions.
 
-## Quand l’utiliser ?
+## When to use it
 
-- Quand vous devez modifier un workflow d'intégration continue ou de validation automatique.
-- Quand une exécution GitHub Actions échoue et que vous devez comprendre le pipeline associé.
-- Quand vous ajoutez une vérification de dépôt déclenchée côté GitHub.
+- When you need to edit a continuous integration workflow or an automated validation workflow.
+- When a GitHub Actions run fails and you need to understand the related pipeline.
+- When you are adding a repository check triggered on the GitHub side.
 
-## Quand ne pas l’utiliser ?
+## When not to use it
 
-- Ne l'utilisez pas pour lancer une simulation locale ou modifier la logique métier Python.
-- Ne commencez pas ici pour découvrir le projet : lisez d'abord le `README.md` racine puis la documentation de `docs/`.
+- Do not use this folder to run a local simulation or modify Python business logic.
+- Do not start here to discover the project: read the root `README.md` first, then `docs/`.
 
-## Point d’entrée / fichiers à ouvrir d’abord
+## First files to open
 
-- `.github/workflows/loraflexsim-smoke.yml` : workflow smoke de la CLI publique `loraflexsim`.
-- `README.md` racine : vue d'ensemble du dépôt avant de modifier l'automatisation.
+- `.github/workflows/loraflexsim-smoke.yml`: smoke workflow for the public `loraflexsim` CLI.
+- Root `README.md`: repository overview before changing automation.
