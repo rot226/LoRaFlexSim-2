@@ -14,6 +14,7 @@ Convergence plan for archive_surface:
 from __future__ import annotations
 
 import argparse
+import ast
 import re
 import sys
 from dataclasses import dataclass
@@ -45,6 +46,8 @@ ALLOWLIST_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"LoRa(?:WAN|FlexSim)?", re.IGNORECASE),
     re.compile(r"\\bCI\\b", re.IGNORECASE),
 )
+FRENCH_ACCENT_REGEX = re.compile(r"[àâäçéèêëîïôöùûüÿœæÀÂÄÇÉÈÊËÎÏÔÖÙÛÜŸŒÆ]")
+_DASHBOARD_UI_KEYWORDS: tuple[str, ...] = ("name", "title", "label", "placeholder")
 
 
 @dataclass(frozen=True)
@@ -93,6 +96,79 @@ def _collect_archive_surface(repo_root: Path) -> list[Path]:
     targets.update(repo_root.glob("pretest_campagne/archive_or_mock/**/*.py"))
     targets.update(repo_root.glob("pretest_campagne/archive_or_mock/**/*.md"))
     return sorted(path for path in targets if path.exists() and path.is_file())
+
+
+def _collect_dashboard_surface(repo_root: Path) -> list[Path]:
+    """Collect targeted dashboard file with user-facing filtering."""
+    target = repo_root / "loraflexsim" / "launcher" / "dashboard.py"
+    return [target] if target.exists() and target.is_file() else []
+
+
+def _iter_dashboard_user_strings(file_path: Path) -> Iterable[tuple[int, str]]:
+    """Yield user-facing strings from dashboard UI surfaces only."""
+    source = file_path.read_text(encoding="utf-8")
+    module = ast.parse(source)
+    parents: dict[ast.AST, ast.AST] = {}
+    for parent in ast.walk(module):
+        for child in ast.iter_child_nodes(parent):
+            parents[child] = parent
+
+    for node in ast.walk(module):
+        if not isinstance(node, ast.Constant) or not isinstance(node.value, str):
+            continue
+        text = node.value.strip()
+        if not text:
+            continue
+        parent = parents.get(node)
+        if isinstance(parent, ast.keyword) and parent.arg in _DASHBOARD_UI_KEYWORDS:
+            yield node.lineno, text
+            continue
+        if isinstance(parent, ast.Assign):
+            if any(isinstance(target, ast.Attribute) and target.attr == "object" for target in parent.targets):
+                yield node.lineno, text
+                continue
+        if isinstance(parent, ast.Call):
+            func_name = ""
+            if isinstance(parent.func, ast.Name):
+                func_name = parent.func.id
+            elif isinstance(parent.func, ast.Attribute):
+                func_name = parent.func.attr
+            if func_name in {"Markdown", "HTML", "Alert", "Str"}:
+                yield node.lineno, text
+                continue
+            if func_name == "ValueError":
+                yield node.lineno, text
+
+
+def _iter_dashboard_surface_violations(
+    files: Iterable[Path],
+    forbidden_regexes: list[tuple[str, re.Pattern[str]]],
+) -> list[Violation]:
+    violations: list[Violation] = []
+    for file_path in files:
+        for line_number, text in _iter_dashboard_user_strings(file_path):
+            if _is_allowlisted(text):
+                continue
+            for pattern, regex in forbidden_regexes:
+                if regex.search(text):
+                    violations.append(
+                        Violation(
+                            file_path=file_path,
+                            line_number=line_number,
+                            pattern=pattern,
+                            line_text=text,
+                        )
+                    )
+            if FRENCH_ACCENT_REGEX.search(text):
+                violations.append(
+                    Violation(
+                        file_path=file_path,
+                        line_number=line_number,
+                        pattern="french_accent",
+                        line_text=text,
+                    )
+                )
+    return violations
 
 
 def _iter_violations(files: Iterable[Path], forbidden_regexes: list[tuple[str, re.Pattern[str]]]) -> list[Violation]:
@@ -191,7 +267,12 @@ def main() -> int:
         violations=_iter_violations(_collect_archive_surface(repo_root), forbidden_regexes),
         blocking=args.strict_global,
     )
-    results = [public_result, archive_result]
+    dashboard_result = SurfaceResult(
+        name="dashboard_ui_surface",
+        violations=_iter_dashboard_surface_violations(_collect_dashboard_surface(repo_root), forbidden_regexes),
+        blocking=True,
+    )
+    results = [public_result, dashboard_result, archive_result]
     for idx, result in enumerate(results):
         if idx:
             print()

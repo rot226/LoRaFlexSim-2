@@ -229,7 +229,7 @@ def _configure_qos_clusters_from_widgets() -> None:
     proportions = _parse_cluster_field(
         qos_cluster_proportions_input.value,
         cluster_count,
-        field_label="Les proportions",
+        field_label="Proportions",
         default_factory=_default_proportions,
     )
     if any(p <= 0 for p in proportions):
@@ -255,7 +255,7 @@ def _configure_qos_clusters_from_widgets() -> None:
     pdr_targets = _parse_cluster_field(
         qos_cluster_pdr_targets_input.value,
         cluster_count,
-        field_label="Les cibles PDR",
+        field_label="PDR targets",
         default_factory=_default_pdr,
     )
     if any(target <= 0 or target > 1 for target in pdr_targets):
