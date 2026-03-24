@@ -1,41 +1,41 @@
-# Politique de sécurité
+# Security Policy
 
-Merci de contribuer à la publication responsable de LoRaFlexSim.
+Thank you for supporting responsible security practices for LoRaFlexSim.
 
-## Signaler une vulnérabilité
+## Reporting a vulnerability
 
-Si vous identifiez une vulnérabilité de sécurité, merci de **ne pas** l’exposer publiquement dans une issue ouverte. Préférez un signalement privé aux mainteneurs du dépôt avec :
+If you identify a security vulnerability, please **do not** disclose it publicly in an open issue. Use **private reporting** to the repository maintainers and include:
 
-- une description du problème ;
-- les composants concernés ;
-- les étapes de reproduction ;
-- l’impact estimé ;
-- toute proposition d’atténuation si disponible.
+- a clear description of the vulnerability;
+- affected components;
+- reproducible steps;
+- an initial **impact assessment**;
+- any proposed **mitigation** if available.
 
-## Ce qu’il faut éviter
+## What to avoid
 
-Jusqu’à correction, évitez de publier :
+Until a fix is available, avoid publishing:
 
-- des secrets, identifiants ou jetons ;
-- un exploit complet ;
-- des détails permettant une compromission immédiate.
+- secrets, credentials, or tokens;
+- a full exploit;
+- operational details that enable immediate compromise.
 
-## Périmètre
+## Scope
 
-Cette politique couvre en priorité :
+This policy primarily covers:
 
-- le code source du dépôt ;
-- les scripts d’exécution et d’analyse ;
-- la documentation qui pourrait induire une configuration risquée.
+- source code in this repository;
+- execution and analysis scripts;
+- documentation that could lead to insecure configuration.
 
-## Bonnes pratiques pour les contributions
+## Contribution security best practices
 
-Avant de proposer un changement :
+Before submitting a change:
 
-- vérifiez que les exemples ne contiennent pas de secrets ;
-- documentez explicitement les hypothèses de sécurité ;
-- signalez toute dépendance sensible ou tout comportement réseau notable.
+- verify that examples do not contain secrets;
+- document security assumptions explicitly;
+- report any sensitive dependency or notable network behavior.
 
-## Publication d’un correctif
+## Patch publication
 
-Lorsqu’un correctif est prêt, les mainteneurs peuvent publier un résumé du problème, de son impact et de la version corrigée, avec un niveau de détail compatible avec une divulgation responsable.
+When a fix is ready, maintainers may publish a summary of the vulnerability, its impact, and the fixed version, with a level of detail aligned with **coordinated disclosure**.
