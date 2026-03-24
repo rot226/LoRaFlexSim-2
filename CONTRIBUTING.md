@@ -69,6 +69,39 @@ If you are not submitting an immediate fix, open an issue and include:
 - expected behavior;
 - relevant logs, screenshots, or files when available.
 
+## Official bug procedure
+
+When opening or triaging a bug, use the dedicated labels below:
+
+- `bug`
+- `regression`
+- `docs-bug`
+- `platform-windows`
+- `ci-failure`
+
+Set one severity level:
+
+- `S1` (blocking)
+- `S2` (major)
+- `S3` (minor)
+
+Use a bug issue template containing, at minimum:
+
+- environment (OS, Python version, shell, branch/commit);
+- command executed;
+- expected result;
+- observed result;
+- logs (or CI output / stack trace).
+
+### Definition of Done (bug fix)
+
+A bug fix is considered done only when all of the following are completed:
+
+1. a minimal reproduction is documented;
+2. the fix is implemented;
+3. a non-regression test is added or updated;
+4. documentation is updated if user-facing behavior is impacted.
+
 ## Community respect
 
 Please keep communication constructive, inclusive, and respectful in issues, discussions, and pull requests. If the repository publishes a `CODE_OF_CONDUCT.md`, it applies to all project interactions.
