@@ -5,7 +5,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$env:PYTHONPATH = 'src'
+$repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
+$env:PYTHONPATH = $repoRoot.Path
 
 $baseArgs = @(
     'run',
@@ -33,10 +34,10 @@ switch ($Profile) {
 }
 
 $cmd = @($baseArgs + $grid + $extra)
-Write-Host "[mobilesfrdth] Point d’entrée officiel recommandé"
-Write-Host "[mobilesfrdth] Profil=$Profile"
-Write-Host "[mobilesfrdth] Sortie=$Out"
-Write-Host "[mobilesfrdth] Commande: python -m mobilesfrdth $($cmd -join ' ')"
+Write-Host "[loraflexsim] Point d’entrée officiel recommandé"
+Write-Host "[loraflexsim] Profil=$Profile"
+Write-Host "[loraflexsim] Sortie=$Out"
+Write-Host "[loraflexsim] Commande: python -m loraflexsim $($cmd -join ' ')"
 
-python -m mobilesfrdth @cmd
+python -m loraflexsim @cmd
 exit $LASTEXITCODE

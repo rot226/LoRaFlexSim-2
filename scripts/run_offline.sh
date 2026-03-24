@@ -18,7 +18,7 @@ Usage: ./scripts/run_offline.sh [options]
 Options:
   --config <path>             Fichier de configuration (défaut: experiments/default.yaml)
   --out-root <path>           Répertoire de sortie racine (défaut: runs/offline)
-  --grid <spec>               Grille mobilesfrdth (défaut: N=50,100;speed=1,3;mode=SNIR_OFF,SNIR_ON;algo=ADR,ADR_MIXRA,UCB,UCB_FORGET)
+  --grid <spec>               Grille loraflexsim (défaut: N=50,100;speed=1,3;mode=SNIR_OFF,SNIR_ON;algo=ADR,ADR_MIXRA,UCB,UCB_FORGET)
   --reps <n>                  Nombre de répétitions (défaut: 2)
   --seed <n>                  Graine de base (défaut: 1234)
   --sf-range <range>          Plage de spreading factors (défaut: 7-12)
@@ -121,16 +121,16 @@ if [[ ${#missing_modules[@]} -gt 0 ]]; then
 fi
 
 echo "[1/4] run"
-"${PYTHON_BIN}" -m mobilesfrdth run --config "${CONFIG}" --out "${OUT_ROOT}" --grid "${GRID}" --reps "${REPS}" --seed "${SEED}" --sf-range "${SF_RANGE}"
+"${PYTHON_BIN}" -m loraflexsim run --config "${CONFIG}" --out "${OUT_ROOT}" --grid "${GRID}" --reps "${REPS}" --seed "${SEED}" --sf-range "${SF_RANGE}"
 
 aggregates_dir="${OUT_ROOT}/aggregates"
 figures_dir="${OUT_ROOT}/figures"
 
 echo "[2/4] aggregate"
-"${PYTHON_BIN}" -m mobilesfrdth aggregate --results "${OUT_ROOT}" --out "${aggregates_dir}"
+"${PYTHON_BIN}" -m loraflexsim aggregate --results "${OUT_ROOT}" --out "${aggregates_dir}"
 
 echo "[3/4] plots"
-plot_args=(-m mobilesfrdth plots --aggregates-dir "${aggregates_dir}" --out "${figures_dir}")
+plot_args=(-m loraflexsim plots --aggregates-dir "${aggregates_dir}" --out "${figures_dir}")
 for filter in "${SCENARIO_FILTERS[@]}"; do
   plot_args+=(--scenario-filter "${filter}")
 done
@@ -140,7 +140,7 @@ fi
 "${PYTHON_BIN}" "${plot_args[@]}"
 
 echo "[4/4] validate"
-"${PYTHON_BIN}" -m mobilesfrdth.qa.validate_results --aggregates-dir "${aggregates_dir}" --plots-summary "${figures_dir}/plots_summary.json"
+"${PYTHON_BIN}" -m loraflexsim validate --aggregates-dir "${aggregates_dir}" --plots-summary "${figures_dir}/plots_summary.json"
 
-echo "Pipeline offline terminé avec succès via le point d’entrée officiel recommandé loraflexsim (backend mobilesfrdth)."
+echo "Pipeline offline terminé avec succès via le point d’entrée officiel recommandé loraflexsim."
 echo "Les workflows de recherche vivent dans pretest_campagne/ et les pipelines retirés sont documentés sous docs/archive_or_research/."

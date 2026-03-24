@@ -419,7 +419,7 @@ def main(argv=None):
         "--fast",
         action="store_true",
         help=(
-            "Exécute un run tronqué (10 % des pas de temps, au moins 600 s) et "
+            "Exécute un run tronqué (10 %% des pas de temps, au moins 600 s) et "
             "réduit le nombre de nœuds de moitié pour les tests rapides."
         ),
     )

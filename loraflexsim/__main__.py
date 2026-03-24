@@ -2,13 +2,7 @@
 
 from __future__ import annotations
 
-from mobilesfrdth.cli import main as _legacy_main
-
-
-def main() -> int:
-    """Délègue à la CLI historique tant que la migration complète n'est pas finalisée."""
-
-    return _legacy_main()
+from .cli import main
 
 
 if __name__ == "__main__":
