@@ -1,4 +1,4 @@
-"""Génère les visualisations du banc QoS par clusters."""
+"""Generate QoS benchmark visualizations by cluster."""
 
 from __future__ import annotations
 
@@ -145,10 +145,10 @@ def _plot_metric_vs_nodes(
                 ys = [item.get(metric, 0.0) for item in data]
                 label = f"{algorithm} (SNIR {'ON' if use_snir else 'OFF'})"
                 ax.plot(xs, ys, marker="o", label=label, color=SNIR_COLORS[color_key])
-        ax.set_xlabel("Nombre de nœuds")
+        ax.set_xlabel("Number of nodes")
         ax.set_ylabel(ylabel)
         title_period = f"{period:.0f}" if float(period).is_integer() else f"{period:g}"
-        ax.set_title(f"{ylabel} – période {title_period} s")
+        ax.set_title(f"{ylabel} - period {title_period} s")
         ax.grid(True, linestyle=":", alpha=0.5)
         fig.legend(loc="lower center", bbox_to_anchor=(0.5, 1.02), ncol=3)
         figures_dir.mkdir(parents=True, exist_ok=True)
@@ -194,9 +194,9 @@ def _plot_pdr_clusters(records: List[Dict[str, Any]], figures_dir: Path) -> None
                 if target is not None:
                     break
             if target is not None:
-                ax.axhline(target, color="black", linestyle="--", linewidth=1, label="Cible" if idx == 0 else None)
+                ax.axhline(target, color="black", linestyle="--", linewidth=1, label="Target" if idx == 0 else None)
             ax.set_title(f"Cluster {cluster_id}")
-            ax.set_xlabel("Nœuds")
+            ax.set_xlabel("Nodes")
             if idx == 0:
                 ax.set_ylabel("PDR")
             ax.set_ylim(0.0, 1.05)
@@ -211,7 +211,7 @@ def _plot_pdr_clusters(records: List[Dict[str, Any]], figures_dir: Path) -> None
                 ncol=3,
             )
         title_period = f"{period:.0f}" if float(period).is_integer() else f"{period:g}"
-        fig.suptitle(f"PDR par cluster – période {title_period} s")
+        fig.suptitle(f"PDR by cluster - period {title_period} s")
         figures_dir.mkdir(parents=True, exist_ok=True)
         output = figures_dir / f"pdr_clusters_tx_{title_period}.png"
         plt.subplots_adjust(top=0.80)
@@ -358,11 +358,11 @@ def _plot_heatmap(records: List[Dict[str, Any]], figures_dir: Path) -> None:
                     matrix=matrix_on,
                     sfs=sfs_on,
                     channels=channels_on,
-                    title=f"Heatmap SF×canal – {algorithm} (SNIR ON)",
+                    title=f"SFxchannel heatmap - {algorithm} (SNIR ON)",
                     figures_dir=figures_dir,
                     filename=f"heatmap_sf_channel_{algorithm.replace(' ', '_')}_snir_on.png",
                     cmap="viridis",
-                    cbar_label="Débit (bps)",
+                    cbar_label="Throughput (bps)",
                 )
         if record_off:
             throughput_off = record_off.get("throughput_sf_channel", {})
@@ -374,11 +374,11 @@ def _plot_heatmap(records: List[Dict[str, Any]], figures_dir: Path) -> None:
                     matrix=matrix_off,
                     sfs=sfs_off,
                     channels=channels_off,
-                    title=f"Heatmap SF×canal – {algorithm} (SNIR OFF)",
+                    title=f"SFxchannel heatmap - {algorithm} (SNIR OFF)",
                     figures_dir=figures_dir,
                     filename=f"heatmap_sf_channel_{algorithm.replace(' ', '_')}_snir_off.png",
                     cmap="viridis",
-                    cbar_label="Débit (bps)",
+                    cbar_label="Throughput (bps)",
                 )
         if not record_on or not record_off:
             continue
@@ -405,27 +405,27 @@ def _plot_heatmap(records: List[Dict[str, Any]], figures_dir: Path) -> None:
             matrix=diff_matrix,
             sfs=sfs,
             channels=channels,
-            title=f"Différence SNIR ON – OFF – {algorithm}",
+            title=f"SNIR ON - OFF difference - {algorithm}",
             figures_dir=figures_dir,
             filename=f"heatmap_sf_channel_{algorithm.replace(' ', '_')}_snir_diff.png",
             cmap="coolwarm",
-            cbar_label="Δ débit (bps)",
+            cbar_label="Δ throughput (bps)",
             vmin=-max_abs,
             vmax=max_abs,
         )
 
 
 def generate_plots(results_dir: Path, figures_dir: Path, *, quiet: bool = False) -> bool:
-    """Génère l'ensemble des figures à partir des CSV du banc QoS.
+    """Generate all figures from QoS benchmark CSVs.
 
-    Retourne ``True`` si au moins une figure a été produite.
+    Returns ``True`` if at least one figure was produced.
     """
 
     if plt is None:
         if not quiet:
             print(
-                "Matplotlib ou NumPy manquant : impossible de générer les graphiques. "
-                "Installez les dépendances complètes pour activer cette étape."
+                "Matplotlib or NumPy missing: unable to generate plots. "
+                "Install full dependencies to enable this step."
             )
         return False
 
@@ -433,18 +433,18 @@ def generate_plots(results_dir: Path, figures_dir: Path, *, quiet: bool = False)
     records = _load_records(results_dir)
     if not records:
         if not quiet:
-            print("Aucun résultat trouvé, aucune figure générée.")
+            print("No result found, no figure generated.")
         return False
     _plot_pdr_clusters(records, figures_dir)
     _plot_metric_vs_nodes(records, "PDR", "PDR", "pdr", figures_dir)
     _plot_metric_vs_nodes(records, "DER", "DER", "der", figures_dir)
-    _plot_metric_vs_nodes(records, "throughput_bps", "Débit (bps)", "throughput", figures_dir)
-    _plot_metric_vs_nodes(records, "jain_index", "Indice de Jain", "jain", figures_dir)
+    _plot_metric_vs_nodes(records, "throughput_bps", "Throughput (bps)", "throughput", figures_dir)
+    _plot_metric_vs_nodes(records, "jain_index", "Jain index", "jain", figures_dir)
     _plot_snr_cdf(records, figures_dir)
     _plot_sf_histogram(records, figures_dir)
     _plot_heatmap(records, figures_dir)
     if not quiet:
-        print(f"Figures enregistrées dans {figures_dir}")
+        print(f"Figures saved in {figures_dir}")
     return True
 
 

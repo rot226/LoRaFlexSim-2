@@ -26,14 +26,14 @@ if ([string]::IsNullOrWhiteSpace($VenvPath)) {
     } elseif (Test-Path ".\\env\\Scripts\\python.exe") {
         $VenvPath = ".\\env"
     } else {
-        Write-Error "Aucun venv détecté. Créez un environnement avec 'python -m venv .venv' (ou 'python -m venv env'), puis relancez ce script, ou fournissez -VenvPath."
+        Write-Error "No venv detected. Create one with 'python -m venv .venv' (or 'python -m venv env'), then rerun this script, or provide -VenvPath."
         exit 1
     }
 }
 
 $Py = Join-Path $VenvPath "Scripts/python.exe"
 if (-not (Test-Path $Py)) {
-    Write-Error "Interpréteur Python introuvable dans le venv : $Py"
+    Write-Error "Python interpreter not found in venv: $Py"
     exit 1
 }
 
@@ -46,5 +46,5 @@ $arguments = @(
     "--packet-intervals" "300" "600"
 )
 
-Write-Host "Lancement de la matrice Step 1 avec le Python du venv : $Py"
+Write-Host "Starting Step 1 matrix with venv Python: $Py"
 & $Py @arguments

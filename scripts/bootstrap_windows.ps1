@@ -17,23 +17,23 @@ function Show-RunCommand {
     )
 
     Write-Host ""
-    Write-Host "==== Commande à utiliser ====" -ForegroundColor Cyan
+    Write-Host "==== Command to use ====" -ForegroundColor Cyan
 
     if ($EditableInstalled) {
-        Write-Host "Point d'entrée officiel recommandé installé :" -ForegroundColor Green
+        Write-Host "Recommended official entry point installed:" -ForegroundColor Green
         Write-Host "  loraflexsim --help"
         Write-Host "  loraflexsim presets --list"
         Write-Host "  python -m loraflexsim --help"
     } else {
-        Write-Host "Mode fallback sans installation editable :" -ForegroundColor Yellow
+        Write-Host "Fallback mode without editable install:" -ForegroundColor Yellow
         Write-Host "  powershell -ExecutionPolicy Bypass -File scripts/loraflexsim.ps1 --help"
-        Write-Host "  # (équivalent direct)"
+        Write-Host "  # (direct equivalent)"
         Write-Host "  `$env:PYTHONPATH='.'; python -m loraflexsim --help"
     }
 }
 
 if (-not (Get-Command py -ErrorAction SilentlyContinue)) {
-    Write-Error "Le lanceur Python 'py' est introuvable. Installez Python 3.11 ou 3.12 puis relancez ce script."
+    Write-Error "Python launcher 'py' was not found. Install Python 3.11 or 3.12 and rerun this script."
     exit 1
 }
 
@@ -47,43 +47,43 @@ foreach ($candidate in @('-3.11', '-3.12')) {
 }
 
 if ($null -eq $selectedPython) {
-    Write-Error "Aucune installation Python 3.11 ou 3.12 n'a été détectée via 'py'."
+    Write-Error "No Python 3.11 or 3.12 installation was detected via 'py'."
     exit 1
 }
 
 if (-not (Test-Path $venvPython)) {
-    Write-Host "Création de l'environnement virtuel .venv avec py $selectedPython..."
+    Write-Host "Creating .venv virtual environment with py $selectedPython..."
     py $selectedPython -m venv .venv
 }
 
 if (-not (Test-Path $activateScript)) {
-    Write-Error "Environnement virtuel introuvable ou incomplet : '$venvDir'. Vérifiez la création de .venv puis relancez ce script."
+    Write-Error "Virtual environment not found or incomplete: '$venvDir'. Check .venv creation and rerun this script."
     exit 1
 }
 
-Write-Host "Activation de .venv..."
+Write-Host "Activating .venv..."
 . $activateScript
 
 if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
-    Write-Error "Python n'est pas accessible après activation de .venv. Vérifiez '$venvDir'."
+    Write-Error "Python is not accessible after activating .venv. Check '$venvDir'."
     exit 1
 }
 
-Write-Host "Version Python active :" -ForegroundColor Cyan
+Write-Host "Active Python version:" -ForegroundColor Cyan
 python --version
 
 $activeVersion = python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "Impossible de lire la version Python active dans .venv."
+    Write-Error "Unable to read active Python version in .venv."
     exit 1
 }
 $activeVersion = ($activeVersion | Select-Object -First 1).Trim()
 if ($activeVersion -notin @('3.11', '3.12')) {
-    Write-Error "Version Python non supportée dans .venv : $activeVersion. Utilisez Python 3.11 ou 3.12."
+    Write-Error "Unsupported Python version in .venv: $activeVersion. Use Python 3.11 or 3.12."
     exit 1
 }
 
-Write-Host "Vérification de l'import setuptools..." -ForegroundColor Cyan
+Write-Host "Checking setuptools import..." -ForegroundColor Cyan
 $setuptoolsOk = $true
 python -c "import setuptools" 2>$null
 if ($LASTEXITCODE -ne 0) {
@@ -91,24 +91,24 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 if (-not $setuptoolsOk) {
-    Write-Warning "Import setuptools KO. Tentative d'installation de setuptools..."
+    Write-Warning "setuptools import failed. Trying to install setuptools..."
     python -m pip install setuptools
     python -c "import setuptools"
     if ($LASTEXITCODE -ne 0) {
-        Write-Warning "setuptools reste indisponible : passage en mode fallback via loraflexsim."
+        Write-Warning "setuptools is still unavailable: switching to fallback mode via loraflexsim."
         Show-RunCommand -EditableInstalled $false
         exit 0
     }
 }
 
-Write-Host "Installation du projet en mode editable (sans build isolation)..." -ForegroundColor Cyan
+Write-Host "Installing project in editable mode (without build isolation)..." -ForegroundColor Cyan
 python -m pip install -e . --no-build-isolation
 if ($LASTEXITCODE -ne 0) {
-    Write-Warning "Échec de 'pip install -e . --no-build-isolation'."
-    Write-Warning "Basculer automatiquement en mode fallback dépôt pour conserver loraflexsim comme point d'entrée recommandé."
+    Write-Warning "'pip install -e . --no-build-isolation' failed."
+    Write-Warning "Automatically switching to repository fallback mode to keep loraflexsim as recommended entry point."
     Show-RunCommand -EditableInstalled $false
     exit 0
 }
 
-Write-Host "Bootstrap Windows terminé." -ForegroundColor Green
+Write-Host "Windows bootstrap completed." -ForegroundColor Green
 Show-RunCommand -EditableInstalled $true

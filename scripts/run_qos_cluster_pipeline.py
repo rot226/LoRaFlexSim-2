@@ -1,4 +1,4 @@
-"""Pipeline complète pour exécuter le banc QoS et générer les graphes."""
+"""Complete pipeline to run the QoS benchmark and generate plots."""
 
 from __future__ import annotations
 
@@ -30,52 +30,52 @@ def _build_parser() -> argparse.ArgumentParser:
         "--preset",
         choices=[preset.name for preset in list_presets()],
         default="quick",
-        help="Préréglage de scénarios à exécuter (défaut : quick)",
+        help="Scenario preset to execute (default: quick)",
     )
     parser.add_argument(
         "--seed",
         type=int,
         default=1,
-        help="Graine de simulation initiale",
+        help="Initial simulation seed",
     )
     parser.add_argument(
         "--mixra-solver",
         choices=["auto", "greedy"],
         default="auto",
-        help="Solveur à utiliser pour MixRA-Opt",
+        help="Solver to use for MixRA-Opt",
     )
     parser.add_argument(
         "--duration",
         type=float,
         default=None,
-        help="Durée maximale de simulation en secondes (par défaut : valeur du preset)",
+        help="Maximum simulation duration in seconds (default: preset value)",
     )
     parser.add_argument(
         "--results-dir",
         type=Path,
         default=None,
-        help="Répertoire racine pour les résultats CSV",
+        help="Root directory for CSV results",
     )
     parser.add_argument(
         "--figures-dir",
         type=Path,
         default=None,
-        help="Répertoire racine pour les figures",
+        help="Root directory for figures",
     )
     parser.add_argument(
         "--skip-plots",
         action="store_true",
-        help="N'exécute pas la génération des figures",
+        help="Skip figure generation",
     )
     parser.add_argument(
         "--quiet",
         action="store_true",
-        help="Réduit les impressions de progression",
+        help="Reduce progress output",
     )
     parser.add_argument(
         "--list-presets",
         action="store_true",
-        help="Affiche les préréglages disponibles et quitte",
+        help="List available presets and exit",
     )
     return parser
 
@@ -98,19 +98,19 @@ def _print_summary(summary: Mapping[str, Any]) -> None:
         for label, payload in states.items():
             report_path = payload.get("report_path") if isinstance(payload, Mapping) else None
             summary_path = payload.get("summary_path") if isinstance(payload, Mapping) else None
-            print(f"État SNIR : {label}")
+            print(f"SNIR state: {label}")
             if report_path:
-                print(f"  Rapport Markdown : {report_path}")
+                print(f"  Markdown report: {report_path}")
             if summary_path:
-                print(f"  Résumé JSON : {summary_path}")
+                print(f"  JSON summary: {summary_path}")
         return
 
     report_path = summary.get("report_path")
     summary_path = summary.get("summary_path")
     if report_path:
-        print(f"Rapport Markdown : {report_path}")
+        print(f"Markdown report: {report_path}")
     if summary_path:
-        print(f"Résumé JSON : {summary_path}")
+        print(f"JSON summary: {summary_path}")
 
 
 def main(
@@ -130,19 +130,19 @@ def main(
     duration = args.duration if args.duration is not None else preset.simulation_duration_s
 
     if not args.quiet:
-        print(f"Preset sélectionné : {preset.label}")
+        print(f"Selected preset: {preset.label}")
         print(
-            "Charges : "
+            "Loads: "
             + ", ".join(str(value) for value in preset.node_counts)
-            + " | Périodes : "
+            + " | Periods: "
             + ", ".join(
                 f"{int(value) if float(value).is_integer() else value:g} s" for value in preset.tx_periods
             )
         )
-        print(f"Durée max : {duration / 3600:.1f} h")
-        print(f"Résultats : {results_dir}")
+        print(f"Max duration: {duration / 3600:.1f} h")
+        print(f"Results: {results_dir}")
         if not args.skip_plots:
-            print(f"Figures : {figures_dir}")
+            print(f"Figures: {figures_dir}")
 
     summary = runner(
         node_counts=preset.node_counts,
@@ -170,18 +170,18 @@ def main(
                 if not args.quiet:
                     suffix = f" ({label})"
                     if generated:
-                        print(f"Figures enregistrées dans {state_fig_dir}{suffix}")
+                        print(f"Figures saved in {state_fig_dir}{suffix}")
                     else:
-                        print(f"Aucune figure générée pour {state_dir}{suffix}.")
+                        print(f"No figure generated for {state_dir}{suffix}.")
         else:
             generated_any = plotter(results_dir, figures_dir)
             if not args.quiet:
                 if generated_any:
-                    print(f"Figures enregistrées dans {figures_dir}")
+                    print(f"Figures saved in {figures_dir}")
                 else:
-                    print("Aucun résultat disponible pour générer des figures.")
+                    print("No results available to generate figures.")
         if not args.quiet and not generated_any:
-            print("Aucune figure n'a été produite.")
+            print("No figure was produced.")
     return summary
 
 

@@ -29,15 +29,15 @@ switch ($Profile) {
         $extra = @('--resume', '--max-walltime', '172800')
     }
     default {
-        throw "Profil non supporté: $Profile"
+        throw "Unsupported profile: $Profile"
     }
 }
 
 $cmd = @($baseArgs + $grid + $extra)
-Write-Host "[loraflexsim] Point d’entrée officiel recommandé"
-Write-Host "[loraflexsim] Profil=$Profile"
-Write-Host "[loraflexsim] Sortie=$Out"
-Write-Host "[loraflexsim] Commande: python -m loraflexsim $($cmd -join ' ')"
+Write-Host "[loraflexsim] Recommended official entry point"
+Write-Host "[loraflexsim] Profile=$Profile"
+Write-Host "[loraflexsim] Output=$Out"
+Write-Host "[loraflexsim] Command: python -m loraflexsim $($cmd -join ' ')"
 
 python -m loraflexsim @cmd
 exit $LASTEXITCODE
