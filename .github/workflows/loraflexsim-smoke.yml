@@ -5,7 +5,22 @@ on:
   pull_request:
 
 jobs:
+  validate-language:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Language surface check (report-only during migration)
+        run: make validate-language
+
   smoke-linux:
+    needs: validate-language
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -26,6 +41,7 @@ jobs:
           python -m loraflexsim.run --help
 
   smoke-windows:
+    needs: validate-language
     runs-on: windows-latest
     steps:
       - name: Checkout

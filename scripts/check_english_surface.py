@@ -137,6 +137,14 @@ def parse_args() -> argparse.Namespace:
         default=Path(__file__).resolve().parents[1],
         help="Repository root path (default: auto-detected from script location).",
     )
+    parser.add_argument(
+        "--report-only",
+        action="store_true",
+        help=(
+            "Always exit with status 0 while still printing violations. "
+            "Useful as a temporary migration mode before enforcing blocking checks."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -147,6 +155,9 @@ def main() -> int:
     targets = _collect_targets(repo_root)
     violations = _iter_violations(targets, forbidden_regexes)
     _print_report(repo_root, violations)
+    if violations and args.report_only:
+        print("\nWARNING: report-only mode enabled, violations are not blocking.")
+        return 0
     return 1 if violations else 0
 
 
