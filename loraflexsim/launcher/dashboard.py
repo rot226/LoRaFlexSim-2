@@ -589,7 +589,7 @@ def update_map():
         x=x_nodes,
         y=y_nodes,
         mode="markers+text",
-        name="Nœuds",
+        name="Nodes",
         text=node_ids,
         textposition="middle center",
         marker=dict(symbol="circle", color="blue", size=32),
@@ -602,7 +602,7 @@ def update_map():
         x=x_gw,
         y=y_gw,
         mode="markers+text",
-        name="Passerelles",
+        name="Gateways",
         text=gw_ids,
         textposition="middle center",
         marker=dict(symbol="star", color="red", size=28, line=dict(width=1, color="black")),
@@ -759,7 +759,7 @@ def update_heatmap(event=None):
         name="Gateways",
     )
     fig.update_layout(
-        title="Heatmap couverture (RSSI)",
+        title="RSSI Coverage Heatmap",
         xaxis_title="X (m)",
         yaxis_title="Y (m)",
         xaxis_range=[0, area],
