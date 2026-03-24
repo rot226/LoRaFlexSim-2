@@ -5,18 +5,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
-_Aucun changement notable pour le moment._
+_No notable changes for now._
 
 ## [1.0.1] - 2025-09-30
 ### Added
-- Ajout du profil d'exécution « fast » pour les scripts MNE3SD afin de réduire automatiquement la taille des balayages et d'appliquer les préréglages associés (nœuds, réplicas, intervalles RX classe C). 
+- Added the "fast" execution profile for MNE3SD scripts to automatically reduce sweep sizes and apply associated presets (nodes, replicas, Class C RX intervals).
 ### Changed
-- Les générateurs de trafic (simulateur CLI, nœuds complets et chargeur de configuration) s'appuient désormais sur `traffic.exponential.sample_interval` pour échantillonner strictement une loi exponentielle alignée sur OMNeT++ et ne repousser les transmissions que lorsque l'intervalle reste inférieur à la durée d'émission précédente. 
-- Le profil `adr_standard_1` active un canal dégradé plus sévère (bruit, fading et capture avancée) par défaut afin de refléter les validations radio.
-- Le gain de traitement LoRa n'est plus ajouté implicitement au calcul du SNR ; il devient un comportement opt-in via le paramètre `processing_gain`.
+- Traffic generators (CLI simulator, full nodes, and configuration loader) now rely on `traffic.exponential.sample_interval` to sample a strictly exponential distribution aligned with OMNeT++, and only defer transmissions when the interval remains shorter than the previous transmission duration.
+- The `adr_standard_1` profile now enables a more severe degraded channel (noise, fading, and advanced capture) by default to reflect radio validation conditions.
+- LoRa processing gain is no longer implicitly added to SNR calculation; it is now opt-in through the `processing_gain` parameter.
 ### Fixed
-- Les fenêtres périodiques des nœuds de classe C cessent de sonder lorsqu'aucun downlink n'est en attente, ce qui évite les boucles infinies observées lors des campagnes MNE3SD tout en garantissant la livraison finale.
-- Les balayages de densité MNE3SD peuvent forcer l'intervalle de sondage des nœuds de classe C, avec une valeur réduite appliquée automatiquement pour le profil « fast » afin d'accélérer les itérations.
+- Periodic Class C node windows stop polling when no downlink is pending, preventing the infinite loops observed during MNE3SD campaigns while still guaranteeing final delivery.
+- MNE3SD density sweeps can force the Class C node polling interval, with a reduced value automatically applied for the "fast" profile to speed up iterations.
 
 ## [Draft]
 _Brouillon conservé pour une refonte majeure envisagée mais jamais publiée._
