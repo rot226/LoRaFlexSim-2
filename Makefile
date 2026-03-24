@@ -1,9 +1,17 @@
-.PHONY: validate static-legacy-identifiers
+.PHONY: validate validate-language static-legacy-identifiers
+
+# Temporary migration mode: keep report-only to avoid permanently blocking CI.
+# Switch to blocking mode after cleanup by overriding with:
+#   make validate-language VALIDATE_LANGUAGE_ARGS=
+VALIDATE_LANGUAGE_ARGS ?= --report-only
 
 static-legacy-identifiers:
 	pytest tests/test_legacy_identifiers_absent.py
 
-validate: static-legacy-identifiers
+validate-language:
+	python scripts/check_english_surface.py $(VALIDATE_LANGUAGE_ARGS)
+
+validate: validate-language static-legacy-identifiers
 	pytest -k "channel"
 	pytest -k "omnet_phy or rx_chain or overlap_snir or flora_capture or startup_currents or pa_ramp"
 	pytest -k "gateway or collision_capture or compare_flora"
