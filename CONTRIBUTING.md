@@ -41,6 +41,24 @@ If `make` is not available on Windows, use Git Bash, WSL, or an equivalent envir
 - avoid breaking paths or commands already documented in `README.md`;
 - document any new user-visible behavior or dependency.
 
+## Language policy
+
+Project default language is **English**. To keep the documentation and contributor experience consistent, all public, user-facing content must be written in English by default:
+
+- documentation pages and updates (`README`, `docs/`, contribution guides);
+- UI text labels, messages, and notifications;
+- CLI help text and examples;
+- pull request titles/descriptions and issue descriptions intended for public project history.
+
+French (or any other language) must only appear when intentionally localized and clearly scoped as localization content.
+
+## Review checklist
+
+Before requesting review, verify:
+
+- [ ] No French strings in user-facing docs/UI unless intentionally localized.
+- [ ] README and docs updated in English for any feature change.
+
 ## Reporting an issue
 
 If you are not submitting an immediate fix, open an issue and include:
