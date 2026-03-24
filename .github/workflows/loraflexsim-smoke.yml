@@ -22,6 +22,9 @@ jobs:
       - name: Documentation consistency check
         run: make validate-docs-consistency
 
+      - name: Public entrypoint regression tests
+        run: make static-public-entrypoints
+
   smoke-linux:
     needs: validate-language
     runs-on: ubuntu-latest

@@ -20,7 +20,13 @@ This folder contains the project's active documentation: installation, usage gui
 ## Entry points / files to open first
 
 - `docs/installation.md`: installation and local environment.
-- `docs/user_guide_cli.md`: standard workflow via `mobilesfrdth`.
-- `docs/user_guide_dashboard.md`: legacy dashboard usage.
+- `docs/user_guide_cli.md`: standard workflow via `loraflexsim`.
+- `docs/user_guide_dashboard.md`: current dashboard usage (`panel serve loraflexsim/launcher/dashboard.py --show`).
 - `docs/advanced_workflows.md`: advanced, historical, or specialized cases.
 - `docs/repository_map.md`: top-level repository reading map.
+
+## Public command entry points
+
+- Dashboard: `panel serve loraflexsim/launcher/dashboard.py --show`
+- Official CLI: `loraflexsim --help`
+- Python fallback: `python -m loraflexsim --help`
