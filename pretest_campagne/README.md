@@ -1,22 +1,22 @@
 # `pretest_campagne/`
 
-## À quoi sert ce dossier ?
+## What is this folder for?
 
-Ce dossier est la racine canonique des campagnes de recherche, reproductions métier et archives scientifiques conservées dans le dépôt.
+This folder is the canonical root for research campaigns, domain reproductions, and scientific archives kept in this repository.
 
-## Quand l’utiliser ?
+## When should you use it?
 
-- Quand vous devez rejouer ou auditer un scénario de recherche documenté.
-- Quand vous travaillez sur `scenario_a/`, `scenario_b/`, `scenario_c/` ou `scenario_d/`.
-- Quand une reproduction, une archive ou un document scientifique renvoie explicitement vers ce dossier.
+- When replaying or auditing a documented research scenario.
+- When working on `scenario_a/`, `scenario_b/`, `scenario_c/`, or `scenario_d/`.
+- When a reproduction, archive, or scientific document explicitly refers to this folder.
 
-## Quand ne pas l’utiliser ?
+## When should you not use it?
 
-- Ne l'utilisez pas comme point d'entrée standard pour un nouveau flux utilisateur.
-- Ne l'utilisez pas si votre besoin relève du flux moderne `mobilesfrdth` ou d'une simple exécution locale.
+- Do not use it as the standard entry point for a new user workflow.
+- Do not use it when your need is covered by the modern command-line workflow `mobilesfrdth` or a simple local run.
 
-## Point d’entrée / fichiers à ouvrir d’abord
+## Entry points / files to open first
 
-- `docs/archive_or_research/README.md` : vue d'ensemble des espaces recherche/archive.
-- `pretest_campagne/scenario_a/README.md`, `scenario_b/README.md`, `scenario_c/README.md`, `scenario_d/README.md` : guides locaux par scénario.
-- `pretest_campagne/archive_or_mock/README.md` et `pretest_campagne/iwcmc_archive/README.md` : archives spécialisées.
+- `docs/archive_or_research/README.md`: overview of research/archive spaces.
+- `pretest_campagne/scenario_a/README.md`, `scenario_b/README.md`, `scenario_c/README.md`, `scenario_d/README.md`: per-scenario guides.
+- `pretest_campagne/archive_or_mock/README.md` and `pretest_campagne/iwcmc_archive/README.md`: specialized archives.

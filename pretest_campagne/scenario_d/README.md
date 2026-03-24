@@ -1,47 +1,42 @@
 # `pretest_campagne/scenario_d/`
 
-## En 30 secondes
+## In 30 seconds
 
-| Rubrique | Réponse rapide |
+| Section | Quick answer |
 | --- | --- |
-| **À quoi sert ce dossier ?** | Regrouper les expériences de mobilité du scénario D de la campagne MNE3SD et leurs variantes D1–D10. |
-| **Quand l’utiliser ?** | Quand vous devez rejouer ou ajuster une campagne de mobilité scénario D avec sweeps de portée, vitesse, passerelles ou charge. |
-| **Quand ne pas l’utiliser ?** | Ne l’utilisez pas pour une campagne standard `mobilesfrdth` ni pour les autres scénarios `pretest_campagne`. |
-| **Point d’entrée principal** | Les scripts `pretest_campagne.scenario_d.scenarios.run_mobility_*` ou le batch `python -m scripts.mne3sd.run_all_campaign_outputs --campaign scenario_d`. |
-| **Sorties produites** | Des CSV dans `results/mne3sd/scenario_d/` et des figures dans `figures/mne3sd/scenario_d/`. |
-| **Documentation détaillée** | Ce README résume les scénarios D1–D10, les paramètres communs et les commandes de génération. |
+| **What is this folder for?** | Group mobility experiments for MNE3SD scenario D and D1–D10 variants. |
+| **When should you use it?** | When replaying or tuning a scenario D mobility campaign with range, speed, gateway, or load sweeps. |
+| **When should you not use it?** | Do not use it for a standard `mobilesfrdth` campaign or other `pretest_campagne` scenarios. |
+| **Main entry point** | `pretest_campagne.scenario_d.scenarios.run_mobility_*` scripts or `python -m scripts.mne3sd.run_all_campaign_outputs --campaign scenario_d`. |
+| **Produced outputs** | CSV files in `results/mne3sd/scenario_d/` and figures in `figures/mne3sd/scenario_d/`. |
+| **Detailed documentation** | This README summarizes scenarios D1–D10, shared parameters, and generation commands. |
 
-## Documentation détaillée
+## Detailed documentation
 
-### Rôle du dossier
+### Folder role
 
-Ce dossier rassemble les scripts utilisés pour reproduire les expériences axées sur la mobilité du scénario D de la campagne MNE3SD.
+This folder contains scripts used to reproduce mobility-focused experiments for MNE3SD scenario D.
 
-### Scénarios D1–D10
+### Scenarios D1–D10
 
-| Scénario | Nom | Objectif |
+| Scenario | Name | Objective |
 | --- | --- | --- |
-| D1 | `mobility_range_baseline` | Référence de portée moyenne avec mobilité piétonne. |
-| D2 | `mobility_range_stress` | Robustesse en portée maximale avec bruit de canal accru. |
-| D3 | `mobility_speed_baseline` | Impact d'une vitesse nominale sur le PDR. |
-| D4 | `mobility_speed_extremes` | Exploration des vitesses extrêmes. |
-| D5 | `mobility_gateway_baseline` | Distribution du trafic par passerelle. |
-| D6 | `mobility_gateway_density` | Gain marginal d'ajout de passerelles. |
-| D7 | `mobility_model_comparison` | Comparaison des modèles de mobilité. |
-| D8 | `mobility_interference_load` | Effet d'une charge radio accrue. |
-| D9 | `mobility_reliability_ci` | Jeu rapide pour validations CI. |
-| D10 | `mobility_full_campaign` | Campagne complète du scénario D. |
+| D1 | `mobility_range_baseline` | Baseline medium-range mobility. |
+| D2 | `mobility_range_stress` | Maximum-range robustness under increased channel noise. |
+| D3 | `mobility_speed_baseline` | Impact of nominal speed on PDR. |
+| D4 | `mobility_speed_extremes` | Exploration of extreme speeds. |
+| D5 | `mobility_gateway_baseline` | Traffic distribution by gateway. |
+| D6 | `mobility_gateway_density` | Marginal gain from adding gateways. |
+| D7 | `mobility_model_comparison` | Mobility model comparison. |
+| D8 | `mobility_interference_load` | Effect of increased radio load. |
+| D9 | `mobility_reliability_ci` | Fast set for CI validation. |
+| D10 | `mobility_full_campaign` | Full scenario D campaign. |
 
-### Paramètres de simulation communs
+### Shared simulation parameters
 
-Les scripts exposent notamment : `--seed`, `--runs`, `--duration`, `--distance-min`, `--distance-max`, `--speed-min`, `--speed-max`, `--output` ou `--results`, ainsi que `--profile` et `--workers` selon le sweep.
+Scripts expose: `--seed`, `--runs`, `--duration`, `--distance-min`, `--distance-max`, `--speed-min`, `--speed-max`, `--output` or `--results`, plus `--profile` and `--workers` depending on the sweep.
 
-### Sorties attendues
-
-- CSV : `results/mne3sd/scenario_d/`
-- Figures : `figures/mne3sd/scenario_d/`
-
-### Générer les données
+### Generate data
 
 ```powershell
 python -m pretest_campagne.scenario_d.scenarios.run_mobility_range_sweep `
@@ -49,17 +44,11 @@ python -m pretest_campagne.scenario_d.scenarios.run_mobility_range_sweep `
     --results results/mne3sd/scenario_d/mobility_range_custom.csv
 ```
 
-### Générer les figures
+### Generate figures
 
 ```powershell
 python -m pretest_campagne.scenario_d.plots.<figure_module> `
     --input results/mne3sd/scenario_d/<scenario_name>.csv `
     --figures-dir figures/mne3sd/scenario_d/ `
     --format png
-```
-
-### Lanceur de batch
-
-```powershell
-python -m scripts.mne3sd.run_all_campaign_outputs --campaign scenario_d
 ```

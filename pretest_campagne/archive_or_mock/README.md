@@ -1,7 +1,7 @@
 # Archive or mock
 
-Ce sous-espace regroupe les contenus conservés pour archive, démonstration légère ou comparaison, sans statut de point d’entrée recommandé.
+This subspace groups content kept for archive, lightweight demonstration, or comparison purposes, without being a recommended entry point.
 
-## Contenus
+## Contents
 
-- `mobile-sfrd/` : archive d’un mock pédagogique historique. Utiliser `mobilesfrdth` pour le flux standard.
+- `mobile-sfrd/`: archive of a historical educational mock. Use `mobilesfrdth` for the standard workflow.

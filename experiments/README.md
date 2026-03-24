@@ -1,22 +1,22 @@
 # `experiments/`
 
-## À quoi sert ce dossier ?
+## What is this folder for?
 
-Ce dossier regroupe des configurations, presets et sous-campagnes exploratoires utilisés pour la recherche, les comparaisons et certains essais reproductibles.
+This folder contains exploratory configurations, presets, and sub-campaigns used for research, benchmarking, and selected reproducible experiments.
 
-## Quand l’utiliser ?
+## When should you use it?
 
-- Quand vous devez charger un preset comme `default.yaml`, `paper_fast.yaml` ou `paper_core.yaml`.
-- Quand vous travaillez sur une sous-campagne de recherche avec son propre README.
-- Quand une validation ou une expérience renvoie explicitement vers `experiments/`.
+- When loading a preset such as `default.yaml`, `paper_fast.yaml`, or `paper_core.yaml`.
+- When working on a research sub-campaign with its own README.
+- When a validation or experiment explicitly points to `experiments/`.
 
-## Quand ne pas l’utiliser ?
+## When should you not use it?
 
-- Ne l'utilisez pas comme premier point d'entrée pour un nouvel utilisateur.
-- Ne l'utilisez pas pour le flux standard si la documentation principale suffit.
+- Do not use it as the first entry point for new users.
+- Do not use it for the standard workflow when main documentation is sufficient.
 
-## Point d’entrée / fichiers à ouvrir d’abord
+## Entry points / files to open first
 
-- `experiments/default.yaml`, `experiments/paper_fast.yaml`, `experiments/paper_core.yaml` : presets principaux.
-- `experiments/snir_stage1/README.md` et `experiments/ucb1/README.md` : guides locaux de sous-campagnes.
-- `docs/advanced_workflows.md` : contexte de ces expériences dans l'ensemble du dépôt.
+- `experiments/default.yaml`, `experiments/paper_fast.yaml`, `experiments/paper_core.yaml`: main presets.
+- `experiments/snir_stage1/README.md` and `experiments/ucb1/README.md`: local guides for sub-campaigns.
+- `docs/advanced_workflows.md`: context for these experiments in the repository.

@@ -1,16 +1,16 @@
 # LoRaFlexSim-2
 
-LoRaFlexSim-2 est un simulateur LoRa/LoRaWAN en Python pour exécuter des campagnes, agréger des résultats et visualiser les métriques réseau.
+LoRaFlexSim-2 is a Python LoRa/LoRaWAN simulator for running campaigns, aggregating results, and visualizing network metrics.
 
-## Parcours public recommandé
+## Recommended public entry path
 
-1. **Voie principale** : dashboard Panel.
-2. **Voie scriptable** : CLI `loraflexsim`.
-3. **Fallback technique** : `python -m loraflexsim`.
+1. **Primary path**: Panel dashboard.
+2. **Scriptable path**: `loraflexsim` CLI.
+3. **Technical fallback**: `python -m loraflexsim`.
 
-Les anciens noms et anciennes surfaces (`mobilesfrdth`, `sfrd/`, `src/`, `final/`) ne font plus partie du parcours public.
+Legacy names and legacy surfaces (`mobilesfrdth`, `sfrd/`, `src/`, `final/`) are no longer part of the public entry path.
 
-## Démarrage rapide (Windows 11)
+## Quick start (Windows 11)
 
 ```powershell
 py -3.11 -m venv .venv
@@ -18,13 +18,13 @@ py -3.11 -m venv .venv
 python -m pip install -e . --no-build-isolation
 ```
 
-### Lancer le dashboard (recommandé)
+### Launch the dashboard (recommended)
 
 ```powershell
 panel serve loraflexsim/launcher/dashboard.py --show
 ```
 
-### Utiliser la CLI (si besoin d’automatiser)
+### Use the CLI (for automation)
 
 ```powershell
 loraflexsim --help
@@ -32,26 +32,26 @@ loraflexsim presets --list
 loraflexsim run --preset paper_fast --out runs/quickstart
 ```
 
-### Fallback sans entrypoint console
+### Fallback without a console entrypoint
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/loraflexsim.ps1 --help
 python -m loraflexsim --help
 ```
 
-## Dossiers actifs vs historiques
+## Active vs historical folders
 
-| Zone | Statut | Usage |
+| Area | Status | Usage |
 | --- | --- | --- |
-| `loraflexsim/` | actif | moteur, dashboard, CLI publique |
-| `docs/` | actif | documentation utilisateur |
-| `scripts/` | actif | bootstrap et automatisation |
-| `qos_cli/` | spécialisé | campagnes QoS expertes |
-| `docs/archive_or_research/` | historique | mémoire de migration et recherche |
-| `pretest_campagne/` | historique/recherche | reproductions et comparatifs |
+| `loraflexsim/` | active | engine, dashboard, public CLI |
+| `docs/` | active | user documentation |
+| `scripts/` | active | bootstrap and automation |
+| `qos_cli/` | specialized | advanced QoS campaigns |
+| `docs/archive_or_research/` | historical | migration and research memory |
+| `pretest_campagne/` | historical/research | reproductions and comparisons |
 
-## Suppressions / migration
+## Removals / migration
 
-- `sfrd/`, `src/` et `final/` : retirés de la surface vivante.
-- `mobilesfrdth/` : conservé uniquement comme trace interne de migration, documentée comme historique.
-- Détails : `docs/archive_or_research/migration_legacy_surfaces.md`.
+- `sfrd/`, `src/`, and `final/`: removed from the live surface.
+- `mobilesfrdth/`: kept only as an internal migration trace, documented as historical.
+- Details: `docs/archive_or_research/migration_legacy_surfaces.md`.

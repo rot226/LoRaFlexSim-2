@@ -1,31 +1,31 @@
 # `pretest_campagne/scenario_b/`
 
-## En 30 secondes
+## In 30 seconds
 
-| Rubrique | Réponse rapide |
+| Section | Quick answer |
 | --- | --- |
-| **À quoi sert ce dossier ?** | Regrouper les expériences de mobilité du scénario B de la campagne MNE3SD. |
-| **Quand l’utiliser ?** | Quand vous devez rejouer des sweeps de portée, vitesse ou nombre de passerelles pour le scénario B. |
-| **Quand ne pas l’utiliser ?** | Ne l’utilisez pas pour la CLI standard `mobilesfrdth`, ni pour un autre scénario `pretest_campagne`. |
-| **Point d’entrée principal** | Les scripts `pretest_campagne.scenario_b.scenarios.run_mobility_*` ou le batch `python -m scripts.mne3sd.run_all_campaign_outputs --campaign scenario_b`. |
-| **Sorties produites** | Des CSV dans `results/mne3sd/scenario_b/` et des figures dans `figures/mne3sd/scenario_b/`. |
-| **Documentation détaillée** | Ce README documente les sweeps disponibles, les profils d’exécution et les commandes de génération. |
+| **What is this folder for?** | Group mobility experiments for MNE3SD scenario B. |
+| **When should you use it?** | When replaying range, speed, or gateway sweeps for scenario B. |
+| **When should you not use it?** | Do not use it for the standard `mobilesfrdth` CLI workflow or another `pretest_campagne` scenario. |
+| **Main entry point** | `pretest_campagne.scenario_b.scenarios.run_mobility_*` scripts or `python -m scripts.mne3sd.run_all_campaign_outputs --campaign scenario_b`. |
+| **Produced outputs** | CSV files in `results/mne3sd/scenario_b/` and figures in `figures/mne3sd/scenario_b/`. |
+| **Detailed documentation** | This README documents available sweeps, execution profiles, and generation commands. |
 
-## Documentation détaillée
+## Detailed documentation
 
-### Rôle du dossier
+### Folder role
 
-Ce dossier rassemble les scripts utilisés pour reproduire les expériences axées sur la mobilité du scénario B de la campagne MNE3SD.
+This folder contains scripts used to reproduce mobility-focused experiments for MNE3SD scenario B.
 
-### Scénarios couverts
+### Covered scenarios
 
 - `urban_canyon`
 - `rural_highway`
 - `industrial_campus`
 
-### Paramètres de simulation communs
+### Shared simulation parameters
 
-Les points d'entrée des scénarios proposent notamment :
+Scenario entrypoints include:
 
 - `--config`
 - `--seed`
@@ -33,25 +33,20 @@ Les points d'entrée des scénarios proposent notamment :
 - `--duration`
 - `--distance-min` / `--distance-max`
 - `--speed-min` / `--speed-max`
-- `--output` ou `--results`
+- `--output` or `--results`
 
-### Profils d'exécution
+### Execution profiles
 
-Les lanceurs de scénarios respectent l'option `--profile` partagée ainsi que la variable d'environnement `MNE3SD_PROFILE` :
+Scenario launchers support shared `--profile` and `MNE3SD_PROFILE`:
 
-- `full` *(par défaut)*
+- `full` *(default)*
 - `ci`
 
-### Parallélisation
+### Parallelization
 
-Les scripts `run_mobility_range_sweep.py`, `run_mobility_speed_sweep.py` et `run_mobility_gateway_sweep.py` acceptent `--workers`.
+`run_mobility_range_sweep.py`, `run_mobility_speed_sweep.py`, and `run_mobility_gateway_sweep.py` support `--workers`.
 
-### Sorties attendues
-
-- CSV : `results/mne3sd/scenario_b/`
-- Figures : `figures/mne3sd/scenario_b/`
-
-### Générer les données
+### Generate data
 
 ```powershell
 python -m pretest_campagne.scenario_b.scenarios.run_mobility_range_sweep `
@@ -59,17 +54,11 @@ python -m pretest_campagne.scenario_b.scenarios.run_mobility_range_sweep `
     --results results/mne3sd/scenario_b/mobility_range_custom.csv
 ```
 
-### Générer les figures
+### Generate figures
 
 ```powershell
 python -m pretest_campagne.scenario_b.plots.<figure_module> `
     --input results/mne3sd/scenario_b/<scenario_name>.csv `
     --figures-dir figures/mne3sd/scenario_b/ `
     --format pdf
-```
-
-### Lanceur de batch
-
-```powershell
-python -m scripts.mne3sd.run_all_campaign_outputs --campaign scenario_b
 ```
