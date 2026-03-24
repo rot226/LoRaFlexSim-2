@@ -1746,7 +1746,7 @@ center_col = pn.Column(
             manual_pos_toggle,
             position_textarea,
             pn.Spacer(height=10),
-            pn.pane.Markdown("### Radio avancée"),
+            pn.pane.Markdown("### Advanced Radio"),
             qos_snir_toggle,
             qos_inter_sf_coupling_input,
             qos_capture_thresholds_input,
