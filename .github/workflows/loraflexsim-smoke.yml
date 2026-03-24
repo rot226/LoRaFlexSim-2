@@ -19,6 +19,9 @@ jobs:
       - name: Language surface check (report-only during migration)
         run: make validate-language
 
+      - name: Documentation consistency check
+        run: make validate-docs-consistency
+
   smoke-linux:
     needs: validate-language
     runs-on: ubuntu-latest

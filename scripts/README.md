@@ -8,6 +8,7 @@ This folder contains automation and bootstrap scripts.
 - `scripts/loraflexsim.ps1`: Windows wrapper for the public CLI.
 - `scripts/loraflexsim.sh`: Linux/macOS wrapper.
 - `scripts/windows/run_offline.ps1`: Windows offline pipeline.
+- `scripts/check_docs_consistency.py`: blocking static audit for documentation coherence (dead paths/links, legacy references, entrypoints, Windows vs bash examples).
 
 ## Positioning
 
