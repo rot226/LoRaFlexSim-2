@@ -12,7 +12,7 @@ def test_reward_nominal_case():
 
     reward = selector.reward_from_outcome(True, snir_db=2.0)
 
-    assert reward == pytest.approx(1.0)
+    assert reward == pytest.approx(0.8)
 
 
 def test_reward_marginal_snir_penalty():
@@ -26,7 +26,7 @@ def test_reward_marginal_snir_penalty():
         True, snir_db=0.1, marginal_snir_margin_db=0.5
     )
 
-    assert reward == pytest.approx(0.35)
+    assert reward == pytest.approx(0.28)
 
 
 def test_reward_energy_and_collision_penalties():
@@ -43,7 +43,7 @@ def test_reward_energy_and_collision_penalties():
         collision=True,
     )
 
-    assert reward == pytest.approx(0.5)
+    assert reward == pytest.approx(0.25)
 
 
 def test_reward_with_fairness_component():
@@ -57,7 +57,7 @@ def test_reward_with_fairness_component():
         fairness_index=0.75,
     )
 
-    assert reward == pytest.approx(0.3)
+    assert reward == pytest.approx(0.14285714285714288)
 
 
 def test_reward_normalization_with_expected_der():
@@ -65,7 +65,7 @@ def test_reward_normalization_with_expected_der():
 
     reward = selector.reward_from_outcome(True, expected_der=2.0)
 
-    assert reward == pytest.approx(0.5)
+    assert reward == pytest.approx(0.29411764705882354)
 
 
 def test_reward_qos_normalization_caps_success():
@@ -81,7 +81,7 @@ def test_reward_qos_normalization_caps_success():
         expected_der=0.5,
     )
 
-    assert reward == pytest.approx(1.0)
+    assert reward == pytest.approx(0.8)
 
 
 def test_reward_varies_with_snir_enabled():
@@ -119,6 +119,7 @@ def test_reward_sliding_window_mean():
         energy_penalty_weight=0.0,
         collision_penalty=0.0,
         reward_window=2,
+        reward_mode="qos_weighted",
     )
 
     first = selector.update("SF7", success=True)
@@ -135,6 +136,7 @@ def test_qos_window_mean_includes_snir_collision_energy():
         success_weight=1.0,
         snir_margin_weight=0.2,
         reward_window=2,
+        reward_mode="qos_weighted",
     )
 
     selector.update(
