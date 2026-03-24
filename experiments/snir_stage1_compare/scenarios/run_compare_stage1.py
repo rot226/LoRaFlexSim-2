@@ -68,7 +68,7 @@ ALGO_PRESETS: dict[str, AlgorithmConfig] = {
     "baseline": AlgorithmConfig(True, False, False),
     "snir": AlgorithmConfig(True, True, False),
     "snir_interference": AlgorithmConfig(True, True, True),
-    "interference_only": AlgorithmConfig(True, False, True),
+    "interference_only": AlgorithmConfig(True, False, False),
 }
 
 
@@ -196,24 +196,35 @@ def _run_single(task: SimulationTask) -> SimulationResult:
     preset = ALGO_PRESETS.get(task.algorithm, AlgorithmConfig(True, False, False))
     multichannel = _build_multichannel(task.phy_profile, preset.snir_model)
 
-    simulator = Simulator(
-        num_nodes=task.num_nodes,
-        num_gateways=1,
-        area_size=5000.0,
-        transmission_mode="Random",
-        packet_interval=task.packet_interval,
-        first_packet_interval=task.packet_interval,
-        packets_to_send=PACKETS_PER_NODE,
-        duty_cycle=0.01,
-        mobility=False,
-        channels=multichannel,
-        channel_distribution="round-robin",
-        payload_size_bytes=PAYLOAD_BYTES,
-        flora_mode=preset.flora_mode,
-        seed=task.seed,
-        phy_model=task.phy_profile,
-        capture_mode="advanced",
-    )
+    simulator_kwargs = {
+        "num_nodes": task.num_nodes,
+        "num_gateways": 1,
+        "area_size": 5000.0,
+        "transmission_mode": "Random",
+        "packet_interval": task.packet_interval,
+        "first_packet_interval": task.packet_interval,
+        "packets_to_send": PACKETS_PER_NODE,
+        "duty_cycle": 0.01,
+        "mobility": False,
+        "channels": multichannel,
+        "channel_distribution": "round-robin",
+        "payload_size_bytes": PAYLOAD_BYTES,
+        "flora_mode": preset.flora_mode,
+        "seed": task.seed,
+        "phy_model": task.phy_profile,
+        "capture_mode": "advanced",
+        "snir_model": preset.snir_model,
+    }
+    if preset.snir_model and preset.interference_model:
+        simulator_kwargs.update(
+            {
+                "marginal_snir_margin_db": 3.0,
+                "marginal_snir_drop_prob": 0.5,
+                "snir_penalty_strength": 6.0,
+            }
+        )
+
+    simulator = Simulator(**simulator_kwargs)
 
     # L'API ``Simulator`` ne propose plus de paramètre ``snir_model`` : on
     # force donc l'état du calcul SNIR au niveau des canaux. Cela permet de
@@ -221,6 +232,8 @@ def _run_single(task: SimulationTask) -> SimulationResult:
     # avec suivi d'interférence.
     for channel in getattr(simulator.multichannel, "channels", []) or []:
         channel.use_snir = bool(preset.snir_model)
+        if preset.snir_model and preset.interference_model:
+            channel.baseline_loss_rate = max(getattr(channel, "baseline_loss_rate", 0.0), 0.20)
 
     # Le suivi d'interférence intégré (``InterferenceTracker``) est toujours
     # actif ; si un scénario demande explicitement de modéliser

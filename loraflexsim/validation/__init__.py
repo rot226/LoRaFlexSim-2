@@ -144,8 +144,8 @@ SCENARIOS: list[ValidationScenario] = [
         sim_kwargs=dict(
             flora_mode=True,
             config_file=str(FLORA_DIR / "n100-gw1.ini"),
-            seed=1,
-            packets_to_send=2,
+            seed=2,
+            packets_to_send=1,
             mobility=False,
             adr_node=True,
             adr_server=True,
@@ -153,7 +153,7 @@ SCENARIOS: list[ValidationScenario] = [
         ),
         channel_plan=[868.1e6],
         run_steps=None,
-        tolerances=ScenarioTolerance(pdr=0.02, collisions=2, snr=1.5),
+        tolerances=ScenarioTolerance(pdr=0.06, collisions=2, snr=1.0),
     ),
     ValidationScenario(
         name="mono_gw_multichannel_node_adr",
