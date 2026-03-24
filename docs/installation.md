@@ -1,33 +1,16 @@
-# Installation et compatibilité plateforme
+# Installation (Windows 11 en priorité)
 
-Ce guide documente le parcours canonique de LoRaFlexSim.
+Ce guide décrit l’installation publique de LoRaFlexSim-2.
 
-## Décision officielle
+## Ce qui est officiel aujourd’hui
 
-Le dépôt reste **packagé comme projet Python installable**, avec un packaging désormais centré sur le package public `loraflexsim/`.
+- **Principal** : dashboard Panel.
+- **CLI supportée** : `loraflexsim`.
+- **Fallback** : `python -m loraflexsim`.
 
-La surface publique du simulateur est désormais :
+Les surfaces `mobilesfrdth`, `sfrd/`, `src/` et `final/` sont historiques et ne doivent plus être utilisées comme entrée standard.
 
-- **dashboard** : `panel serve loraflexsim/launcher/dashboard.py --show`
-- **CLI officielle** : `loraflexsim ...`
-- **fallback Python direct** : `python -m loraflexsim ...`
-
-La forme `python -m loraflexsim.run ...` reste disponible pour usage bas niveau, mais **ne constitue pas le parcours recommandé**.
-
-## Matrice de compatibilité
-
-| Surface | Windows 11 | Linux | macOS |
-| --- | --- | --- | --- |
-| Installation editable | **prioritaire** | documentée | documentée |
-| CLI `loraflexsim` | **prioritaire** | documentée | documentée |
-| Wrapper dépôt `scripts/loraflexsim.*` | **oui** | **oui** | **oui** |
-| Fallback `python -m loraflexsim` | **oui** | **oui** | **oui** |
-| Dashboard Panel | **prioritaire** | documenté | documenté |
-| `python -m loraflexsim.run` | historique | historique | historique |
-
-## Installation recommandée
-
-### Windows 11 / PowerShell
+## Installation recommandée — Windows 11
 
 ```powershell
 py -3.11 -m venv .venv
@@ -35,49 +18,10 @@ py -3.11 -m venv .venv
 python -m pip install -e . --no-build-isolation
 ```
 
-### Linux / macOS / bash
-
-```bash
-python3.11 -m venv .venv
-source .venv/bin/activate
-python -m pip install -e . --no-build-isolation
-```
-
-## Dépendances utiles selon le flux
-
-- **CLI `loraflexsim` installée** : `python -m pip install -e . --no-build-isolation`
-- **Dashboard** : runtime complet + `panel`, `plotly`, `numpy`, `pandas`
-- **Fallback dépôt / offline** : `matplotlib` et `PyYAML` restent le minimum pratique pour la chaîne CLI existante
-
-## Lancer la CLI officielle
-
-### Après installation editable
+## Vérification rapide
 
 ```powershell
 loraflexsim --help
-loraflexsim presets --list
-loraflexsim run --preset paper_fast --out runs/quickstart
-```
-
-Sous Linux/macOS, les mêmes commandes s’exécutent en bash/zsh.
-
-### Fallback dépôt
-
-#### Windows 11
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/loraflexsim.ps1 --help
-powershell -ExecutionPolicy Bypass -File scripts/loraflexsim.ps1 presets --list
-powershell -ExecutionPolicy Bypass -File scripts/loraflexsim.ps1 run --preset paper_fast --out runs/quickstart
-python -m loraflexsim --help
-```
-
-#### Linux / macOS
-
-```bash
-./scripts/loraflexsim.sh --help
-./scripts/loraflexsim.sh presets --list
-./scripts/loraflexsim.sh run --preset paper_fast --out runs/quickstart
 python -m loraflexsim --help
 ```
 
@@ -87,44 +31,15 @@ python -m loraflexsim --help
 panel serve loraflexsim/launcher/dashboard.py --show
 ```
 
-Même commande sous bash/zsh.
+Si le navigateur ne s’ouvre pas automatiquement, copiez l’URL affichée par Panel.
 
-## Scripts recommandés
-
-| Script | Rôle | Plateformes |
-| --- | --- | --- |
-| `scripts/bootstrap_windows.ps1` | bootstrap Windows 11 | Windows 11 |
-| `scripts/bootstrap_unix.sh` | bootstrap Unix | Linux, macOS |
-| `scripts/loraflexsim.ps1` | wrapper dépôt canonique | Windows 11 |
-| `scripts/loraflexsim.sh` | wrapper dépôt canonique | Linux, macOS |
-| `scripts/windows/run_offline.ps1` | pipeline offline Windows 11 | Windows 11 |
-
-## Limitations connues
-
-- `panel serve ... --show` dépend de la capacité du système à ouvrir un navigateur par défaut.
-- `python -m loraflexsim.run` expose un niveau plus bas que la CLI officielle et n’offre pas le parcours `run -> aggregate -> plots -> validate` documenté pour la communauté.
-- Le dossier `mobilesfrdth/` reste présent dans le dépôt pendant la migration, mais il n’est plus l’ancre du packaging public.
-
-## Parcours recommandé sans ambiguïté
-
-### Windows 11
+## Fallback Windows 11 (wrapper dépôt)
 
 ```powershell
-py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -e . --no-build-isolation
-loraflexsim --help
-python -m loraflexsim --help
-panel serve loraflexsim/launcher/dashboard.py --show
+powershell -ExecutionPolicy Bypass -File scripts/loraflexsim.ps1 --help
 ```
 
-### Linux / macOS
+## Notes migration
 
-```bash
-python3.11 -m venv .venv
-source .venv/bin/activate
-python -m pip install -e . --no-build-isolation
-loraflexsim --help
-python -m loraflexsim --help
-panel serve loraflexsim/launcher/dashboard.py --show
-```
+- Les dossiers historiques retirés de l’usage public sont suivis dans `docs/archive_or_research/migration_legacy_surfaces.md`.
+- Les workflows de recherche restent documentés séparément dans `docs/archive_or_research/`.

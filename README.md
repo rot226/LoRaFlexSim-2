@@ -1,15 +1,16 @@
-# LoRaFlexSim 1.0.1
+# LoRaFlexSim-2
 
-LoRaFlexSim est un simulateur LoRa/LoRaWAN en Python avec deux surfaces publiques canoniques :
+LoRaFlexSim-2 est un simulateur LoRa/LoRaWAN en Python pour exécuter des campagnes, agréger des résultats et visualiser les métriques réseau.
 
-- le **dashboard Panel** pour l’exploration visuelle ;
-- la **CLI officielle `loraflexsim`** pour les campagnes reproductibles.
+## Parcours public recommandé
 
-Le dépôt reste **packagé comme projet Python installable**, mais le packaging est désormais réaligné sur le package public `loraflexsim/`. L’ancien package `mobilesfrdth/` n’est plus exposé comme surface d’entrée documentée ni comme point d’installation à promouvoir.
+1. **Voie principale** : dashboard Panel.
+2. **Voie scriptable** : CLI `loraflexsim`.
+3. **Fallback technique** : `python -m loraflexsim`.
 
-## Installer
+Les anciens noms et anciennes surfaces (`mobilesfrdth`, `sfrd/`, `src/`, `final/`) ne font plus partie du parcours public.
 
-### Windows 11 / PowerShell
+## Démarrage rapide (Windows 11)
 
 ```powershell
 py -3.11 -m venv .venv
@@ -17,23 +18,13 @@ py -3.11 -m venv .venv
 python -m pip install -e . --no-build-isolation
 ```
 
-### Linux / macOS / bash
-
-```bash
-python3.11 -m venv .venv
-source .venv/bin/activate
-python -m pip install -e . --no-build-isolation
-```
-
-## Lancer le dashboard
+### Lancer le dashboard (recommandé)
 
 ```powershell
 panel serve loraflexsim/launcher/dashboard.py --show
 ```
 
-La commande est identique sous bash/zsh.
-
-## Lancer la CLI officielle
+### Utiliser la CLI (si besoin d’automatiser)
 
 ```powershell
 loraflexsim --help
@@ -41,73 +32,26 @@ loraflexsim presets --list
 loraflexsim run --preset paper_fast --out runs/quickstart
 ```
 
-### Fallback dépôt si l’entrypoint console n’est pas disponible
-
-- **Windows 11** : `powershell -ExecutionPolicy Bypass -File scripts/loraflexsim.ps1 --help`
-- **Linux / macOS** : `./scripts/loraflexsim.sh --help`
-- **Fallback Python direct** : `python -m loraflexsim --help`
-
-## Décision de surface publique
-
-La surface publique du simulateur est fixée explicitement comme suit :
-
-1. **Dashboard public** : `panel serve loraflexsim/launcher/dashboard.py --show`
-2. **CLI publique officielle** : `loraflexsim ...`
-3. **Entrée bas niveau conservée** : `python -m loraflexsim.run`
-
-Autrement dit :
-
-- un **nouvel utilisateur**, en particulier sous **Windows 11**, doit commencer par le dashboard ou par `loraflexsim` ;
-- `python -m loraflexsim` est le fallback Python direct aligné sur le nom public du projet ;
-- `python -m loraflexsim.run` reste un chemin **historique / bas niveau**.
-
-## Premier workflow CLI recommandé
+### Fallback sans entrypoint console
 
 ```powershell
-loraflexsim run --preset paper_fast --out runs/quickstart
-loraflexsim aggregate --results runs/quickstart --out runs/quickstart
-loraflexsim plots --aggregates-dir runs/quickstart/aggregates --out runs/quickstart/plots --profile exploratory
-loraflexsim validate --aggregates-dir runs/quickstart/aggregates
+powershell -ExecutionPolicy Bypass -File scripts/loraflexsim.ps1 --help
+python -m loraflexsim --help
 ```
 
-Sorties attendues :
+## Dossiers actifs vs historiques
 
-- `runs/quickstart/results/`
-- `runs/quickstart/aggregates/`
-- `runs/quickstart/plots/`
-
-## Où aller ensuite ?
-
-- `docs/installation.md` : installation, compatibilité plateforme et fallbacks.
-- `docs/user_guide_dashboard.md` : démarrage guidé du dashboard.
-- `docs/user_guide_cli.md` : guide complet de la CLI officielle `loraflexsim`.
-- `docs/user_entrypoints_inventory.md` : inventaire détaillé des entrées utilisateur.
-- `docs/repository_map.md` : carte de gouvernance documentaire du dépôt.
-- `loraflexsim/README.md` : rôle du cœur historique `loraflexsim/`.
-
-## Structure rapide du dépôt
-
-| Dossier | Rôle | Statut |
+| Zone | Statut | Usage |
 | --- | --- | --- |
-| `loraflexsim/` | package Python public, cœur du simulateur et dashboard | officiel |
-| `mobilesfrdth/` | code historique encore présent dans le dépôt pendant la migration | interne / transitoire |
-| `docs/` | documentation utilisateur et technique | officiel |
-| `scripts/` | wrappers et automatisation locale | officiel |
-| `pretest_campagne/`, `docs/archive_or_research/` | reproduction, archives et workflows historiques | historique / recherche |
-| `qos_cli/`, `docs/archive_or_research/` | outils avancés et archives documentaires | avancé / non canonique |
+| `loraflexsim/` | actif | moteur, dashboard, CLI publique |
+| `docs/` | actif | documentation utilisateur |
+| `scripts/` | actif | bootstrap et automatisation |
+| `qos_cli/` | spécialisé | campagnes QoS expertes |
+| `docs/archive_or_research/` | historique | mémoire de migration et recherche |
+| `pretest_campagne/` | historique/recherche | reproductions et comparatifs |
 
-## Compatibilité résumée
+## Suppressions / migration
 
-| Surface | Windows 11 | Linux | macOS |
-| --- | --- | --- | --- |
-| CLI `loraflexsim` | documentée et prioritaire | documentée | documentée |
-| Dashboard Panel | documenté et prioritaire | documenté | documenté |
-| `python -m loraflexsim` | fallback dépôt/documentation | fallback dépôt/documentation | fallback dépôt/documentation |
-| `python -m loraflexsim.run` | support historique | support historique | support historique |
-
-## Notes de compatibilité
-
-- L’installation editable reste la méthode recommandée.
-- Le packaging du dépôt cible **Python 3.11 à 3.12**.
-- Le packaging publié par `pyproject.toml` est désormais aligné sur `loraflexsim`.
-- Si `panel serve ... --show` n’ouvre pas automatiquement le navigateur, copiez l’URL affichée dans votre navigateur.
+- `sfrd/`, `src/` et `final/` : retirés de la surface vivante.
+- `mobilesfrdth/` : conservé uniquement comme trace interne de migration, documentée comme historique.
+- Détails : `docs/archive_or_research/migration_legacy_surfaces.md`.
