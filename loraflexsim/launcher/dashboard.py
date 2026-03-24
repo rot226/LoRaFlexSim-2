@@ -397,8 +397,8 @@ noise_std_input = pn.widgets.FloatInput(
 mobility_checkbox = pn.widgets.Checkbox(name="Enable node mobility", value=False)
 
 # Widgets pour régler la vitesse minimale et maximale des nœuds mobiles
-mobility_speed_min_input = pn.widgets.FloatInput(name="Vitesse min (m/s)", value=2.0, step=0.5, start=0.1)
-mobility_speed_max_input = pn.widgets.FloatInput(name="Vitesse max (m/s)", value=10.0, step=0.5, start=0.1)
+mobility_speed_min_input = pn.widgets.FloatInput(name="Minimum speed (m·s⁻¹)", value=2.0, step=0.5, start=0.1)
+mobility_speed_max_input = pn.widgets.FloatInput(name="Maximum speed (m·s⁻¹)", value=10.0, step=0.5, start=0.1)
 show_paths_checkbox = pn.widgets.Checkbox(name="Show trajectories", value=False)
 
 # Choix du modèle de mobilité
@@ -468,7 +468,7 @@ qos_inter_sf_coupling_input = pn.widgets.FloatInput(
 qos_capture_thresholds_input = pn.widgets.TextInput(
     name="SNIR capture thresholds (dB)",
     value="",
-    placeholder="Ex.: 6, 6, 6",
+    placeholder="e.g., 6, 6, 6",
 )
 qos_cluster_count_input = pn.widgets.IntInput(
     name="Number of QoS clusters",
@@ -774,7 +774,7 @@ def toggle_heatmap(event=None):
     """Afficher ou masquer la heatmap de couverture."""
     if heatmap_pane.visible:
         heatmap_pane.visible = False
-        heatmap_button.name = "Afficher la heatmap"
+        heatmap_button.name = "Show heatmap"
         return
     update_heatmap()
     heatmap_pane.visible = True
