@@ -23,7 +23,7 @@
 | --- | --- |
 | `docs/archive_or_research/` | mémoire de migration + guides historiques |
 | `pretest_campagne/` | reproduction/recherche héritée |
-| `mobilesfrdth/` | code hérité conservé comme trace de migration |
+| `loraflexsim_legacy/` | archive technique interne non destinée aux utilisateurs |
 
 ## Dossiers/surfaces supprimés du parcours public
 

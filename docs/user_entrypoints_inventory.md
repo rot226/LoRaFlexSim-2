@@ -21,7 +21,7 @@
 
 ## Surfaces retirées du récit public
 
-- `mobilesfrdth`
+- `ancien alias CLI` (retiré)
 - `sfrd/`
 - `src/`
 - `final/`

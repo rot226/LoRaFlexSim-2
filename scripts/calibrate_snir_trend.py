@@ -8,10 +8,10 @@ import pathlib
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT))
 
-from mobilesfrdth.simulator.channel import ChannelConfig, received_power_dbm
-from mobilesfrdth.simulator.interference import InterferenceConfig, transmission_success
+from loraflexsim_legacy.simulator.channel import ChannelConfig, received_power_dbm
+from loraflexsim_legacy.simulator.interference import InterferenceConfig, transmission_success
 
 
 @dataclass(frozen=True)

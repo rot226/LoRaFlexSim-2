@@ -1,4 +1,4 @@
-# Calibration reproductible SNIR/SINR pour mobilesfrdth.
+# Calibration reproductible SNIR/SINR pour loraflexsim.
 name: snir_calibration_profiles
 seed: 20260601
 simulation:
