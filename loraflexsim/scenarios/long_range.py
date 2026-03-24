@@ -262,6 +262,12 @@ def create_long_range_channels(preset: str) -> List[Channel]:
             channel.energy_detection_dBm = detection_floor
             channel.detection_threshold_dBm = detection_floor
 
+        # FLoRa applies a slightly more permissive demodulation gate than our
+        # raw sensitivity table lookup, especially around SF10–SF12.  A small
+        # margin keeps long-range parity scenarios aligned with the reference
+        # traces without changing the underlying path-loss model.
+        channel.sensitivity_margin_dB = -0.6
+
         channels.append(channel)
     return channels
 
