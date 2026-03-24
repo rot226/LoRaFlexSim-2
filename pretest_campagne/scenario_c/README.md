@@ -1,23 +1,23 @@
 # `pretest_campagne/scenario_c/`
 
-## En 30 secondes
+## In 30 seconds
 
-| Rubrique | Réponse rapide |
+| Section | Quick answer |
 | --- | --- |
-| **À quoi sert ce dossier ?** | Conserver le pipeline de reproduction/recherche du scénario C, avec ses scripts d’exécution, d’agrégation et de génération de figures. |
-| **Quand l’utiliser ?** | Quand vous devez rejouer la campagne scénario C, comparer avec les résultats auteur ou inspecter les artefacts de recherche déjà présents. |
-| **Quand ne pas l’utiliser ?** | Ne l’utilisez pas pour une campagne standard, une démonstration rapide ou un premier usage du projet. |
-| **Point d’entrée principal** | `python -m pretest_campagne.scenario_c.run_all`, puis `python -m pretest_campagne.scenario_c.make_all_plots`. |
-| **Sorties produites** | Des résultats de `step1`/`step2`, des agrégats CSV et des figures sous `results/pretest_campagne/scenario_c/` et `figures/pretest_campagne/scenario_c/`. |
-| **Documentation détaillée** | Voir `docs/archive_or_research/scenario_c_reproduction.md` et `docs/advanced_workflows.md`. |
+| **What is this folder for?** | Preserve the scenario C reproduction/research pipeline, including run, aggregation, and figure-generation scripts. |
+| **When should you use it?** | When replaying scenario C, comparing with author results, or inspecting existing research artifacts. |
+| **When should you not use it?** | Do not use it for a standard campaign, quick demo, or first project use. |
+| **Main entry point** | `python -m pretest_campagne.scenario_c.run_all`, then `python -m pretest_campagne.scenario_c.make_all_plots`. |
+| **Produced outputs** | `step1`/`step2` outputs, CSV aggregates, and figures under `results/pretest_campagne/scenario_c/` and `figures/pretest_campagne/scenario_c/`. |
+| **Detailed documentation** | See `docs/archive_or_research/scenario_c_reproduction.md` and `docs/advanced_workflows.md`. |
 
-**Archive de reproduction** — ce dossier regroupe surtout des scripts de reproduction, d’analyse et de génération de figures pour des workflows de recherche.
+**Reproduction archive** — this folder mainly contains reproduction, analysis, and figure-generation scripts for research workflows.
 
-## Documentation détaillée
+## Detailed documentation
 
-La documentation détaillée a été déplacée vers :
+Detailed documentation has been moved to:
 
 - `docs/archive_or_research/scenario_c_reproduction.md`
 - `docs/advanced_workflows.md`
 
-Ce README sert désormais de point de redirection depuis `pretest_campagne/scenario_c/`.
+This README now serves as a redirect entry point from `pretest_campagne/scenario_c/`.

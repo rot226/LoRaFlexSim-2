@@ -1,40 +1,40 @@
-# SNIR‑Aware Resource Allocation in LoRaWAN with Reinforcement Learning under Mobility
+# SNIR-Aware Resource Allocation in LoRaWAN with Reinforcement Learning under Mobility
 
-Ce dossier regroupe les artefacts liés à la section MED pour pretest_campagne/iwcmc_archive.
+This folder groups artifacts related to the MED section for `pretest_campagne/iwcmc_archive`.
 
 ## Structure
 
-- `simulations/` : configurations et sorties brutes des simulations MED.
-- `figures/` : figures finales utilisées dans le manuscrit (MED1 à MED8).
-- `scripts/` : scripts de génération, post-traitement et export des figures MED.
-- `data/` : jeux de données intermédiaires utilisés par les scripts.
+- `simulations/`: MED simulation configurations and raw outputs.
+- `figures/`: final figures used in the manuscript (MED1 to MED8).
+- `scripts/`: scripts for generation, post-processing, and MED figure export.
+- `data/`: intermediate datasets used by scripts.
 
 ## Scripts (conventions)
 
-Chaque script déposé dans `scripts/` doit préciser en en‑tête :
+Each script in `scripts/` should specify in its header:
 
-- l’objectif du script,
-- les entrées attendues (dossier ou fichiers dans `data/` ou `simulations/`),
-- les sorties générées (fichiers écrits dans `figures/`).
+- script objective,
+- expected inputs (folder or files in `data/` or `simulations/`),
+- generated outputs (files written to `figures/`).
 
-Nommer les scripts selon l’action principale et la figure cible, par exemple :
+Name scripts by main action and target figure, for example:
 
 - `build_med1_traffic_profile.py`
 - `plot_med4_snir_cdf.py`
 
-## Nomenclature des figures MED
+## MED figure naming
 
-Les figures finales suivent la convention `MED<n>.svg` où `<n>` est un numéro de 1 à 8.
+Final figures follow `MED<n>.svg`, where `<n>` is a number from 1 to 8.
 
-| Fichier | Contenu prévu |
+| File | Expected content |
 | --- | --- |
-| `MED1.svg` | Profil de mobilité / scénario (à préciser). |
-| `MED2.svg` | Allocation des ressources vs mobilité (à préciser). |
-| `MED3.svg` | SNIR vs temps / distance (à préciser). |
-| `MED4.svg` | CDF SNIR / PDR (à préciser). |
-| `MED5.svg` | Récompense RL vs itérations (à préciser). |
-| `MED6.svg` | Répartition des SF / canaux (à préciser). |
-| `MED7.svg` | Comparaison baselines (à préciser). |
-| `MED8.svg` | Sensibilité paramètres (à préciser). |
+| `MED1.svg` | Mobility profile / scenario (to be specified). |
+| `MED2.svg` | Resource allocation vs mobility (to be specified). |
+| `MED3.svg` | SNIR vs time / distance (to be specified). |
+| `MED4.svg` | SNIR / PDR CDF (to be specified). |
+| `MED5.svg` | RL reward vs iterations (to be specified). |
+| `MED6.svg` | SF / channel distribution (to be specified). |
+| `MED7.svg` | Baseline comparison (to be specified). |
+| `MED8.svg` | Parameter sensitivity (to be specified). |
 
-Mettre à jour la colonne « Contenu prévu » dès qu’un intitulé définitif est connu.
+Update the “Expected content” column as soon as final titles are known.

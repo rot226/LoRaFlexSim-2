@@ -1,43 +1,43 @@
 # `pretest_campagne/iwcmc_archive/`
 
-## En 30 secondes
+## In 30 seconds
 
-| Rubrique | Réponse rapide |
+| Section | Quick answer |
 | --- | --- |
-| **À quoi sert ce dossier ?** | Conserver les campagnes héritées `iwcmc_archive` pour reproduction, comparaison et archivage métier. |
-| **Quand l’utiliser ?** | Quand vous devez rejouer ou relire une campagne historique `snir_static`, `rl_static`, `rl_mobile` ou les artefacts MED. |
-| **Quand ne pas l’utiliser ?** | Ne l’utilisez pas pour une nouvelle campagne standard ni comme point d’entrée principal du projet. |
-| **Point d’entrée principal** | Commencer par la documentation d’archive, puis utiliser les scripts `run_campaign.*` des sous-dossiers concernés. |
-| **Sorties produites** | Des résultats historiques dans `results/pretest_campagne/iwcmc_archive/` et des artefacts d’archive spécifiques à chaque sous-campagne. |
-| **Documentation détaillée** | `docs/archive_or_research/iwcmc_archive.md` et `docs/archive_or_research/README.md`. |
+| **What is this folder for?** | Keep legacy `iwcmc_archive` campaigns for reproduction, benchmarking, and archival use. |
+| **When should you use it?** | When replaying or reviewing historical `snir_static`, `rl_static`, `rl_mobile`, or MED artifacts. |
+| **When should you not use it?** | Do not use it for a new standard campaign or as the project's main entry point. |
+| **Main entry point** | Start with archive documentation, then use `run_campaign.*` scripts in the relevant subfolder. |
+| **Produced outputs** | Historical outputs in `results/pretest_campagne/iwcmc_archive/` and archive artifacts in each sub-campaign. |
+| **Detailed documentation** | `docs/archive_or_research/iwcmc_archive.md` and `docs/archive_or_research/README.md`. |
 
-**Documentation historique** — ce dossier est conservé pour les campagnes héritées, la reproduction et la comparaison de résultats.
+**Historical documentation** — this folder is preserved for legacy campaigns, reproduction, and result comparison.
 
-## Documentation détaillée
+## Detailed documentation
 
-### Objectif du dossier
+### Folder purpose
 
-Le dossier `pretest_campagne/iwcmc_archive/` sert de point d’entrée court vers les artefacts et la documentation de l’archive métier `iwcmc_archive`.
+`pretest_campagne/iwcmc_archive/` is a short entry point to artifacts and documentation for the `iwcmc_archive` domain archive.
 
-### Prérequis
+### Prerequisites
 
-- **OS documenté en priorité : Windows 11**.
-- **Shell documenté : PowerShell**.
-- **Répertoire d’exécution : racine du dépôt**.
-- **Version Python recommandée : 3.11**.
-- **Support packaging : Python 3.11 à 3.12**.
-- **Installation standard recommandée :** `python -m pip install -e . --no-build-isolation` après activation du venv.
-- **`PYTHONPATH=src` n’est pas requis** pour le flux standard ; il ne s’applique qu’aux contournements offline/fallback explicitement indiqués ailleurs.
+- **Primary documented OS: Windows 11**.
+- **Documented shell: PowerShell**.
+- **Execution directory: repository root**.
+- **Recommended Python version: 3.11**.
+- **Packaging support: Python 3.11 to 3.12**.
+- **Recommended standard installation:** `python -m pip install -e . --no-build-isolation` after venv activation.
+- **`PYTHONPATH=src` is not required** for the standard workflow; it only applies to explicit offline/fallback workarounds documented elsewhere.
 
-### Scénario minimal
+### Minimal scenario
 
-Pour un usage minimal, commencez par lire la documentation d’archive afin d’identifier la campagne et les scripts correspondants.
+For minimal use, first read archive documentation to identify the campaign and scripts to run.
 
-### Commandes de run
+### Run commands
 
-Aucune commande de run unique n’est maintenue dans ce README ; utilisez les scripts `run_campaign.ps1` ou `run_campaign.sh` du sous-dossier concerné.
+No single run command is maintained in this README; use `run_campaign.ps1` or `run_campaign.sh` in the relevant subfolder.
 
-### Lien direct vers la doc détaillée
+### Direct links to detailed docs
 
 - `docs/archive_or_research/iwcmc_archive.md`
 - `docs/archive_or_research/README.md`

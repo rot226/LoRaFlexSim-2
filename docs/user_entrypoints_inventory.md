@@ -1,29 +1,29 @@
-# Inventaire des points d’entrée utilisateur
+# Inventory of user entry points
 
-## Entrées publiques actuelles
+## Current public entry points
 
-| Entrée | Statut | Usage |
+| Entry point | Status | Usage |
 | --- | --- | --- |
-| `panel serve loraflexsim/launcher/dashboard.py --show` | principale | usage interactif |
-| `loraflexsim` | officielle | campagnes CLI |
-| `python -m loraflexsim` | fallback | exécution Python directe |
-| `scripts/loraflexsim.ps1` | wrapper Windows 11 | fallback local |
-| `scripts/loraflexsim.sh` | wrapper Linux/macOS | fallback local |
+| `panel serve loraflexsim/launcher/dashboard.py --show` | primary | interactive usage |
+| `loraflexsim` | official | command-line campaigns |
+| `python -m loraflexsim` | fallback | direct Python execution |
+| `scripts/loraflexsim.ps1` | Windows 11 wrapper | local fallback |
+| `scripts/loraflexsim.sh` | Linux/macOS wrapper | local fallback |
 
-## Entrées non publiques (historique / expert)
+## Non-public entry points (historical / expert)
 
-| Zone | Statut |
+| Area | Status |
 | --- | --- |
-| `python -m loraflexsim.run` | technique/historique |
-| `qos_cli/` | spécialisé |
-| `pretest_campagne/` | recherche |
-| `docs/archive_or_research/` | archive documentaire |
+| `python -m loraflexsim.run` | technical/historical |
+| `qos_cli/` | specialized |
+| `pretest_campagne/` | research |
+| `docs/archive_or_research/` | documentation archive |
 
-## Surfaces retirées du récit public
+## Surfaces removed from the public narrative
 
-- `ancien alias CLI` (retiré)
+- `legacy CLI alias` (removed)
 - `sfrd/`
 - `src/`
 - `final/`
 
-Traçabilité de la migration : `docs/archive_or_research/migration_legacy_surfaces.md`.
+Migration traceability: `docs/archive_or_research/migration_legacy_surfaces.md`.

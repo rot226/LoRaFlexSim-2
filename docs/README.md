@@ -1,24 +1,24 @@
 # `docs/`
 
-## À quoi sert ce dossier ?
+## What is this folder for?
 
-Ce dossier regroupe la documentation active du projet : installation, guides d'usage, workflows avancés, validation et carte de lecture du dépôt.
+This folder contains the project's active documentation: installation, usage guides, advanced workflows, validation, and a top-level repository reading map.
 
-## Quand l’utiliser ?
+## When should you use it?
 
-- Quand vous découvrez le projet et cherchez le bon guide pour votre besoin.
-- Quand vous devez installer l'environnement sous Windows 11 ou exécuter un flux documenté.
-- Quand vous cherchez la documentation de référence d'une CLI, d'un pipeline ou d'une campagne.
+- When discovering the project and looking for the right guide.
+- When you need to install the environment on Windows 11 or run a documented workflow.
+- When you need reference documentation for a CLI, pipeline, or campaign.
 
-## Quand ne pas l’utiliser ?
+## When should you not use it?
 
-- Ne l'utilisez pas pour modifier directement le moteur de simulation ou les scripts d'automatisation.
-- Ne restez pas dans `docs/` si vous avez déjà identifié le module ou la commande cible à modifier.
+- Do not use it to directly modify the simulation engine or automation scripts.
+- Do not stay in `docs/` once you have identified the module or command you need to change.
 
-## Point d’entrée / fichiers à ouvrir d’abord
+## Entry points / files to open first
 
-- `docs/installation.md` : installation et environnement local.
-- `docs/user_guide_cli.md` : flux standard via `mobilesfrdth`.
-- `docs/user_guide_dashboard.md` : usage du dashboard historique.
-- `docs/advanced_workflows.md` : cas avancés, historiques ou spécialisés.
-- `docs/repository_map.md` : carte de lecture du dépôt top-level.
+- `docs/installation.md`: installation and local environment.
+- `docs/user_guide_cli.md`: standard workflow via `mobilesfrdth`.
+- `docs/user_guide_dashboard.md`: legacy dashboard usage.
+- `docs/advanced_workflows.md`: advanced, historical, or specialized cases.
+- `docs/repository_map.md`: top-level repository reading map.

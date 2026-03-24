@@ -1,16 +1,16 @@
-# Installation (Windows 11 en priorité)
+# Installation (Windows 11 first)
 
-Ce guide décrit l’installation publique de LoRaFlexSim-2.
+This guide describes the public installation path for LoRaFlexSim-2.
 
-## Ce qui est officiel aujourd’hui
+## What is officially supported today
 
-- **Principal** : dashboard Panel.
-- **CLI supportée** : `loraflexsim`.
-- **Fallback** : `python -m loraflexsim`.
+- **Primary**: Panel dashboard.
+- **Supported CLI**: `loraflexsim`.
+- **Fallback**: `python -m loraflexsim`.
 
-Les surfaces `mobilesfrdth`, `sfrd/`, `src/` et `final/` sont historiques et ne doivent plus être utilisées comme entrée standard.
+The `mobilesfrdth`, `sfrd/`, `src/`, and `final/` surfaces are historical and must no longer be used as the standard entry path.
 
-## Installation recommandée — Windows 11
+## Recommended installation — Windows 11
 
 ```powershell
 py -3.11 -m venv .venv
@@ -18,28 +18,28 @@ py -3.11 -m venv .venv
 python -m pip install -e . --no-build-isolation
 ```
 
-## Vérification rapide
+## Quick verification
 
 ```powershell
 loraflexsim --help
 python -m loraflexsim --help
 ```
 
-## Lancer le dashboard
+## Launch the dashboard
 
 ```powershell
 panel serve loraflexsim/launcher/dashboard.py --show
 ```
 
-Si le navigateur ne s’ouvre pas automatiquement, copiez l’URL affichée par Panel.
+If the browser does not open automatically, copy the URL displayed by Panel.
 
-## Fallback Windows 11 (wrapper dépôt)
+## Windows 11 fallback (repository wrapper)
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/loraflexsim.ps1 --help
 ```
 
-## Notes migration
+## Migration notes
 
-- Les dossiers historiques retirés de l’usage public sont suivis dans `docs/archive_or_research/migration_legacy_surfaces.md`.
-- Les workflows de recherche restent documentés séparément dans `docs/archive_or_research/`.
+- Historical folders removed from public usage are tracked in `docs/archive_or_research/migration_legacy_surfaces.md`.
+- Research workflows remain documented separately in `docs/archive_or_research/`.
