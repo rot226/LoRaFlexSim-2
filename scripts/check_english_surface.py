@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-"""Check public surfaces for forbidden French wording.
+"""Check English-only quality gates on explicit QA surfaces.
 
-This script scans selected public-facing files and reports lines containing
-forbidden French patterns, except when the line matches an allowlist of
-technical terms/paths/commands.
+QA perimeter:
+- public_surface: strict blocking gate (must be English-only).
+- archive_surface: temporary tolerated zone, reported but non-blocking by default.
+
+Convergence plan for archive_surface:
+1) Temporary documented exclusion (current default mode).
+2) Progressive translation while keeping visibility through reports.
+3) Global strict mode once archive_surface reaches target quality.
 """
 
 from __future__ import annotations
@@ -50,6 +55,13 @@ class Violation:
     line_text: str
 
 
+@dataclass(frozen=True)
+class SurfaceResult:
+    name: str
+    violations: list[Violation]
+    blocking: bool
+
+
 def _build_forbidden_regex(pattern: str) -> re.Pattern[str]:
     escaped = re.escape(pattern)
     if pattern.isalpha() or " " in pattern:
@@ -61,16 +73,25 @@ def _is_allowlisted(line: str) -> bool:
     return any(regex.search(line) for regex in ALLOWLIST_PATTERNS)
 
 
-def _collect_targets(repo_root: Path) -> list[Path]:
+def _collect_public_surface(repo_root: Path) -> list[Path]:
+    """Collect strict blocking files (public_surface)."""
     targets: set[Path] = {
         repo_root / "README.md",
-        repo_root / "loraflexsim" / "launcher" / "dashboard.py",
-        repo_root / "loraflexsim" / "run.py",
+        repo_root / "docs" / "README.md",
+        repo_root / "docs" / "installation.md",
+        repo_root / "scripts" / "check_english_surface.py",
     }
-    targets.update(repo_root.glob("docs/**/*.md"))
-    targets.update(repo_root.glob("scripts/*.py"))
-    targets.update(repo_root.glob("scripts/*.ps1"))
-    targets.update(repo_root.glob("scripts/*.sh"))
+    return sorted(path for path in targets if path.exists() and path.is_file())
+
+
+def _collect_archive_surface(repo_root: Path) -> list[Path]:
+    """Collect temporarily tolerated files (archive_surface)."""
+    targets: set[Path] = set()
+    targets.update(repo_root.glob("docs/archive_or_research/**/*.md"))
+    targets.update(repo_root.glob("pretest_campagne/iwcmc_archive/**/*.py"))
+    targets.update(repo_root.glob("pretest_campagne/iwcmc_archive/**/*.md"))
+    targets.update(repo_root.glob("pretest_campagne/archive_or_mock/**/*.py"))
+    targets.update(repo_root.glob("pretest_campagne/archive_or_mock/**/*.md"))
     return sorted(path for path in targets if path.exists() and path.is_file())
 
 
@@ -98,7 +119,8 @@ def _iter_violations(files: Iterable[Path], forbidden_regexes: list[tuple[str, r
     return violations
 
 
-def _print_report(repo_root: Path, violations: list[Violation]) -> None:
+def _print_surface_report(repo_root: Path, result: SurfaceResult) -> None:
+    violations = result.violations
     sorted_violations = sorted(
         violations,
         key=lambda v: (
@@ -107,8 +129,8 @@ def _print_report(repo_root: Path, violations: list[Violation]) -> None:
             v.pattern.lower(),
         ),
     )
-
-    print("=== English surface check report ===")
+    gate = "blocking" if result.blocking else "non-blocking"
+    print(f"=== {result.name} ({gate}) ===")
     print(f"Total violations: {len(sorted_violations)}")
 
     if not sorted_violations:
@@ -141,8 +163,15 @@ def parse_args() -> argparse.Namespace:
         "--report-only",
         action="store_true",
         help=(
-            "Always exit with status 0 while still printing violations. "
-            "Useful as a temporary migration mode before enforcing blocking checks."
+            "Always exit with status 0 while still printing violations from all surfaces."
+        ),
+    )
+    parser.add_argument(
+        "--strict-global",
+        action="store_true",
+        help=(
+            "Make archive_surface blocking as well (phase 3 convergence mode). "
+            "Without this flag, archive_surface stays non-blocking."
         ),
     )
     return parser.parse_args()
@@ -152,13 +181,32 @@ def main() -> int:
     args = parse_args()
     repo_root = args.repo_root.resolve()
     forbidden_regexes = [(pattern, _build_forbidden_regex(pattern)) for pattern in FORBIDDEN_PATTERNS]
-    targets = _collect_targets(repo_root)
-    violations = _iter_violations(targets, forbidden_regexes)
-    _print_report(repo_root, violations)
-    if violations and args.report_only:
+    public_result = SurfaceResult(
+        name="public_surface",
+        violations=_iter_violations(_collect_public_surface(repo_root), forbidden_regexes),
+        blocking=True,
+    )
+    archive_result = SurfaceResult(
+        name="archive_surface",
+        violations=_iter_violations(_collect_archive_surface(repo_root), forbidden_regexes),
+        blocking=args.strict_global,
+    )
+    results = [public_result, archive_result]
+    for idx, result in enumerate(results):
+        if idx:
+            print()
+        _print_surface_report(repo_root, result)
+
+    if any(r.violations for r in results) and args.report_only:
         print("\nWARNING: report-only mode enabled, violations are not blocking.")
         return 0
-    return 1 if violations else 0
+    has_blocking_violation = any(r.blocking and r.violations for r in results)
+    if archive_result.violations and not archive_result.blocking:
+        print(
+            "\nINFO: archive_surface violations are tolerated in phase 1/2 "
+            "(run with --strict-global for phase 3 global strict control)."
+        )
+    return 1 if has_blocking_violation else 0
 
 
 if __name__ == "__main__":

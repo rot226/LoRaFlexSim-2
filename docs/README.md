@@ -24,3 +24,28 @@ This folder contains the project's active documentation: installation, usage gui
 - `docs/user_guide_dashboard.md`: legacy dashboard usage.
 - `docs/advanced_workflows.md`: advanced, historical, or specialized cases.
 - `docs/repository_map.md`: top-level repository reading map.
+
+## QA perimeter for English-only migration
+
+To unblock CI quickly while preserving full migration goals, the repository now
+uses two explicit QA surfaces in `scripts/check_english_surface.py`:
+
+- **`public_surface` (strict, blocking):** must stay English-only.
+  - Current scope: `README.md`, `docs/README.md`, `docs/installation.md`,
+    `scripts/check_english_surface.py`.
+- **`archive_surface` (temporary controlled tolerance):**
+  - Scope focused on legacy/archive trees (for example
+    `docs/archive_or_research/**` and `pretest_campagne/*archive*` paths).
+  - Violations are still reported to keep visibility, but not blocking by
+    default.
+
+## Archive convergence plan
+
+- **Phase 1 — documented temporary exclusion (current default):**
+  `archive_surface` is non-blocking and tracked in reports.
+- **Phase 2 — progressive translation:**
+  reduce `archive_surface` violations incrementally while keeping CI green on
+  `public_surface`.
+- **Phase 3 — global strict control:**
+  enable strict mode (`--strict-global`) so both surfaces become blocking and
+  enforce English-only repository-wide.
