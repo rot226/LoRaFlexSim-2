@@ -14,15 +14,15 @@ Ce document dresse la cartographie des modules critiques et des scénarios `pyte
 ### `loraflexsim/launcher/omnet_phy.py`
 - **Rôle :** reproduction du PHY OMNeT++ (capture, bruit corrélé, consommation énergétique événementielle).
 - **Tests existants :**
-  - `tests/test_omnet_phy_energy.py`, `tests/test_rx_chain.py` et `tests/test_overlap_snir.py` couvrent l'accumulation d'énergie, la chaîne de réception et le calcul SNIR.
+  - `tests/test_omnet_phy_energy.py`, `tests/test_flora_capture.py` et `tests/test_overlap_snir.py` couvrent l'accumulation d'énergie, la chaîne de réception et le calcul SNIR.
   - `tests/test_flora_capture.py` garantit l'équivalence des traces FLoRa et inclut `test_compute_snrs_ignores_other_channels` pour éviter toute régression sur le filtrage fréquentiel.
-  - `tests/test_startup_currents.py` et `tests/test_pa_ramp.py` vérifient la modélisation des transitoires.
+  - `tests/test_pa_ramp.py` et `tests/test_energy_profile_preservation.py` vérifient la modélisation des transitoires énergétiques.
 
 ### `loraflexsim/launcher/gateway.py`
 - **Rôle :** représentation passerelle (capture, énergie, filtrage multicanal).
 - **Tests existants :**
   - `tests/test_gateway_capture.py` et `tests/test_collision_capture.py` valident la logique de capture et de collision.
-  - `tests/test_network_server.py`, `tests/test_rx_windows.py` et `tests/test_compare_flora.py` exercent l'interaction passerelle ↔ serveur.
+  - `tests/test_network_server.py`, `tests/test_class_a.py` et `tests/test_compare_flora.py` exercent l'interaction passerelle ↔ serveur.
   - `tests/test_energy_profile_preservation.py` s'assure que la comptabilité énergétique reste cohérente après conversions de profils.
 
 ### `loraflexsim/launcher/server.py`
@@ -35,14 +35,14 @@ Ce document dresse la cartographie des modules critiques et des scénarios `pyte
 ### `loraflexsim/launcher/lorawan.py`
 - **Rôle :** encodage MAC (OTAA, commandes ADR, gestion des fenêtres RX, cryptographie AES/MIC).
 - **Tests existants :**
-  - `tests/test_class_a.py` et `tests/test_rx_windows.py` valident la temporalité RX1/RX2.
-  - `tests/test_adr.py`, `tests/test_adr_lite.py` et `tests/test_adr_max.py` vérifient les conversions SF/puissance.
+  - `tests/test_class_a.py` et `tests/test_class_bc.py` valident la temporalité RX1/RX2.
+  - `tests/test_adr.py` et `tests/test_adr_classes_bc.py` vérifient les conversions SF/puissance.
   - `tests/test_flora_energy.py` s'assure que la comptabilité énergétique LoRaWAN reste identique à FLoRa.
 
 ### Mobilité (`loraflexsim/launcher/*mobility*.py`)
 - **Rôle :** générateurs de trajectoires (random waypoint, traces GPS, terrain).
 - **Tests existants :**
-  - `tests/test_random_waypoint_mobility.py`, `tests/test_path_mobility.py` et `tests/test_run_mobility_models_path.py` couvrent la génération et la persistance.
+  - `tests/test_planned_random_waypoint.py`, `tests/test_path_mobility.py` et `tests/test_mobility_extra.py` couvrent la génération et la persistance.
   - `tests/test_mobility_multichannel_integration.py`, `tests/test_mobility_latency.py` et `tests/test_mobility_energy_per_packet.py` vérifient l'intégration complète.
   - `tests/test_node_positions_mobility.py` contrôle la cohérence des positions injectées au simulateur.
 
