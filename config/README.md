@@ -1,18 +1,18 @@
 # `config/`
 
-Ce dossier contient les **configurations partagées** du flux standard du dépôt.
+This directory contains **shared configuration files** for the repository standard workflow.
 
-## À quoi sert ce dossier ?
+## Purpose
 
-- `experiment_defaults.yaml` : paramètres communs des campagnes et presets.
-- `mobility_profiles.yaml` : profils de mobilité réutilisés par les scénarios.
+- `experiment_defaults.yaml`: common campaign and preset parameters.
+- `mobility_profiles.yaml`: reusable mobility profiles for scenarios.
 
-## Quand l’ouvrir ?
+## When to open it
 
-- si vous adaptez un comportement global du simulateur ;
-- si vous voulez comprendre les valeurs par défaut utilisées par `mobilesfrdth` ;
-- si une commande ou un preset mentionne une configuration commune.
+- if you modify global simulator behavior;
+- if you need default values used by `mobilesfrdth`;
+- if a command or preset references shared configuration.
 
-## Point d’entrée lié
+## Related entry point
 
-Pour lancer une campagne standard, revenez d’abord au `README.md` racine puis à `docs/user_guide_cli.md`.
+To run a standard campaign, start from root `README.md` and then `docs/user_guide_cli.md`.

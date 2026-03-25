@@ -1,16 +1,16 @@
 # `figures/`
 
-Ce dossier contient des **figures versionnées** conservées comme **références documentaires ou archives**.
+This directory contains **versioned figures** kept as **documentation references or archives**.
 
-## Statut
+## Status
 
-- **Historique / archive**.
-- Ce dossier ne constitue pas un point d’entrée d’exécution.
+- **Historical / archival**.
+- This directory is not an execution entry point.
 
-## Quand l’ouvrir ?
+## When to open it
 
-- pour comparer des sorties déjà générées ;
-- pour illustrer la documentation ;
-- pour retrouver une figure historique sans relancer toute la campagne.
+- to compare already generated outputs;
+- to illustrate documentation;
+- to retrieve a historical figure without rerunning an entire campaign.
 
-Pour générer de nouvelles figures, passez d’abord par `mobilesfrdth`, `docs/advanced_workflows.md` ou le workflow spécifique correspondant.
+To generate new figures, start from `mobilesfrdth`, `docs/advanced_workflows.md`, or the corresponding workflow guide.

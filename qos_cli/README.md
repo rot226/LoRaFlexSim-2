@@ -1,17 +1,17 @@
 # `qos_cli/`
 
-## Rôle
+## Role
 
-Interface spécialisée pour les campagnes QoS avancées (préparation, exécution, métriques, figures, rapport).
+Specialized interface for advanced QoS campaigns (setup, execution, metrics, figures, reporting).
 
-## Quand l’utiliser ?
+## When to use it
 
-- Pour des scénarios QoS experts.
-- Quand un workflow mentionne explicitement `python -m qos_cli.lfs_run`.
+- For expert QoS scenarios.
+- When a workflow explicitly requires `python -m qos_cli.lfs_run`.
 
-## Quand ne pas l’utiliser ?
+## When not to use it
 
-- Pas pour une première prise en main.
-- Pas comme CLI publique principale.
+- Not for a first project onboarding.
+- Not as the main public CLI.
 
-La CLI publique principale reste `loraflexsim`.
+The main public CLI remains `loraflexsim`.

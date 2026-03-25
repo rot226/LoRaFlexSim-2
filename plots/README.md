@@ -1,12 +1,12 @@
 # `plots/`
 
-Ce dossier contient des scripts de visualisation de support.
+This directory contains support visualization scripts.
 
-## Positionnement
+## Positioning
 
-- Ce n’est pas le point d’entrée principal.
-- Le parcours principal reste le dashboard, puis la CLI `loraflexsim`.
+- This is not the main entry point.
+- The main workflow remains dashboard first, then `loraflexsim` CLI.
 
-## Quand l’utiliser ?
+## When to use it
 
-Quand un workflow avancé demande explicitement un script de `plots/`.
+When an advanced workflow explicitly asks for a script under `plots/`.

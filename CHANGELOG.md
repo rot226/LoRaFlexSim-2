@@ -19,7 +19,7 @@ _No notable changes for now._
 - MNE3SD density sweeps can force the Class C node polling interval, with a reduced value automatically applied for the "fast" profile to speed up iterations.
 
 ## [Draft]
-_Brouillon conservé pour une refonte majeure envisagée mais jamais publiée._
+_Draft retained for a major redesign that was considered but never published._
 
 ### Added
 - Complete rewrite of the LoRa network simulator in Python.
