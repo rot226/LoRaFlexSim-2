@@ -67,6 +67,16 @@ logger = logging.getLogger(__name__)
 diag_logger = logging.getLogger("diagnostics")
 
 
+def _normalize_sf_policy(policy: object) -> str | None:
+    """Normalise les noms de politiques SF en conservant les alias historiques."""
+
+    if policy is None:
+        return None
+    normalized = str(policy).strip().lower()
+    aliases = {"ucb1": "ucb", "ucb": "ucb", "thompson": "thompson"}
+    return aliases.get(normalized, normalized)
+
+
 def _load_channel_overrides(path: str | Path | None) -> dict[str, float | bool]:
     """Return channel override values defined in ``path`` if present."""
 
@@ -1820,6 +1830,103 @@ class Simulator:
             f"Scheduled mobility {event_id} for node {node.id} at t={time:.2f}s"
         )
 
+    def _get_node_sf_policy(self, node: Node) -> str | None:
+        """Retourne la politique SF active pour un nœud."""
+
+        explicit_policy = _normalize_sf_policy(getattr(node, "sf_policy", None))
+        if explicit_policy is not None:
+            return explicit_policy
+        return _normalize_sf_policy(getattr(node, "learning_method", None))
+
+    def _handle_sf_policy_tx_start(self, node: Node) -> None:
+        """Applique la politique SF au début d'une émission."""
+
+        if node.adr:
+            return
+        policy = self._get_node_sf_policy(node)
+        if policy == "ucb":
+            if getattr(node, "sf_selector", None) is None:
+                node.sf_selector = LoRaSFSelectorUCB1(**self.ucb_selector_kwargs)
+            selected_sf = node.sf_selector.select_sf()
+            if isinstance(selected_sf, str) and selected_sf.upper().startswith("SF"):
+                try:
+                    node.sf = int(selected_sf[2:])
+                except ValueError:
+                    pass
+            return
+        if policy == "thompson":
+            # Placeholder: la politique Thompson est dispatchée ici dès qu'un
+            # sélecteur dédié sera branché.
+            return
+
+    def _handle_sf_policy_tx_end(
+        self,
+        node: Node,
+        *,
+        delivered: bool,
+        entry: dict,
+        snir_for_node: float | None,
+    ) -> None:
+        """Met à jour la politique SF en fin d'émission."""
+
+        if node.adr:
+            return
+        policy = self._get_node_sf_policy(node)
+        if policy == "ucb" and getattr(node, "sf_selector", None) is not None:
+            airtime = entry["end_time"] - entry["start_time"]
+            collision = entry["heard"] and not delivered
+            snir_threshold = REQUIRED_SNR.get(node.sf)
+            qos_config = getattr(self, "qos_clusters_config", {}) or {}
+            qos_cluster_id = getattr(node, "qos_cluster_id", None)
+            expected_der = None
+            if qos_cluster_id is not None:
+                expected_der = qos_config.get(qos_cluster_id, {}).get("pdr_target")
+
+            traffic_volume = None
+            if self.packets_to_send:
+                traffic_volume = min(node.tx_attempted / self.packets_to_send, 1.0)
+
+            reward_normalized = node.sf_selector.update(
+                f"SF{node.sf}",
+                success=delivered,
+                snir_db=snir_for_node,
+                snir_threshold_db=snir_threshold,
+                marginal_snir_margin_db=getattr(node.channel, "marginal_snir_margin_db", None),
+                airtime_s=airtime,
+                energy_j=entry.get("energy_J"),
+                collision=collision,
+                expected_der=expected_der,
+                local_der=node.pdr,
+                traffic_volume=traffic_volume,
+            )
+            selector_info = getattr(node.sf_selector, "last_reward_info", {}) or {}
+            reward_raw = float(selector_info.get("reward_raw", reward_normalized))
+            success_rate = selector_info.get("success_rate", node.pdr)
+            energy_norm = float(selector_info.get("energy_norm", 0.0))
+            if self.ucb_episode_mode == "time":
+                episode = int(self.current_time / self.ucb_episode_time_window_s) + 1
+            else:
+                self._ucb_episode_packet_counter += 1
+                episode = (
+                    (self._ucb_episode_packet_counter - 1) // self.ucb_episode_packet_window
+                ) + 1
+            self._ucb_episode_counter = max(self._ucb_episode_counter, episode)
+            self.ucb_history.append(
+                {
+                    "episode": episode,
+                    "reward_raw": reward_raw,
+                    "reward_normalized": float(reward_normalized),
+                    "chosen_sf": int(node.sf),
+                    "success_rate": float(success_rate) if success_rate is not None else 0.0,
+                    "bitrate_norm": self._bitrate_norm_for_sf(int(node.sf)),
+                    "energy_norm": energy_norm,
+                }
+            )
+            return
+        if policy == "thompson":
+            # Placeholder: mise à jour Thompson à brancher lorsque disponible.
+            return
+
     def step(self) -> bool:
         """Exécute le prochain événement planifié. Retourne False si plus d'événement à traiter."""
         if not self.running or not self.event_queue:
@@ -1865,15 +1972,7 @@ class Simulator:
                     "Affectation de secours du nœud %s sur le canal %s", node_id, fallback
                 )
 
-            if not node.adr and getattr(node, "learning_method", None) == "ucb1":
-                if getattr(node, "sf_selector", None) is None:
-                    node.sf_selector = LoRaSFSelectorUCB1(**self.ucb_selector_kwargs)
-                selected_sf = node.sf_selector.select_sf()
-                if isinstance(selected_sf, str) and selected_sf.upper().startswith("SF"):
-                    try:
-                        node.sf = int(selected_sf[2:])
-                    except ValueError:
-                        pass
+            self._handle_sf_policy_tx_start(node)
             node.last_tx_time = time
             if node._nb_trans_left <= 0:
                 node._nb_trans_left = max(1, node.nb_trans)
@@ -2234,61 +2333,12 @@ class Simulator:
             if hasattr(node, "record_radio_outcome"):
                 node.record_radio_outcome(success=delivered, snir=snir_for_node)
 
-            if (
-                not node.adr
-                and getattr(node, "learning_method", None) == "ucb1"
-                and getattr(node, "sf_selector", None) is not None
-            ):
-                airtime = entry["end_time"] - entry["start_time"]
-                collision = entry["heard"] and not delivered
-                snir_threshold = REQUIRED_SNR.get(node.sf)
-                qos_config = getattr(self, "qos_clusters_config", {}) or {}
-                qos_cluster_id = getattr(node, "qos_cluster_id", None)
-                expected_der = None
-                if qos_cluster_id is not None:
-                    expected_der = qos_config.get(qos_cluster_id, {}).get("pdr_target")
-
-                traffic_volume = None
-                if self.packets_to_send:
-                    traffic_volume = min(node.tx_attempted / self.packets_to_send, 1.0)
-
-                reward_normalized = node.sf_selector.update(
-                    f"SF{node.sf}",
-                    success=delivered,
-                    snir_db=snir_for_node,
-                    snir_threshold_db=snir_threshold,
-                    marginal_snir_margin_db=getattr(node.channel, "marginal_snir_margin_db", None),
-                    airtime_s=airtime,
-                    energy_j=entry.get("energy_J"),
-                    collision=collision,
-                    expected_der=expected_der,
-                    local_der=node.pdr,
-                    traffic_volume=traffic_volume,
-                )
-                selector_info = getattr(node.sf_selector, "last_reward_info", {}) or {}
-                reward_raw = float(selector_info.get("reward_raw", reward_normalized))
-                success_rate = selector_info.get("success_rate", node.pdr)
-                energy_norm = float(selector_info.get("energy_norm", 0.0))
-                if self.ucb_episode_mode == "time":
-                    episode = int(self.current_time / self.ucb_episode_time_window_s) + 1
-                else:
-                    self._ucb_episode_packet_counter += 1
-                    episode = (
-                        (self._ucb_episode_packet_counter - 1)
-                        // self.ucb_episode_packet_window
-                    ) + 1
-                self._ucb_episode_counter = max(self._ucb_episode_counter, episode)
-                self.ucb_history.append(
-                    {
-                        "episode": episode,
-                        "reward_raw": reward_raw,
-                        "reward_normalized": float(reward_normalized),
-                        "chosen_sf": int(node.sf),
-                        "success_rate": float(success_rate) if success_rate is not None else 0.0,
-                        "bitrate_norm": self._bitrate_norm_for_sf(int(node.sf)),
-                        "energy_norm": energy_norm,
-                    }
-                )
+            self._handle_sf_policy_tx_end(
+                node,
+                delivered=delivered,
+                entry=entry,
+                snir_for_node=snir_for_node,
+            )
 
             if self.debug_rx:
                 if delivered:
