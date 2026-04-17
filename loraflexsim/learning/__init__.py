@@ -1,5 +1,6 @@
 """Composants d'apprentissage pour LoRaFlexSim."""
 
+from .thompson import LoRaSFSelectorThompson
 from .ucb1 import LoRaSFSelectorUCB1, UCB1Bandit
 
-__all__ = ["LoRaSFSelectorUCB1", "UCB1Bandit"]
+__all__ = ["LoRaSFSelectorUCB1", "LoRaSFSelectorThompson", "UCB1Bandit"]
