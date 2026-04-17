@@ -24,6 +24,7 @@ This folder contains the project's active documentation: installation, usage gui
 - `docs/user_guide_dashboard.md`: legacy dashboard usage.
 - `docs/advanced_workflows.md`: advanced, historical, or specialized cases.
 - `docs/repository_map.md`: top-level repository reading map.
+- `docs/architecture_bandit_sf_decision.md`: short architecture note on where SF UCB1 decision/update logic lives (`simulator.py` vs `qos.py`).
 
 ## QA perimeter for English-only migration
 
