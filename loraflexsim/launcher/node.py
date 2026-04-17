@@ -10,6 +10,17 @@ from traffic.exponential import sample_interval
 from traffic.numpy_compat import is_mt19937_rng
 from loraflexsim.learning import LoRaSFSelectorUCB1
 
+
+def _normalize_sf_policy(sf_policy: str | None, learning_method: str | None) -> str | None:
+    """Normalise la politique SF, avec rétrocompatibilité via ``learning_method``."""
+
+    candidate = sf_policy if sf_policy is not None else learning_method
+    if candidate is None:
+        return None
+    normalized = str(candidate).strip().lower()
+    aliases = {"ucb1": "ucb", "ucb": "ucb", "thompson": "thompson"}
+    return aliases.get(normalized, normalized)
+
 # Default energy profile used by all nodes (based on the FLoRa model)
 DEFAULT_ENERGY_PROFILE = FLORA_PROFILE
 
@@ -69,6 +80,7 @@ class Node:
         beacon_loss_prob: float = 0.0,
         beacon_drift: float = 0.0,
         learning_method: str | None = "ucb1",
+        sf_policy: str | None = None,
         skip_downlink_validation: bool = False,
     ):
         """
@@ -244,9 +256,10 @@ class Node:
 
         # Sélection SF par apprentissage lorsque l'ADR est désactivé
         self.learning_method = learning_method or "ucb1"
+        self.sf_policy = _normalize_sf_policy(sf_policy, self.learning_method)
         self.sf_selector = (
             LoRaSFSelectorUCB1()
-            if (not self.adr and self.learning_method == "ucb1")
+            if (not self.adr and self.sf_policy == "ucb")
             else None
         )
 
