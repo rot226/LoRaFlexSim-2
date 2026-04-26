@@ -1333,7 +1333,9 @@ class Simulator:
         self.events_log: list[dict] = []
         # Accès direct aux événements par identifiant
         self._events_log_map: dict[int, dict] = {}
-        self.ucb_history: list[dict[str, float | int | str]] = []
+        # Historique neutre des politiques d'adaptation SF.
+        # ``ucb_history`` reste exposé via alias rétrocompatible.
+        self.sf_policy_history: list[dict[str, object]] = []
         self._ucb_episode_counter = 0
         self.ucb_selector_kwargs = dict(ucb_selector_kwargs or {})
         mode = str(ucb_episode_mode or "packets").strip().lower()
@@ -1430,6 +1432,16 @@ class Simulator:
 
         # Indicateur d'exécution de la simulation
         self.running = True
+
+    @property
+    def ucb_history(self) -> list[dict[str, object]]:
+        """Alias rétrocompatible vers ``sf_policy_history``."""
+
+        return self.sf_policy_history
+
+    @ucb_history.setter
+    def ucb_history(self, value: list[dict[str, object]]) -> None:
+        self.sf_policy_history = value
 
     # ------------------------------------------------------------------
     # Internal time helpers
@@ -1878,6 +1890,12 @@ class Simulator:
         if node.adr:
             return
         policy = self._get_node_sf_policy(node)
+        chosen_sf = int(node.sf)
+        success_value = bool(delivered)
+        success_rate_value = float(node.pdr)
+        bandit_stats = self._serialize_bandit_stats(
+            policy=policy, selector=getattr(node, "sf_selector", None)
+        )
         if policy == "ucb" and getattr(node, "sf_selector", None) is not None:
             airtime = entry["end_time"] - entry["start_time"]
             collision = entry["heard"] and not delivered
@@ -1908,6 +1926,8 @@ class Simulator:
             selector_info = getattr(node.sf_selector, "last_reward_info", {}) or {}
             reward_raw = float(selector_info.get("reward_raw", reward_normalized))
             success_rate = selector_info.get("success_rate", node.pdr)
+            if success_rate is not None:
+                success_rate_value = float(success_rate)
             energy_norm = float(selector_info.get("energy_norm", 0.0))
             if self.ucb_episode_mode == "time":
                 episode = int(self.current_time / self.ucb_episode_time_window_s) + 1
@@ -1917,22 +1937,63 @@ class Simulator:
                     (self._ucb_episode_packet_counter - 1) // self.ucb_episode_packet_window
                 ) + 1
             self._ucb_episode_counter = max(self._ucb_episode_counter, episode)
-            self.ucb_history.append(
+            self.sf_policy_history.append(
                 {
                     "episode": episode,
                     "reward_raw": reward_raw,
                     "reward_normalized": float(reward_normalized),
-                    "chosen_sf": int(node.sf),
-                    "success_rate": float(success_rate) if success_rate is not None else 0.0,
-                    "bitrate_norm": self._bitrate_norm_for_sf(int(node.sf)),
+                    "policy": "ucb",
+                    "chosen_sf": chosen_sf,
+                    "success": success_value,
+                    "success_rate": success_rate_value,
+                    "bitrate_norm": self._bitrate_norm_for_sf(chosen_sf),
                     "energy_norm": energy_norm,
+                    "arm_stats": bandit_stats,
                 }
             )
             return
         if policy == "thompson":
             if getattr(node, "sf_selector", None) is not None:
                 node.sf_selector.update(f"SF{node.sf}", success=delivered)
+                bandit_stats = self._serialize_bandit_stats(
+                    policy=policy, selector=getattr(node, "sf_selector", None)
+                )
+            self._ucb_episode_counter += 1
+            self.sf_policy_history.append(
+                {
+                    "episode": self._ucb_episode_counter,
+                    "reward_raw": 1.0 if success_value else 0.0,
+                    "reward_normalized": 1.0 if success_value else 0.0,
+                    "policy": "thompson",
+                    "chosen_sf": chosen_sf,
+                    "success": success_value,
+                    "success_rate": success_rate_value,
+                    "bitrate_norm": self._bitrate_norm_for_sf(chosen_sf),
+                    "energy_norm": 0.0,
+                    "arm_stats": bandit_stats,
+                }
+            )
             return
+
+    def _serialize_bandit_stats(self, *, policy: str | None, selector: object) -> dict[str, object]:
+        """Sérialise les statistiques minimales des bras pour l'historique."""
+
+        if policy == "ucb" and selector is not None:
+            bandit = getattr(selector, "bandit", None)
+            counts = getattr(bandit, "counts", None) if bandit is not None else None
+            values = getattr(bandit, "values", None) if bandit is not None else None
+            return {
+                "counts": [int(c) for c in counts] if counts is not None else [],
+                "values": [float(v) for v in values] if values is not None else [],
+            }
+        if policy == "thompson" and selector is not None:
+            alpha = getattr(selector, "alpha", None)
+            beta = getattr(selector, "beta", None)
+            return {
+                "alpha": [int(a) for a in alpha] if alpha is not None else [],
+                "beta": [int(b) for b in beta] if beta is not None else [],
+            }
+        return {}
 
     def step(self) -> bool:
         """Exécute le prochain événement planifié. Retourne False si plus d'événement à traiter."""
