@@ -38,7 +38,7 @@ from .server import NetworkServer, REQUIRED_SNR
 from .duty_cycle import DutyCycleManager
 from .smooth_mobility import SmoothMobility
 from .id_provider import next_node_id, next_gateway_id, reset as reset_ids
-from loraflexsim.learning import LoRaSFSelectorUCB1
+from loraflexsim.learning import LoRaSFSelectorThompson, LoRaSFSelectorUCB1
 
 
 class EventType(IntEnum):
@@ -1855,8 +1855,14 @@ class Simulator:
                     pass
             return
         if policy == "thompson":
-            # Placeholder: la politique Thompson est dispatchée ici dès qu'un
-            # sélecteur dédié sera branché.
+            if getattr(node, "sf_selector", None) is None:
+                node.sf_selector = LoRaSFSelectorThompson()
+            selected_sf = node.sf_selector.select_sf()
+            if isinstance(selected_sf, str) and selected_sf.upper().startswith("SF"):
+                try:
+                    node.sf = int(selected_sf[2:])
+                except ValueError:
+                    pass
             return
 
     def _handle_sf_policy_tx_end(
@@ -1924,7 +1930,8 @@ class Simulator:
             )
             return
         if policy == "thompson":
-            # Placeholder: mise à jour Thompson à brancher lorsque disponible.
+            if getattr(node, "sf_selector", None) is not None:
+                node.sf_selector.update(f"SF{node.sf}", success=delivered)
             return
 
     def step(self) -> bool:
