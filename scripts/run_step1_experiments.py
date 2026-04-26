@@ -59,6 +59,24 @@ def _apply_ucb1(simulator: Simulator, manager: QoSManager) -> None:
     simulator.qos_mixra_solver = None
     for node in getattr(simulator, "nodes", []) or []:
         node.learning_method = "ucb1"
+        node.sf_policy = "ucb"
+
+
+def _normalize_sf_policy(policy: str | None) -> str:
+    normalized = str(policy or "ucb").strip().lower()
+    aliases = {"ucb1": "ucb", "ucb": "ucb", "thompson": "thompson"}
+    return aliases.get(normalized, normalized)
+
+
+def _set_sf_policy(simulator: Simulator, sf_policy: str) -> str:
+    policy = _normalize_sf_policy(sf_policy)
+    learning_method = "ucb1" if policy == "ucb" else policy
+    for node in getattr(simulator, "nodes", []) or []:
+        node.sf_policy = policy
+        node.learning_method = learning_method
+        node.sf_selector = None
+    setattr(simulator, "qos_sf_policy", policy)
+    return policy
 
 DEFAULT_RESULTS_DIR = ROOT_DIR / "results" / "step1"
 ALGORITHMS: Mapping[str, Callable[..., None]] = {
@@ -188,6 +206,12 @@ def _build_parser() -> argparse.ArgumentParser:
         default="auto",
         help="Solveur utilisé pour MixRA-Opt",
     )
+    parser.add_argument(
+        "--sf-policy",
+        choices=["ucb", "thompson"],
+        default="ucb",
+        help="Politique SF utilisée avec MixRA-Opt (ucb ou thompson)",
+    )
     fading_group = parser.add_mutually_exclusive_group()
     fading_group.add_argument(
         "--rayleigh",
@@ -309,21 +333,28 @@ def _instantiate_simulator(
     return simulator
 
 
-def _apply_algorithm(name: str, simulator: Simulator, manager: QoSManager, solver: str) -> None:
+def _apply_algorithm(
+    name: str,
+    simulator: Simulator,
+    manager: QoSManager,
+    solver: str,
+    sf_policy: str,
+) -> str | None:
     handler = ALGORITHMS.get(name)
     if handler is None:
         raise ValueError(f"Algorithme inconnu : {name}")
 
     if name == "adr":
         handler(simulator)
-        return
+        return None
 
     if name == "mixra_opt":
         handler(simulator, manager, solver)
         simulator.qos_mixra_solver = solver
-        return
+        return _set_sf_policy(simulator, sf_policy)
 
     handler(simulator, manager)
+    return None
 
 
 def _snir_suffix(use_snir: bool) -> str:
@@ -458,6 +489,10 @@ def _write_run_config(
         "seed": args.seed,
         "algorithm": args.algorithm,
         "mixra_solver": args.mixra_solver,
+        "sf_policy": {
+            "requested": _normalize_sf_policy(args.sf_policy),
+            "effective": getattr(simulator, "qos_sf_policy", None),
+        },
         "simulation": {
             "num_nodes": args.nodes,
             "packet_interval_s": args.packet_interval,
@@ -478,6 +513,7 @@ def _write_run_config(
         "qos": {
             "qos_active": bool(getattr(simulator, "qos_active", False)),
             "qos_algorithm": getattr(simulator, "qos_algorithm", None),
+            "qos_sf_policy": getattr(simulator, "qos_sf_policy", None),
             "adr_node": bool(getattr(simulator, "adr_node", False)),
             "adr_server": bool(getattr(simulator, "adr_server", False)),
             "learning_method": sorted(
@@ -589,6 +625,7 @@ def main(argv: list[str] | None = None) -> Mapping[str, object]:
         "[RUN] "
         f"algo={args.algorithm} use_snir={args.use_snir} seed={args.seed} "
         f"nodes={args.nodes} interval={args.packet_interval:g}s "
+        f"sf_policy={_normalize_sf_policy(args.sf_policy)} "
         f"pure_poisson={args.pure_poisson} "
         f"fading={effective_fading_std_db if effective_fading_std_db is not None else 'config'}dB "
         f"noise_std={args.noise_floor_std_db or 'config'}dB "
@@ -618,7 +655,13 @@ def main(argv: list[str] | None = None) -> Mapping[str, object]:
     )
     manager = QoSManager()
     _configure_clusters(manager, args.packet_interval)
-    _apply_algorithm(args.algorithm, simulator, manager, args.mixra_solver)
+    effective_sf_policy = _apply_algorithm(
+        args.algorithm,
+        simulator,
+        manager,
+        args.mixra_solver,
+        args.sf_policy,
+    )
 
     effective_use_snir = _sync_snir_state(simulator, args.use_snir)
 
@@ -664,6 +707,8 @@ def main(argv: list[str] | None = None) -> Mapping[str, object]:
             "marginal_snir_margin_db": getattr(simulator, "marginal_snir_margin_db", None),
             "marginal_snir_drop_prob": getattr(simulator, "marginal_snir_drop_prob", None),
             "snir_window": _snir_window_label(_resolve_snir_window(simulator)),
+            "sf_policy_requested": _normalize_sf_policy(args.sf_policy),
+            "sf_policy_effective": effective_sf_policy,
         }
     )
     enriched = _compute_additional_metrics(simulator, dict(metrics), args.algorithm, args.mixra_solver)
@@ -674,7 +719,14 @@ def main(argv: list[str] | None = None) -> Mapping[str, object]:
     output_dir: Path = args.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
     interval_label = int(args.packet_interval) if float(args.packet_interval).is_integer() else args.packet_interval
-    csv_path = output_dir / f"{args.algorithm}_N{args.nodes}_T{interval_label}{_snir_suffix(effective_use_snir)}.csv"
+    sf_policy_suffix = (
+        f"_sf-{effective_sf_policy}"
+        if effective_sf_policy
+        else ""
+    )
+    csv_path = output_dir / (
+        f"{args.algorithm}_N{args.nodes}_T{interval_label}{_snir_suffix(effective_use_snir)}{sf_policy_suffix}.csv"
+    )
     _write_csv(csv_path, csv_row)
     run_config_path = _write_run_config(
         output_dir,
