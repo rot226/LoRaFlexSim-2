@@ -53,6 +53,7 @@ ALGO_STYLE: dict[str, AlgoStyle] = {
     "adr_mixra": AlgoStyle(color="#ff7f0e", marker="s", linestyle="--"),
     "ucb": AlgoStyle(color="#2ca02c", marker="^", linestyle="-."),
     "ucb_forget": AlgoStyle(color="#d62728", marker="D", linestyle=":"),
+    "thompson": AlgoStyle(color="#9467bd", marker="P", linestyle="-"),
 }
 
 SINR_CDF_MAX_POINTS_PER_ALGO = 500
@@ -133,30 +134,30 @@ CONTRIBUTION_SPECS = [
 
 ARTICLE_PROFILE_FILTERS: dict[str, dict[str, dict[str, set[str]]]] = {
     "core": {
-        "fig01_pdr_vs_n_snir_off.png": {"mode": {"snir_off"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
-        "fig02_pdr_vs_n_snir_on.png": {"mode": {"snir_on"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
-        "fig03_der_vs_n_snir_off.png": {"mode": {"snir_off"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
-        "fig04_der_vs_n_snir_on.png": {"mode": {"snir_on"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
-        "fig05_throughput_vs_n_snir_off.png": {"mode": {"snir_off"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
-        "fig06_throughput_vs_n_snir_on.png": {"mode": {"snir_on"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
-        "fig07_sf_histogram_by_algo.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
-        "fig08_outage_probability_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
-        "fig09_energy_efficiency_vs_pdr_pareto.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
-        "fig10_sinr_cdf_fixed_scenario.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
-        "fig11_adaptation_cost_vs_speed.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
-        "fig07_tc_vs_speed.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
-        "fig08_fairness_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
-        "fig09_sf_distribution_snir_on.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig01_pdr_vs_n_snir_off.png": {"mode": {"snir_off"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget", "thompson"}},
+        "fig02_pdr_vs_n_snir_on.png": {"mode": {"snir_on"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget", "thompson"}},
+        "fig03_der_vs_n_snir_off.png": {"mode": {"snir_off"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget", "thompson"}},
+        "fig04_der_vs_n_snir_on.png": {"mode": {"snir_on"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget", "thompson"}},
+        "fig05_throughput_vs_n_snir_off.png": {"mode": {"snir_off"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget", "thompson"}},
+        "fig06_throughput_vs_n_snir_on.png": {"mode": {"snir_on"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget", "thompson"}},
+        "fig07_sf_histogram_by_algo.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget", "thompson"}},
+        "fig08_outage_probability_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget", "thompson"}},
+        "fig09_energy_efficiency_vs_pdr_pareto.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget", "thompson"}},
+        "fig10_sinr_cdf_fixed_scenario.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget", "thompson"}},
+        "fig11_adaptation_cost_vs_speed.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget", "thompson"}},
+        "fig07_tc_vs_speed.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget", "thompson"}},
+        "fig08_fairness_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget", "thompson"}},
+        "fig09_sf_distribution_snir_on.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget", "thompson"}},
         "fig09b_sf_distribution_snir_on_small_multiples.png": {
-            "algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}
+            "algo": {"adr", "adr_mixra", "ucb", "ucb_forget", "thompson"}
         },
-        "fig10_sinr_cdf.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
-        "fig11_airtime_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
-        "fig12_switch_count_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
-        "fig13_ucb_tracking_lag_vs_speed.png": {"algo": {"ucb", "ucb_forget"}},
-        "fig14_pareto_reliability_airtime.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
-        "fig15_outage_probability_vs_n.png": {"mode": {"snir_on"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
-        "fig16_energy_efficiency_vs_reliability.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget"}},
+        "fig10_sinr_cdf.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget", "thompson"}},
+        "fig11_airtime_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget", "thompson"}},
+        "fig12_switch_count_vs_n.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget", "thompson"}},
+        "fig13_ucb_tracking_lag_vs_speed.png": {"algo": {"ucb", "ucb_forget", "thompson"}},
+        "fig14_pareto_reliability_airtime.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget", "thompson"}},
+        "fig15_outage_probability_vs_n.png": {"mode": {"snir_on"}, "algo": {"adr", "adr_mixra", "ucb", "ucb_forget", "thompson"}},
+        "fig16_energy_efficiency_vs_reliability.png": {"algo": {"adr", "adr_mixra", "ucb", "ucb_forget", "thompson"}},
     },
     "full": {
         "fig01_pdr_vs_n_snir_off.png": {"mode": {"snir_off"}},
@@ -177,7 +178,7 @@ ARTICLE_PROFILE_FILTERS: dict[str, dict[str, dict[str, set[str]]]] = {
         "fig10_sinr_cdf.png": {"mode": {"snir_on"}},
         "fig11_airtime_vs_n.png": {"mode": {"snir_off", "snir_on"}},
         "fig12_switch_count_vs_n.png": {"mode": {"snir_off", "snir_on"}},
-        "fig13_ucb_tracking_lag_vs_speed.png": {"algo": {"ucb", "ucb_forget"}, "speed": {"1", "3", "5"}},
+        "fig13_ucb_tracking_lag_vs_speed.png": {"algo": {"ucb", "ucb_forget", "thompson"}, "speed": {"1", "3", "5"}},
         "fig14_pareto_reliability_airtime.png": {},
         "fig15_outage_probability_vs_n.png": {"mode": {"snir_on"}, "speed": {"1", "3", "5"}},
         "fig16_energy_efficiency_vs_reliability.png": {},
@@ -218,6 +219,8 @@ ALGO_VALUE_ALIASES = {
     "ucb_forget": "ucb_forget",
     "ucbforget": "ucb_forget",
     "ucb_f": "ucb_forget",
+    "thompson": "thompson",
+    "ts": "thompson",
 }
 
 

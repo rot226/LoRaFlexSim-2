@@ -20,6 +20,7 @@ from .adr.adr_mixra import AdrMixRaConfig, adapt_link
 from .channel import ChannelConfig, received_power_dbm
 from .mab.ucb import UCB1
 from .mab.ucb_forget import UCBForget
+from .mab.thompson import ThompsonSampling
 from .interference import InterferenceConfig, snr_db as compute_snr_db, transmission_success
 from .mobility import rwp, smooth
 
@@ -188,7 +189,7 @@ class EventDrivenEngine:
 
     @staticmethod
     def _buffer_policy_for_algo(algo_name: str) -> tuple[int, int, str]:
-        if algo_name in {"ucb", "ucb_forget"}:
+        if algo_name in {"ucb", "ucb_forget", "thompson"}:
             return 2, 4, "drop_oldest"
         if algo_name == "adr_mixra":
             return 1, 3, "drop_oldest"
@@ -205,7 +206,7 @@ class EventDrivenEngine:
         node_id: int,
         adr_cfg: AdrLegacyConfig,
         adr_mixra_cfg: AdrMixRaConfig,
-        mab_agents: dict[int, UCB1 | UCBForget],
+        mab_agents: dict[int, UCB1 | UCBForget | ThompsonSampling],
         sf_arms: list[int],
         node_tx_power_dbm: float,
     ) -> tuple[int, float, float, str]:
@@ -226,13 +227,14 @@ class EventDrivenEngine:
             )
             reward = (1.0 if success else -0.35) - 0.1 * airtime_s
             return sf, tx_power_dbm, reward, reason
-        if algo_name in {"ucb", "ucb_forget"}:
+        if algo_name in {"ucb", "ucb_forget", "thompson"}:
             agent = mab_agents[node_id]
             arm = agent.select_arm()
             new_sf = sf_arms[arm]
             reward = (1.0 if success else -0.25) - 0.08 * airtime_s
-            agent.update(arm, reward)
-            reason = f"mab_reward={(1.0 if success else -0.25) - 0.08 * airtime_s:.3f}|airtime_cost={airtime_s:.3f}s|qos={'ok' if success else 'degraded'}"
+            mab_feedback = reward if algo_name in {"ucb", "ucb_forget"} else (1.0 if success else 0.0)
+            agent.update(arm, mab_feedback)
+            reason = f"mab_reward={reward:.3f}|feedback={mab_feedback:.3f}|airtime_cost={airtime_s:.3f}s|qos={'ok' if success else 'degraded'}"
             return new_sf, node_tx_power_dbm, reward, reason
         reward = (1.0 if success else -0.25) - 0.08 * airtime_s
         return current_sf, node_tx_power_dbm, reward, "no_adaptation"
@@ -268,7 +270,7 @@ class EventDrivenEngine:
         channel_cfg = ChannelConfig(sigma_shadowing=max(sigma_shadowing, 0.0))
         mobility_name = mobility_model.lower()
 
-        mab_agents: dict[int, UCB1 | UCBForget] = {}
+        mab_agents: dict[int, UCB1 | UCBForget | ThompsonSampling] = {}
         node_states: dict[int, NodeState] = {}
         sf_arms = [7, 8, 9, 10, 11, 12]
         for node in nodes:
@@ -291,6 +293,8 @@ class EventDrivenEngine:
                 mab_agents[node.node_id] = UCB1(n_arms=len(sf_arms))
             elif algo_name == "ucb_forget":
                 mab_agents[node.node_id] = UCBForget(n_arms=len(sf_arms))
+            elif algo_name == "thompson":
+                mab_agents[node.node_id] = ThompsonSampling(n_arms=len(sf_arms), rng=self.rng)
 
         max_retries, buffer_capacity, drop_policy = self._buffer_policy_for_algo(algo_name)
         packet_seq = 0
@@ -536,6 +540,8 @@ class GridRunOrchestrator:
             "ucb_forget": "ucb_forget",
             "ucbforget": "ucb_forget",
             "ucb_f": "ucb_forget",
+            "thompson": "thompson",
+            "ts": "thompson",
         }
         run_config["algo"] = algo_aliases.get(algo_token, "adr")
 

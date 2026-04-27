@@ -39,7 +39,7 @@ PRESETS: dict[str, RunPreset] = {
         config_relpath="experiments/paper_core.yaml",
         grid=(
             "N=40,60,80,100,120,140,160,180,200;speed=1,3;"
-            "mode=SNIR_OFF,SNIR_ON;algo=ADR,ADR_MIXRA,UCB,UCB_FORGET;reps=8;seed_base=1234"
+            "mode=SNIR_OFF,SNIR_ON;algo=ADR,ADR_MIXRA,UCB,UCB_FORGET,THOMPSON;reps=8;seed_base=1234"
         ),
         force_time_bin_s=SAFE_TIME_BIN_S,
     ),

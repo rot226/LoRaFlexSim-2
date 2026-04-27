@@ -21,11 +21,11 @@ MAX_SUPPORTED_PYTHON_EXCLUSIVE = (3, 13)
 
 PROFILE_PRESETS: dict[str, str] = {
     "smoke": "N=40,100,200;speed=1;mode=SNIR_OFF,SNIR_ON;algo=ADR,UCB;reps=1;duration_s=300;seed_base=1234",
-    "paper_core": "N=40,60,80,100,120,140,160,180,200;speed=1,3;mode=SNIR_OFF,SNIR_ON;algo=ADR,ADR_MIXRA,UCB,UCB_FORGET;reps=8;duration_s=3600;seed_base=1234",
-    "paper_extended": "N=40,60,80,100,120,140,160,180,200;speed=0,1,3,5;mode=SNIR_OFF,SNIR_ON;algo=ADR,ADR_MIXRA,UCB,UCB_FORGET;reps=10;duration_s=5400;seed_base=1234",
+    "paper_core": "N=40,60,80,100,120,140,160,180,200;speed=1,3;mode=SNIR_OFF,SNIR_ON;algo=ADR,ADR_MIXRA,UCB,UCB_FORGET,THOMPSON;reps=8;duration_s=3600;seed_base=1234",
+    "paper_extended": "N=40,60,80,100,120,140,160,180,200;speed=0,1,3,5;mode=SNIR_OFF,SNIR_ON;algo=ADR,ADR_MIXRA,UCB,UCB_FORGET,THOMPSON;reps=10;duration_s=5400;seed_base=1234",
     # Alias rétro-compatibilité (anciens profils documentés).
-    "core": "N=50,100,160;speed=1,3;mode=SNIR_OFF,SNIR_ON;algo=ADR,ADR_MIXRA,UCB,UCB_FORGET;reps=2;duration_s=1800;seed_base=1234",
-    "full": "N=50,100,160,320;speed=0,1,3,6;mode=SNIR_OFF,SNIR_ON;algo=ADR,ADR_MIXRA,UCB,UCB_FORGET;reps=5;duration_s=3600;seed_base=1234",
+    "core": "N=50,100,160;speed=1,3;mode=SNIR_OFF,SNIR_ON;algo=ADR,ADR_MIXRA,UCB,UCB_FORGET,THOMPSON;reps=2;duration_s=1800;seed_base=1234",
+    "full": "N=50,100,160,320;speed=0,1,3,6;mode=SNIR_OFF,SNIR_ON;algo=ADR,ADR_MIXRA,UCB,UCB_FORGET,THOMPSON;reps=5;duration_s=3600;seed_base=1234",
 }
 
 PLOTS_NO_FIGURES_EXIT_CODE = 3
