@@ -291,6 +291,7 @@ class Node:
         self.last_radio_snir: float | None = None
         self.downlink_pending: int = 0
         self.acks_received: int = 0
+        self.ack_failures: int = 0
         self.ack_history: list[bool] = []
         self.simulator = None
         # RNG stream assigned by Simulator
@@ -414,6 +415,7 @@ class Node:
             "rx_delivered": self.rx_delivered,
             "downlink_pending": self.downlink_pending,
             "acks_received": self.acks_received,
+            "ack_failures": self.ack_failures,
             "ack_history": self.ack_history,
             "beacon_loss_prob": self.beacon_loss_prob,
             "beacon_drift": self.beacon_drift,
@@ -493,6 +495,10 @@ class Node:
 
     def _record_ack(self, success: bool) -> None:
         """Store ACK result in history (max 32 values)."""
+        if success:
+            self.acks_received += 1
+        else:
+            self.ack_failures += 1
         self.ack_history.append(success)
         if len(self.ack_history) > 32:
             self.ack_history.pop(0)
@@ -824,7 +830,6 @@ class Node:
         if frame.fctrl & 0x20:
             # ACK bit set -> the server acknowledged our last uplink
             self.awaiting_ack = False
-            self.acks_received += 1
             self._record_ack(True)
 
         if frame.confirmed:

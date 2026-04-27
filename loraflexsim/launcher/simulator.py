@@ -3110,6 +3110,9 @@ class Simulator:
         for node in self.nodes:
             p = node.tx_power
             tx_power_distribution[p] = tx_power_distribution.get(p, 0) + 1
+        ack_success_count = sum(int(getattr(node, "acks_received", 0) or 0) for node in self.nodes)
+        ack_nack_count = sum(int(getattr(node, "ack_failures", 0) or 0) for node in self.nodes)
+        ack_total_count = ack_success_count + ack_nack_count
 
         metrics = {
             "PDR": pdr,
@@ -3144,6 +3147,11 @@ class Simulator:
             "energy_breakdown_by_gateway": energy_breakdown_by_gateway,
             **{f"energy_class_{ct}_J": energy_by_class[ct] for ct in energy_by_class},
             "retransmissions": self.retransmissions,
+            "ack_success_count": ack_success_count,
+            "ack_nack_count": ack_nack_count,
+            "ack_total_count": ack_total_count,
+            "ack_success_rate": (ack_success_count / ack_total_count if ack_total_count > 0 else 0.0),
+            "ack_nack_rate": (ack_nack_count / ack_total_count if ack_total_count > 0 else 0.0),
             "simulation_duration_s": sim_time,
             "qos_refresh_benchmark": {
                 "duration_s": sim_time,
