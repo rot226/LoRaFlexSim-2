@@ -39,6 +39,7 @@ ALGO_ALIASES = {
     "ADR_MIXRA": "ADR_MIXRA",
     "UCB": "UCB",
     "UCB_FORGET": "UCB_FORGET",
+    "THOMPSON": "THOMPSON",
 }
 
 

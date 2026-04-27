@@ -986,7 +986,7 @@ def aggregate_runs(
         if run_summary is None:
             continue
         run_algo = str(run_summary.get("algo", "")).lower()
-        if run_algo not in {"ucb", "ucb_forget"}:
+        if run_algo not in {"ucb", "ucb_forget", "thompson"}:
             continue
         uplinks = run_uplinks
         if not uplinks:
