@@ -389,6 +389,11 @@ def _compute_additional_metrics(
     algorithm_label: str,
     mixra_solver: str,
 ) -> Dict[str, Any]:
+    """Enrichit les métriques brutes avec un noyau de clés comparables.
+
+    Le noyau est volontairement léger afin d'uniformiser les exports entre
+    politiques SF (ex. UCB/Thompson) sans refonte large du pipeline.
+    """
     def _build_histogram(values: List[float]) -> tuple[Dict[str, int], List[List[float]], int]:
         histogram: Dict[str, int] = {}
         if values:
@@ -419,6 +424,25 @@ def _compute_additional_metrics(
     total_sent = float(metrics.get("tx_attempted", 0.0) or 0.0)
     delivered = float(metrics.get("delivered", 0.0) or 0.0)
     metrics["DER"] = delivered / total_sent if total_sent > 0 else 0.0
+    metrics["pdr_global"] = float(metrics.get("PDR", 0.0) or 0.0)
+    metrics["throughput_global_bps"] = float(metrics.get("throughput_bps", 0.0) or 0.0)
+    energy_total = metrics.get("energy_J")
+    if energy_total is not None and delivered > 0:
+        metrics["energy_per_delivered_packet_J"] = float(energy_total) / delivered
+    else:
+        metrics["energy_per_delivered_packet_J"] = None
+    metrics["ack_success_count"] = int(metrics.get("ack_success_count", 0) or 0)
+    metrics["ack_nack_count"] = int(metrics.get("ack_nack_count", 0) or 0)
+    ack_total_count = int(metrics.get("ack_total_count", 0) or 0)
+    if ack_total_count <= 0:
+        ack_total_count = metrics["ack_success_count"] + metrics["ack_nack_count"]
+    metrics["ack_total_count"] = ack_total_count
+    metrics["ack_success_rate"] = (
+        metrics["ack_success_count"] / ack_total_count if ack_total_count > 0 else 0.0
+    )
+    metrics["ack_nack_rate"] = (
+        metrics["ack_nack_count"] / ack_total_count if ack_total_count > 0 else 0.0
+    )
 
     nodes = list(getattr(simulator, "nodes", []) or [])
     energy_nodes = float(metrics.get("energy_nodes_J", 0.0) or 0.0)
@@ -509,6 +533,15 @@ def _compute_additional_metrics(
     metrics["snir_samples"] = snir_samples
     metrics["snir_mean"] = snir_mean
     metrics["algorithm"] = algorithm_label
+    metrics["core_metrics_version"] = "v1"
+    metrics["metric_kernel"] = {
+        "pdr_global": metrics.get("pdr_global"),
+        "throughput_bps": metrics.get("throughput_global_bps"),
+        "energy_per_delivered_packet_J": metrics.get("energy_per_delivered_packet_J"),
+        "sf_distribution": metrics.get("sf_distribution", {}),
+        "ack_success_rate": metrics.get("ack_success_rate"),
+        "ack_nack_rate": metrics.get("ack_nack_rate"),
+    }
     metrics.setdefault("mixra_solver", getattr(simulator, "qos_mixra_solver", mixra_solver))
     metrics["throughput_sf_channel_json"] = json.dumps(throughput_map, ensure_ascii=False, sort_keys=True)
     metrics["collision_breakdown_json"] = json.dumps(metrics["collision_breakdown"], ensure_ascii=False, sort_keys=True)
@@ -517,6 +550,7 @@ def _compute_additional_metrics(
     metrics["snir_histogram_json"] = json.dumps(snir_histogram, ensure_ascii=False, sort_keys=True)
     metrics["snir_cdf_json"] = json.dumps(snir_cdf, ensure_ascii=False)
     metrics["sf_distribution_json"] = json.dumps(metrics.get("sf_distribution", {}), ensure_ascii=False, sort_keys=True)
+    metrics["metric_kernel_json"] = json.dumps(metrics.get("metric_kernel", {}), ensure_ascii=False, sort_keys=True)
     metrics["qos_cluster_der_json"] = json.dumps(cluster_der, ensure_ascii=False, sort_keys=True)
     return dict(metrics)
 
