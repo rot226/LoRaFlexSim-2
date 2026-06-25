@@ -204,6 +204,73 @@ def _build_run_config(seed_offset: int = 0) -> dict:
     }
 
 
+def _run_already_collected(collection: list, run_number: int) -> bool:
+    """Return True when a run is already present in a collected result list."""
+
+    for item in collection:
+        if isinstance(item, pd.DataFrame):
+            if "run" in item.columns and not item.empty:
+                run_values = pd.to_numeric(item["run"], errors="coerce")
+                if run_values.eq(run_number).any():
+                    return True
+        elif isinstance(item, dict):
+            try:
+                if int(item.get("run")) == run_number:
+                    return True
+            except (TypeError, ValueError):
+                continue
+    return False
+
+
+def _collect_current_run_results() -> None:
+    """Collect events, metrics, and configuration for the current run once."""
+
+    if sim is None:
+        return
+
+    run_number = current_run if current_run > 0 else 1
+
+    if not _run_already_collected(runs_events, run_number):
+        try:
+            events_df = sim.get_events_dataframe()
+            if events_df is not None:
+                runs_events.append(events_df.assign(run=run_number))
+        except Exception:
+            pass
+
+    metrics_payload: dict | None = None
+    if not _run_already_collected(runs_metrics, run_number):
+        try:
+            metrics_payload = dict(sim.get_metrics())
+            metrics_payload.setdefault("run", run_number)
+            runs_metrics.append(metrics_payload)
+        except Exception:
+            metrics_payload = None
+    else:
+        for item in runs_metrics:
+            if isinstance(item, dict):
+                try:
+                    if int(item.get("run")) == run_number:
+                        metrics_payload = item
+                        break
+                except (TypeError, ValueError):
+                    continue
+
+    if not _run_already_collected(runs_configs, run_number):
+        run_config = getattr(sim, "run_config", None)
+        if isinstance(run_config, dict):
+            config_payload = dict(run_config)
+            config_payload.setdefault("run", run_number)
+            if metrics_payload is None:
+                try:
+                    metrics_payload = dict(sim.get_metrics())
+                except Exception:
+                    metrics_payload = None
+            if metrics_payload is not None:
+                config_payload["pdr_percent"] = float(metrics_payload.get("PDR", 0.0))
+            runs_configs.append(config_payload)
+
+
 # --- Utilitaires QoS -------------------------------------------------------
 def _parse_cluster_field(
     raw_value: str,
@@ -1189,24 +1256,7 @@ def on_stop(event):
         chrono_callback.stop()
         chrono_callback = None
 
-    try:
-        df = sim.get_events_dataframe()
-        if df is not None:
-            runs_events.append(df.assign(run=current_run))
-    except Exception:
-        pass
-    try:
-        runs_metrics.append(sim.get_metrics())
-    except Exception:
-        pass
-
-    run_config = getattr(sim, "run_config", None)
-    if isinstance(run_config, dict):
-        config_payload = dict(run_config)
-        config_payload.setdefault("run", current_run)
-        if runs_metrics:
-            config_payload["pdr_percent"] = float(runs_metrics[-1].get("PDR", 0.0))
-        runs_configs.append(config_payload)
+    _collect_current_run_results()
 
     if current_run < total_runs:
         if runs_metrics:
@@ -1563,6 +1613,9 @@ def exporter_csv(event=None):
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     dest_dir = Path("results") / "dashboard_exports" / timestamp
     global runs_events, runs_metrics, runs_configs
+
+    if sim is not None and not getattr(sim, "running", False):
+        _collect_current_run_results()
 
     if not (runs_events or runs_metrics or runs_configs):
         export_message.object = "⚠️ No data to export!"
