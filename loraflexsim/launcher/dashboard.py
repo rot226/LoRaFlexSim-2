@@ -1553,7 +1553,21 @@ def exporter_csv(event=None):
             export_message.object = "⚠️ No data to export!"
             return
 
-        payload_bytes = int(getattr(sim, "payload_size_bytes", 0) or 0)
+        fallback_payload_bytes = int(getattr(sim, "payload_size_bytes", 0) or 0)
+        payload_by_run: dict[int, int] = {}
+        for idx, run_cfg in enumerate(runs_configs, start=1):
+            run_value = run_cfg.get("run", idx) if isinstance(run_cfg, dict) else idx
+            traffic_cfg = run_cfg.get("traffic", {}) if isinstance(run_cfg, dict) else {}
+            if not isinstance(traffic_cfg, dict):
+                continue
+            payload_value = traffic_cfg.get("payload_size_bytes")
+            if payload_value is None:
+                continue
+            try:
+                payload_by_run[int(run_value)] = int(payload_value)
+            except (TypeError, ValueError):
+                continue
+
         packets_df = df.copy()
 
         if "time" in packets_df.columns:
@@ -1573,9 +1587,14 @@ def exporter_csv(event=None):
             .eq("Success")
             .astype(int)
         )
-        packets_df["payload_bytes"] = payload_bytes
         if "run" in packets_df.columns:
             packets_df["run"] = pd.to_numeric(packets_df["run"], errors="coerce")
+            packets_df["payload_bytes"] = (
+                packets_df["run"].map(payload_by_run).fillna(fallback_payload_bytes)
+            )
+        else:
+            packets_df["payload_bytes"] = fallback_payload_bytes
+            packets_df["run"] = 1
 
         packets_df = packets_df.dropna(subset=["time", "node_id"])
         packets_df["node_id"] = packets_df["node_id"].astype("int64")
@@ -1586,6 +1605,16 @@ def exporter_csv(event=None):
             packets_df["sf"] = packets_df["sf"].astype("Int64")
         if "run" in packets_df.columns:
             packets_df["run"] = packets_df["run"].astype("Int64")
+
+        normalized_columns = [
+            col
+            for col in ["time", "node_id", "sf", "tx_ok", "rx_ok", "payload_bytes", "run"]
+            if col in packets_df.columns
+        ]
+        packets_df = packets_df[
+            normalized_columns
+            + [col for col in packets_df.columns if col not in normalized_columns]
+        ]
 
         packets_path = os.path.join(dest_dir, "raw_packets.csv")
         packets_df.to_csv(packets_path, index=False, encoding="utf-8")
