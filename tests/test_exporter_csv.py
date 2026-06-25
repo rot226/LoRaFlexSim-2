@@ -212,3 +212,47 @@ def test_export_writes_complete_multi_run_csv_and_configs(tmp_path, monkeypatch)
     assert (export_dir / "run_1_config.json").exists()
     assert (export_dir / "run_2_config.json").exists()
     assert (export_dir / "runs_config.csv").exists()
+
+
+def test_export_writes_node_and_gateway_metrics(tmp_path, monkeypatch):
+    dashboard.runs_events = []
+    dashboard.runs_metrics = [
+        {
+            "run": 1,
+            "pdr_by_node": {0: 100.0, 1: 50.0},
+            "recent_pdr_by_node": {0: 95.0, 1: 45.0},
+            "energy_by_node": {0: 1.25, 1: 2.5},
+            "airtime_by_node": {0: 0.5, 1: 0.75},
+            "energy_breakdown_by_node": {
+                0: {"tx": 0.5, "rx": 0.25, "sleep": 0.4, "listen": 0.1},
+                1: {"tx": 1.0, "rx": 0.5, "sleep": 0.8, "listen": 0.2},
+            },
+            "pdr_by_gateway": {"gw-1": 100.0, "gw-2": 75.0},
+            "energy_by_gateway": {"gw-1": 3.5, "gw-2": 4.5},
+            "energy_breakdown_by_gateway": {
+                "gw-1": {"tx": 1.5, "rx": 1.0, "sleep": 0.75, "listen": 0.25},
+                "gw-2": {"tx": 2.0, "rx": 1.25, "sleep": 1.0, "listen": 0.25},
+            },
+        }
+    ]
+    dashboard.runs_configs = []
+    dashboard.sim = type("S", (), {"payload_size_bytes": 20})()
+    dashboard.export_message = pn.pane.Markdown()
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: None)
+    monkeypatch.chdir(tmp_path)
+
+    dashboard.exporter_csv()
+
+    export_dir = _export_dir(tmp_path)
+    nodes_metrics = export_dir / "nodes_metrics.csv"
+    gateways_metrics = export_dir / "gateways_metrics.csv"
+
+    assert nodes_metrics.exists()
+    nodes_df = pd.read_csv(nodes_metrics)
+    assert len(nodes_df) == 2
+    assert {"run", "node_id", "pdr", "energy_j"}.issubset(nodes_df.columns)
+
+    assert gateways_metrics.exists()
+    gateways_df = pd.read_csv(gateways_metrics)
+    assert len(gateways_df) == 2
+    assert {"run", "gateway_id", "pdr", "energy_j"}.issubset(gateways_df.columns)
