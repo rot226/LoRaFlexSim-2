@@ -256,3 +256,41 @@ def test_export_writes_node_and_gateway_metrics(tmp_path, monkeypatch):
     gateways_df = pd.read_csv(gateways_metrics)
     assert len(gateways_df) == 2
     assert {"run", "gateway_id", "pdr", "energy_j"}.issubset(gateways_df.columns)
+
+
+def test_export_writes_qos_clusters_metrics(tmp_path, monkeypatch):
+    dashboard.runs_events = []
+    dashboard.runs_metrics = [
+        {
+            "run": 3,
+            "qos_cluster_pdr": {1: 95.0, 2: 82.5},
+            "qos_cluster_targets": {1: 90.0, 2: 85.0},
+            "qos_cluster_pdr_gap": {1: 5.0, 2: -2.5},
+            "qos_cluster_throughput_bps": {1: 1200.0, 2: 800.0},
+            "qos_cluster_node_counts": {1: 4, 2: 3},
+            "qos_cluster_sf_channel": {1: {"sf": 7, "channel": 0}},
+            "qos_throughput_gini": 0.25,
+        }
+    ]
+    dashboard.runs_configs = []
+    dashboard.sim = type("S", (), {"payload_size_bytes": 20})()
+    dashboard.export_message = pn.pane.Markdown()
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: None)
+    monkeypatch.chdir(tmp_path)
+
+    dashboard.exporter_csv()
+
+    export_dir = _export_dir(tmp_path)
+    qos_clusters_metrics = export_dir / "qos_clusters_metrics.csv"
+    assert qos_clusters_metrics.exists()
+
+    qos_clusters_df = pd.read_csv(qos_clusters_metrics)
+    assert {
+        "run",
+        "cluster_id",
+        "pdr",
+        "pdr_target",
+        "pdr_gap",
+        "throughput_bps",
+        "node_count",
+    }.issubset(qos_clusters_df.columns)
