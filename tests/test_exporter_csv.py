@@ -43,6 +43,7 @@ def test_export_to_tmp_dir(tmp_path, monkeypatch):
         "payload_bytes",
     ]
     assert packets_df["sf"].between(7, 12).all()
+    assert packets_df["payload_bytes"].tolist() == [20, 20]
 
     energy_df = pd.read_csv(raw_energy)
     assert list(energy_df.columns) == ["run", "total_energy_joule", "sim_duration_s"]
@@ -94,3 +95,44 @@ def test_export_raw_energy_keeps_multiple_runs_identifiable(tmp_path, monkeypatc
         2: 25.0,
     }
     assert energy_df.set_index("run")["sim_duration_s"].to_dict() == {1: 10.0, 2: 20.0}
+
+
+def test_export_raw_packets_payload_uses_run_config(tmp_path, monkeypatch):
+    run_1_df = pd.DataFrame(
+        {
+            "start_time": [0.0, 1.0],
+            "node_id": [0, 1],
+            "sf": [7, 8],
+            "result": ["Success", "Success"],
+            "run": [1, 1],
+        }
+    )
+    run_2_df = pd.DataFrame(
+        {
+            "start_time": [0.0, 1.0],
+            "node_id": [0, 1],
+            "sf": [9, 10],
+            "result": ["Success", "CollisionLoss"],
+            "run": [2, 2],
+        }
+    )
+    dashboard.runs_events = [run_1_df, run_2_df]
+    dashboard.runs_metrics = []
+    dashboard.runs_configs = [
+        {"run": 1, "traffic": {"payload_size_bytes": 12}},
+        {"run": 2, "traffic": {"payload_size_bytes": 34}},
+    ]
+    dashboard.sim = type("S", (), {"payload_size_bytes": 99})()
+    dashboard.export_message = pn.pane.Markdown()
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: None)
+    monkeypatch.chdir(tmp_path)
+
+    dashboard.exporter_csv()
+
+    packets_df = pd.read_csv(tmp_path / "raw_packets.csv")
+    assert packets_df.groupby("run")["payload_bytes"].unique().apply(
+        list
+    ).to_dict() == {
+        1: [12],
+        2: [34],
+    }
