@@ -1733,22 +1733,43 @@ def exporter_csv(event=None):
             written_files.append(qos_clusters_metrics_path)
 
         if runs_metrics:
-            raw_energy_df = metrics_df[["run"]].copy()
-            raw_energy_df["total_energy_joule"] = pd.to_numeric(
+            energy_summary_df = metrics_df[["run"]].copy()
+            energy_summary_df["total_energy_joule"] = pd.to_numeric(
                 metrics_df.get("energy_J"), errors="coerce"
             )
+            energy_summary_df["energy_nodes_joule"] = pd.to_numeric(
+                metrics_df.get("energy_nodes_J"), errors="coerce"
+            )
+            energy_summary_df["energy_gateways_joule"] = pd.to_numeric(
+                metrics_df.get("energy_gateways_J"), errors="coerce"
+            )
             if "simulation_duration_s" in metrics_df.columns:
-                raw_energy_df["sim_duration_s"] = pd.to_numeric(
+                energy_summary_df["sim_duration_s"] = pd.to_numeric(
                     metrics_df.get("simulation_duration_s"), errors="coerce"
                 )
             else:
-                raw_energy_df = raw_energy_df.merge(
+                energy_summary_df = energy_summary_df.merge(
                     duration_by_run, on="run", how="left"
                 )
-            raw_energy_df = raw_energy_df[
-                ["run", "total_energy_joule", "sim_duration_s"]
+            energy_summary_df = energy_summary_df[
+                [
+                    "run",
+                    "total_energy_joule",
+                    "energy_nodes_joule",
+                    "energy_gateways_joule",
+                    "sim_duration_s",
+                ]
             ]
-            raw_energy_df = raw_energy_df.fillna(0.0)
+            energy_summary_df = energy_summary_df.fillna(0.0)
+            energy_summary_path = dest_dir / "energy_summary.csv"
+            energy_summary_df.to_csv(
+                energy_summary_path, index=False, encoding="utf-8"
+            )
+            written_files.append(energy_summary_path)
+
+            raw_energy_df = energy_summary_df[
+                ["run", "total_energy_joule", "sim_duration_s"]
+            ].copy()
             raw_energy_path = dest_dir / "raw_energy.csv"
             raw_energy_df.to_csv(raw_energy_path, index=False, encoding="utf-8")
             written_files.append(raw_energy_path)
