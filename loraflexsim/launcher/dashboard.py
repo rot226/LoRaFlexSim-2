@@ -1554,27 +1554,38 @@ def exporter_csv(event=None):
             return
 
         payload_bytes = int(getattr(sim, "payload_size_bytes", 0) or 0)
-        packets_df = pd.DataFrame(
-            {
-                "time": pd.to_numeric(df.get("start_time"), errors="coerce"),
-                "node_id": pd.to_numeric(df.get("node_id"), errors="coerce"),
-                "sf": pd.to_numeric(df.get("sf"), errors="coerce"),
-                "tx_ok": 1,
-                "rx_ok": (
-                    pd.Series(df.get("result", ""), index=df.index)
-                    .eq("Success")
-                    .astype(int)
-                ),
-                "payload_bytes": payload_bytes,
-                "run": pd.to_numeric(df.get("run"), errors="coerce"),
-            }
+        packets_df = df.copy()
+
+        if "time" in packets_df.columns:
+            packets_df["time"] = pd.to_numeric(packets_df["time"], errors="coerce")
+        else:
+            packets_df["time"] = pd.to_numeric(
+                packets_df.get("start_time"), errors="coerce"
+            )
+        packets_df["node_id"] = pd.to_numeric(
+            packets_df.get("node_id"), errors="coerce"
         )
-        packets_df = packets_df.dropna(subset=["time", "node_id", "sf", "run"])
-        packets_df = packets_df[packets_df["sf"].between(7, 12)]
-        packets_df[["node_id", "sf", "tx_ok", "rx_ok", "payload_bytes", "run"]] = (
-            packets_df[["node_id", "sf", "tx_ok", "rx_ok", "payload_bytes", "run"]]
-            .astype("int64")
+        if "sf" in packets_df.columns:
+            packets_df["sf"] = pd.to_numeric(packets_df["sf"], errors="coerce")
+        packets_df["tx_ok"] = 1
+        packets_df["rx_ok"] = (
+            pd.Series(packets_df.get("result", ""), index=packets_df.index)
+            .eq("Success")
+            .astype(int)
         )
+        packets_df["payload_bytes"] = payload_bytes
+        if "run" in packets_df.columns:
+            packets_df["run"] = pd.to_numeric(packets_df["run"], errors="coerce")
+
+        packets_df = packets_df.dropna(subset=["time", "node_id"])
+        packets_df["node_id"] = packets_df["node_id"].astype("int64")
+        packets_df[["tx_ok", "rx_ok", "payload_bytes"]] = packets_df[
+            ["tx_ok", "rx_ok", "payload_bytes"]
+        ].astype("int64")
+        if "sf" in packets_df.columns:
+            packets_df["sf"] = packets_df["sf"].astype("Int64")
+        if "run" in packets_df.columns:
+            packets_df["run"] = packets_df["run"].astype("Int64")
 
         packets_path = os.path.join(dest_dir, "raw_packets.csv")
         packets_df.to_csv(packets_path, index=False, encoding="utf-8")
