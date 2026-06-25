@@ -1543,15 +1543,13 @@ def exporter_csv(event=None):
     dest_dir = os.getcwd()
     global runs_events, runs_metrics, runs_configs
 
-    if not runs_events:
-        export_message.object = "⚠️ Start the simulation first!"
+    if not (runs_events or runs_metrics or runs_configs):
+        export_message.object = "⚠️ No data to export!"
         return
 
     try:
-        df = pd.concat(runs_events, ignore_index=True)
-        if df.empty:
-            export_message.object = "⚠️ No data to export!"
-            return
+        exported_files: list[tuple[str, str]] = []
+        duration_by_run = pd.DataFrame(columns=["run", "sim_duration_s"])
 
         fallback_payload_bytes = int(getattr(sim, "payload_size_bytes", 0) or 0)
         payload_by_run: dict[int, int] = {}
@@ -1568,62 +1566,86 @@ def exporter_csv(event=None):
             except (TypeError, ValueError):
                 continue
 
-        packets_df = df.copy()
+        if runs_events:
+            df = pd.concat(runs_events, ignore_index=True)
+            if not df.empty:
+                packets_df = df.copy()
 
-        if "time" in packets_df.columns:
-            packets_df["time"] = pd.to_numeric(packets_df["time"], errors="coerce")
-        else:
-            packets_df["time"] = pd.to_numeric(
-                packets_df.get("start_time"), errors="coerce"
-            )
-        packets_df["node_id"] = pd.to_numeric(
-            packets_df.get("node_id"), errors="coerce"
-        )
-        if "sf" in packets_df.columns:
-            packets_df["sf"] = pd.to_numeric(packets_df["sf"], errors="coerce")
-        packets_df["tx_ok"] = 1
-        packets_df["rx_ok"] = (
-            pd.Series(packets_df.get("result", ""), index=packets_df.index)
-            .eq("Success")
-            .astype(int)
-        )
-        if "run" in packets_df.columns:
-            packets_df["run"] = pd.to_numeric(packets_df["run"], errors="coerce")
-            packets_df["payload_bytes"] = (
-                packets_df["run"].map(payload_by_run).fillna(fallback_payload_bytes)
-            )
-        else:
-            packets_df["payload_bytes"] = fallback_payload_bytes
-            packets_df["run"] = 1
+                if "time" in packets_df.columns:
+                    packets_df["time"] = pd.to_numeric(
+                        packets_df["time"], errors="coerce"
+                    )
+                else:
+                    packets_df["time"] = pd.to_numeric(
+                        packets_df.get("start_time"), errors="coerce"
+                    )
+                packets_df["node_id"] = pd.to_numeric(
+                    packets_df.get("node_id"), errors="coerce"
+                )
+                if "sf" in packets_df.columns:
+                    packets_df["sf"] = pd.to_numeric(packets_df["sf"], errors="coerce")
+                packets_df["tx_ok"] = 1
+                packets_df["rx_ok"] = (
+                    pd.Series(packets_df.get("result", ""), index=packets_df.index)
+                    .eq("Success")
+                    .astype(int)
+                )
+                if "run" in packets_df.columns:
+                    packets_df["run"] = pd.to_numeric(
+                        packets_df["run"], errors="coerce"
+                    )
+                    packets_df["payload_bytes"] = (
+                        packets_df["run"]
+                        .map(payload_by_run)
+                        .fillna(fallback_payload_bytes)
+                    )
+                else:
+                    packets_df["payload_bytes"] = fallback_payload_bytes
+                    packets_df["run"] = 1
 
-        packets_df = packets_df.dropna(subset=["time", "node_id"])
-        packets_df["node_id"] = packets_df["node_id"].astype("int64")
-        packets_df[["tx_ok", "rx_ok", "payload_bytes"]] = packets_df[
-            ["tx_ok", "rx_ok", "payload_bytes"]
-        ].astype("int64")
-        if "sf" in packets_df.columns:
-            packets_df["sf"] = packets_df["sf"].astype("Int64")
-        if "run" in packets_df.columns:
-            packets_df["run"] = packets_df["run"].astype("Int64")
+                packets_df = packets_df.dropna(subset=["time", "node_id"])
+                if not packets_df.empty:
+                    packets_df["node_id"] = packets_df["node_id"].astype("int64")
+                    packets_df[["tx_ok", "rx_ok", "payload_bytes"]] = packets_df[
+                        ["tx_ok", "rx_ok", "payload_bytes"]
+                    ].astype("int64")
+                    if "sf" in packets_df.columns:
+                        packets_df["sf"] = packets_df["sf"].astype("Int64")
+                    if "run" in packets_df.columns:
+                        packets_df["run"] = packets_df["run"].astype("Int64")
 
-        normalized_columns = [
-            col
-            for col in ["time", "node_id", "sf", "tx_ok", "rx_ok", "payload_bytes", "run"]
-            if col in packets_df.columns
-        ]
-        packets_df = packets_df[
-            normalized_columns
-            + [col for col in packets_df.columns if col not in normalized_columns]
-        ]
+                    normalized_columns = [
+                        col
+                        for col in [
+                            "time",
+                            "node_id",
+                            "sf",
+                            "tx_ok",
+                            "rx_ok",
+                            "payload_bytes",
+                            "run",
+                        ]
+                        if col in packets_df.columns
+                    ]
+                    packets_df = packets_df[
+                        normalized_columns
+                        + [
+                            col
+                            for col in packets_df.columns
+                            if col not in normalized_columns
+                        ]
+                    ]
 
-        packets_path = os.path.join(dest_dir, "raw_packets.csv")
-        packets_df.to_csv(packets_path, index=False, encoding="utf-8")
+                    packets_path = os.path.join(dest_dir, "raw_packets.csv")
+                    packets_df.to_csv(packets_path, index=False, encoding="utf-8")
+                    exported_files.append(("Raw packets", packets_path))
 
-        duration_by_run = (
-            packets_df.groupby("run", as_index=False)["time"].max().rename(
-                columns={"time": "sim_duration_s"}
-            )
-        )
+                    duration_by_run = (
+                        packets_df.groupby("run", as_index=False)["time"].max().rename(
+                            columns={"time": "sim_duration_s"}
+                        )
+                    )
+
         if runs_metrics:
             metrics_df = pd.json_normalize(runs_metrics)
             if "run" not in metrics_df.columns:
@@ -1633,25 +1655,31 @@ def exporter_csv(event=None):
                     col for col in metrics_df.columns if col != "run"
                 ]]
             if "simulation_duration_s" not in metrics_df.columns:
-                metrics_df = metrics_df.merge(
-                    duration_by_run.rename(
-                        columns={"sim_duration_s": "simulation_duration_s"}
-                    ),
-                    on="run",
-                    how="left",
-                )
+                if duration_by_run.empty:
+                    metrics_df["simulation_duration_s"] = pd.NA
+                else:
+                    metrics_df = metrics_df.merge(
+                        duration_by_run.rename(
+                            columns={"sim_duration_s": "simulation_duration_s"}
+                        ),
+                        on="run",
+                        how="left",
+                    )
             metrics_complete_path = os.path.join(dest_dir, "metrics_complete.csv")
             metrics_df.to_csv(metrics_complete_path, index=False, encoding="utf-8")
+            exported_files.append(("Complete metrics", metrics_complete_path))
 
             nodes_metrics_df = _build_nodes_metrics_df(runs_metrics)
             nodes_metrics_path = os.path.join(dest_dir, "nodes_metrics.csv")
             nodes_metrics_df.to_csv(nodes_metrics_path, index=False, encoding="utf-8")
+            exported_files.append(("Nodes metrics", nodes_metrics_path))
 
             gateways_metrics_df = _build_gateways_metrics_df(runs_metrics)
             gateways_metrics_path = os.path.join(dest_dir, "gateways_metrics.csv")
             gateways_metrics_df.to_csv(
                 gateways_metrics_path, index=False, encoding="utf-8"
             )
+            exported_files.append(("Gateways metrics", gateways_metrics_path))
 
             sf_distribution_df = _build_distribution_df(
                 runs_metrics,
@@ -1662,6 +1690,7 @@ def exporter_csv(event=None):
             sf_distribution_df.to_csv(
                 sf_distribution_path, index=False, encoding="utf-8"
             )
+            exported_files.append(("SF distribution", sf_distribution_path))
 
             tx_power_distribution_df = _build_distribution_df(
                 runs_metrics,
@@ -1675,6 +1704,7 @@ def exporter_csv(event=None):
             tx_power_distribution_df.to_csv(
                 tx_power_distribution_path, index=False, encoding="utf-8"
             )
+            exported_files.append(("TX power distribution", tx_power_distribution_path))
 
             qos_clusters_metrics_df = _build_qos_clusters_metrics_df(runs_metrics)
             qos_clusters_metrics_path = os.path.join(
@@ -1684,100 +1714,52 @@ def exporter_csv(event=None):
             qos_clusters_metrics_df.to_csv(
                 qos_clusters_metrics_path, index=False, encoding="utf-8"
             )
+            exported_files.append(("QoS clusters metrics", qos_clusters_metrics_path))
 
-            energy_by_run = pd.DataFrame(
-                {
-                    "run": metrics_df["run"],
-                    "total_energy_joule": pd.to_numeric(
-                        metrics_df.get("energy_J"), errors="coerce"
-                    ),
-                }
+        if runs_metrics:
+            raw_energy_df = metrics_df[["run"]].copy()
+            raw_energy_df["total_energy_joule"] = pd.to_numeric(
+                metrics_df.get("energy_J"), errors="coerce"
             )
-        else:
-            metrics_complete_path = None
-            nodes_metrics_path = None
-            gateways_metrics_path = None
-            sf_distribution_path = os.path.join(dest_dir, "sf_distribution.csv")
-            pd.DataFrame(
-                columns=["run", "sf", "node_count"]
-            ).to_csv(sf_distribution_path, index=False, encoding="utf-8")
-            tx_power_distribution_path = os.path.join(
-                dest_dir,
-                "tx_power_distribution.csv",
-            )
-            pd.DataFrame(
-                columns=["run", "tx_power_dbm", "node_count"]
-            ).to_csv(tx_power_distribution_path, index=False, encoding="utf-8")
-            qos_clusters_metrics_path = os.path.join(
-                dest_dir,
-                "qos_clusters_metrics.csv",
-            )
-            pd.DataFrame(
-                columns=[
-                    "run",
-                    "cluster_id",
-                    "pdr",
-                    "pdr_target",
-                    "pdr_gap",
-                    "throughput_bps",
-                    "node_count",
-                    "sf_channel",
-                ]
-            ).to_csv(qos_clusters_metrics_path, index=False, encoding="utf-8")
-            energy_by_run = pd.DataFrame(
-                {"run": duration_by_run["run"], "total_energy_joule": float("nan")}
-            )
-
-        raw_energy_df = duration_by_run.merge(energy_by_run, on="run", how="left")
-        raw_energy_df = raw_energy_df[["run", "total_energy_joule", "sim_duration_s"]]
-        raw_energy_df = raw_energy_df.fillna(0.0)
-        raw_energy_path = os.path.join(dest_dir, "raw_energy.csv")
-        raw_energy_df.to_csv(raw_energy_path, index=False, encoding="utf-8")
-
+            if "simulation_duration_s" in metrics_df.columns:
+                raw_energy_df["sim_duration_s"] = pd.to_numeric(
+                    metrics_df.get("simulation_duration_s"), errors="coerce"
+                )
+            else:
+                raw_energy_df = raw_energy_df.merge(
+                    duration_by_run, on="run", how="left"
+                )
+            raw_energy_df = raw_energy_df[
+                ["run", "total_energy_joule", "sim_duration_s"]
+            ]
+            raw_energy_df = raw_energy_df.fillna(0.0)
+            raw_energy_path = os.path.join(dest_dir, "raw_energy.csv")
+            raw_energy_df.to_csv(raw_energy_path, index=False, encoding="utf-8")
+            exported_files.append(("Raw energy compatibility", raw_energy_path))
         written_configs: list[str] = []
         for idx, run_cfg in enumerate(runs_configs, start=1):
             cfg_path = os.path.join(dest_dir, f"run_{idx}_config.json")
             with open(cfg_path, "w", encoding="utf-8") as cfg_file:
-                json.dump(run_cfg, cfg_file, indent=2, ensure_ascii=False, sort_keys=True)
+                json.dump(
+                    run_cfg,
+                    cfg_file,
+                    indent=2,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                )
             written_configs.append(cfg_path)
+            exported_files.append((f"Config run {idx}", cfg_path))
 
-        config_summary = ""
-        if written_configs:
-            cfg_links = "<br>".join(f"Config run {i + 1}: <b>{path}</b>" for i, path in enumerate(written_configs))
-            config_summary = f"<br>{cfg_links}"
-        metrics_summary = (
-            f"Metrics: <b>{metrics_complete_path}</b><br>"
-            if metrics_complete_path
-            else "Metrics: <b>not available</b><br>"
-        )
-        nodes_metrics_summary = (
-            f"Nodes metrics: <b>{nodes_metrics_path}</b><br>"
-            if nodes_metrics_path
-            else "Nodes metrics: <b>not available</b><br>"
-        )
-        gateways_metrics_summary = (
-            f"Gateways metrics: <b>{gateways_metrics_path}</b><br>"
-            if gateways_metrics_path
-            else "Gateways metrics: <b>not available</b><br>"
-        )
-        sf_distribution_summary = (
-            f"SF distribution: <b>{sf_distribution_path}</b><br>"
-        )
-        tx_power_distribution_summary = (
-            f"TX power distribution: <b>{tx_power_distribution_path}</b><br>"
-        )
-        qos_clusters_metrics_summary = (
-            f"QoS clusters metrics: <b>{qos_clusters_metrics_path}</b><br>"
+        if not exported_files:
+            export_message.object = "⚠️ No data to export!"
+            return
+
+        exported_summary = "<br>".join(
+            f"{label}: <b>{path}</b>" for label, path in exported_files
         )
         export_message.object = (
-            f"✅ Exported results: <b>{packets_path}</b><br>"
-            f"{metrics_summary}"
-            f"{nodes_metrics_summary}"
-            f"{gateways_metrics_summary}"
-            f"{sf_distribution_summary}"
-            f"{tx_power_distribution_summary}"
-            f"{qos_clusters_metrics_summary}"
-            f"Raw energy compatibility: <b>{raw_energy_path}</b>{config_summary}"
+            "✅ Exported files:<br>"
+            f"{exported_summary}"
             "<br>(Open them with Excel or pandas)"
         )
 
