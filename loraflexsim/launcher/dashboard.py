@@ -1275,6 +1275,79 @@ def on_stop(event):
     pause_button.disabled = pause_prev_disabled
 
 
+def _build_nodes_metrics_df(metrics_list: list[dict]) -> pd.DataFrame:
+    """Build one node-level metrics row per run and node."""
+
+    base_columns = [
+        "run",
+        "node_id",
+        "pdr",
+        "recent_pdr",
+        "energy_j",
+        "airtime_s",
+        "energy_tx_j",
+        "energy_rx_j",
+        "energy_sleep_j",
+        "energy_listen_j",
+    ]
+    breakdown_aliases = {
+        "tx": "energy_tx_j",
+        "rx": "energy_rx_j",
+        "sleep": "energy_sleep_j",
+        "listen": "energy_listen_j",
+    }
+    rows: list[dict] = []
+    extra_breakdown_columns: set[str] = set()
+
+    for run_number, metrics in enumerate(metrics_list, start=1):
+        if not isinstance(metrics, dict):
+            continue
+
+        run_value = metrics.get("run", run_number)
+        pdr_by_node = metrics.get("pdr_by_node") or {}
+        recent_pdr_by_node = metrics.get("recent_pdr_by_node") or {}
+        energy_by_node = metrics.get("energy_by_node") or {}
+        airtime_by_node = metrics.get("airtime_by_node") or {}
+        breakdown_by_node = metrics.get("energy_breakdown_by_node") or {}
+
+        node_ids = set()
+        for node_mapping in (
+            pdr_by_node,
+            recent_pdr_by_node,
+            energy_by_node,
+            airtime_by_node,
+            breakdown_by_node,
+        ):
+            if isinstance(node_mapping, dict):
+                node_ids.update(node_mapping.keys())
+
+        for node_id in sorted(node_ids, key=lambda value: str(value)):
+            breakdown = breakdown_by_node.get(node_id, {})
+            if not isinstance(breakdown, dict):
+                breakdown = {}
+
+            row = {
+                "run": run_value,
+                "node_id": node_id,
+                "pdr": pdr_by_node.get(node_id),
+                "recent_pdr": recent_pdr_by_node.get(node_id),
+                "energy_j": energy_by_node.get(node_id, 0.0),
+                "airtime_s": airtime_by_node.get(node_id, 0.0),
+                "energy_tx_j": breakdown.get("tx", 0.0),
+                "energy_rx_j": breakdown.get("rx", 0.0),
+                "energy_sleep_j": breakdown.get("sleep", 0.0),
+                "energy_listen_j": breakdown.get("listen", 0.0),
+            }
+            for key, value in breakdown.items():
+                column = breakdown_aliases.get(key, f"energy_{key}_j")
+                if column not in row:
+                    row[column] = value
+                    extra_breakdown_columns.add(column)
+            rows.append(row)
+
+    return pd.DataFrame(rows, columns=base_columns + sorted(extra_breakdown_columns))
+
+
 # --- Export CSV local : Méthode universelle ---
 def exporter_csv(event=None):
     """Export simulation results as normalized CSV files in the current directory."""
@@ -1340,6 +1413,11 @@ def exporter_csv(event=None):
                 )
             metrics_complete_path = os.path.join(dest_dir, "metrics_complete.csv")
             metrics_df.to_csv(metrics_complete_path, index=False, encoding="utf-8")
+
+            nodes_metrics_df = _build_nodes_metrics_df(runs_metrics)
+            nodes_metrics_path = os.path.join(dest_dir, "nodes_metrics.csv")
+            nodes_metrics_df.to_csv(nodes_metrics_path, index=False, encoding="utf-8")
+
             energy_by_run = pd.DataFrame(
                 {
                     "run": metrics_df["run"],
@@ -1350,6 +1428,7 @@ def exporter_csv(event=None):
             )
         else:
             metrics_complete_path = None
+            nodes_metrics_path = None
             energy_by_run = pd.DataFrame(
                 {"run": duration_by_run["run"], "total_energy_joule": float("nan")}
             )
@@ -1376,9 +1455,15 @@ def exporter_csv(event=None):
             if metrics_complete_path
             else "Metrics: <b>not available</b><br>"
         )
+        nodes_metrics_summary = (
+            f"Nodes metrics: <b>{nodes_metrics_path}</b><br>"
+            if nodes_metrics_path
+            else "Nodes metrics: <b>not available</b><br>"
+        )
         export_message.object = (
             f"✅ Exported results: <b>{packets_path}</b><br>"
             f"{metrics_summary}"
+            f"{nodes_metrics_summary}"
             f"Raw energy compatibility: <b>{raw_energy_path}</b>{config_summary}"
             "<br>(Open them with Excel or pandas)"
         )
