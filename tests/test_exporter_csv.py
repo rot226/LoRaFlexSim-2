@@ -11,6 +11,11 @@ except Exception:
 from loraflexsim.launcher import dashboard  # noqa: E402
 
 
+def _read_exported_csv(path):
+    assert path.read_bytes().startswith(b"\xef\xbb\xbf")
+    return pd.read_csv(path)
+
+
 def _export_dir(tmp_path):
     exports_root = tmp_path / "results" / "dashboard_exports"
     export_dirs = [path for path in exports_root.iterdir() if path.is_dir()]
@@ -51,7 +56,7 @@ def test_export_to_tmp_dir(tmp_path, monkeypatch):
     assert raw_energy.exists()
     assert energy_summary.exists()
 
-    packets_df = pd.read_csv(raw_packets)
+    packets_df = _read_exported_csv(raw_packets)
     assert list(packets_df.columns)[:6] == [
         "time",
         "node_id",
@@ -63,10 +68,10 @@ def test_export_to_tmp_dir(tmp_path, monkeypatch):
     assert packets_df["sf"].between(7, 12).all()
     assert packets_df["payload_bytes"].tolist() == [20, 20]
 
-    energy_df = pd.read_csv(raw_energy)
+    energy_df = _read_exported_csv(raw_energy)
     assert list(energy_df.columns) == ["run", "total_energy_joule", "sim_duration_s"]
 
-    energy_summary_df = pd.read_csv(energy_summary)
+    energy_summary_df = _read_exported_csv(energy_summary)
     assert list(energy_summary_df.columns) == [
         "run",
         "total_energy_joule",
@@ -124,9 +129,13 @@ def test_collect_current_run_results_is_idempotent_for_export(tmp_path, monkeypa
     dashboard.exporter_csv()
 
     export_dir = _export_dir(tmp_path)
-    assert pd.read_csv(export_dir / "metrics_complete.csv")["run"].tolist() == [1]
-    assert pd.read_csv(export_dir / "raw_packets.csv")["run"].unique().tolist() == [1]
-    assert pd.read_csv(export_dir / "runs_config.csv")["run"].tolist() == [1]
+    assert _read_exported_csv(export_dir / "metrics_complete.csv")["run"].tolist() == [
+        1
+    ]
+    assert _read_exported_csv(export_dir / "raw_packets.csv")[
+        "run"
+    ].unique().tolist() == [1]
+    assert _read_exported_csv(export_dir / "runs_config.csv")["run"].tolist() == [1]
 
 
 def test_export_energy_summary_keeps_multiple_runs_identifiable(tmp_path, monkeypatch):
@@ -172,7 +181,7 @@ def test_export_energy_summary_keeps_multiple_runs_identifiable(tmp_path, monkey
     dashboard.exporter_csv()
 
     export_dir = _export_dir(tmp_path)
-    energy_df = pd.read_csv(export_dir / "energy_summary.csv")
+    energy_df = _read_exported_csv(export_dir / "energy_summary.csv")
     assert list(energy_df.columns) == [
         "run",
         "total_energy_joule",
@@ -222,7 +231,7 @@ def test_export_raw_packets_payload_uses_run_config(tmp_path, monkeypatch):
     dashboard.exporter_csv()
 
     export_dir = _export_dir(tmp_path)
-    packets_df = pd.read_csv(export_dir / "raw_packets.csv")
+    packets_df = _read_exported_csv(export_dir / "raw_packets.csv")
     assert packets_df.groupby("run")["payload_bytes"].unique().apply(
         list
     ).to_dict() == {
@@ -283,17 +292,17 @@ def test_export_writes_complete_multi_run_csv_and_configs(tmp_path, monkeypatch)
     raw_packets = export_dir / "raw_packets.csv"
 
     assert metrics_complete.exists()
-    metrics_df = pd.read_csv(metrics_complete)
+    metrics_df = _read_exported_csv(metrics_complete)
     assert len(metrics_df) == 2
     assert metrics_df["run"].tolist() == [1, 2]
 
-    energy_summary_df = pd.read_csv(energy_summary)
+    energy_summary_df = _read_exported_csv(energy_summary)
     assert "run" in energy_summary_df.columns
 
-    raw_energy_df = pd.read_csv(raw_energy)
+    raw_energy_df = _read_exported_csv(raw_energy)
     assert "run" in raw_energy_df.columns
 
-    raw_packets_df = pd.read_csv(raw_packets)
+    raw_packets_df = _read_exported_csv(raw_packets)
     assert sorted(raw_packets_df["run"].unique().tolist()) == [1, 2]
 
     assert (export_dir / "run_1_config.json").exists()
@@ -335,12 +344,12 @@ def test_export_writes_node_and_gateway_metrics(tmp_path, monkeypatch):
     gateways_metrics = export_dir / "gateways_metrics.csv"
 
     assert nodes_metrics.exists()
-    nodes_df = pd.read_csv(nodes_metrics)
+    nodes_df = _read_exported_csv(nodes_metrics)
     assert len(nodes_df) == 2
     assert {"run", "node_id", "pdr", "energy_j"}.issubset(nodes_df.columns)
 
     assert gateways_metrics.exists()
-    gateways_df = pd.read_csv(gateways_metrics)
+    gateways_df = _read_exported_csv(gateways_metrics)
     assert len(gateways_df) == 2
     assert {"run", "gateway_id", "pdr", "energy_j"}.issubset(gateways_df.columns)
 
@@ -371,7 +380,7 @@ def test_export_writes_qos_clusters_metrics(tmp_path, monkeypatch):
     qos_clusters_metrics = export_dir / "qos_clusters_metrics.csv"
     assert qos_clusters_metrics.exists()
 
-    qos_clusters_df = pd.read_csv(qos_clusters_metrics)
+    qos_clusters_df = _read_exported_csv(qos_clusters_metrics)
     assert {
         "run",
         "cluster_id",
