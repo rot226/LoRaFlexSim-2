@@ -242,7 +242,10 @@ def _collect_current_run_results() -> None:
     if not _run_already_collected(runs_metrics, run_number):
         try:
             metrics_payload = dict(sim.get_metrics())
-            metrics_payload.setdefault("run", run_number)
+            # ``run`` identifies rows in exported multi-run metrics.  Always
+            # normalize it to the current run so a simulator payload without a
+            # run, or with a stale run, cannot create an ambiguous duplicate.
+            metrics_payload["run"] = run_number
             runs_metrics.append(metrics_payload)
         except Exception:
             metrics_payload = None
@@ -256,14 +259,20 @@ def _collect_current_run_results() -> None:
                 except (TypeError, ValueError):
                     continue
 
-    if not _run_already_collected(runs_configs, run_number):
-        run_config = getattr(sim, "run_config", None)
-        if isinstance(run_config, dict):
-            config_payload = dict(run_config)
-            config_payload.setdefault("run", run_number)
+    run_cfg = getattr(sim, "run_config", None)
+    if isinstance(run_cfg, dict):
+        config_payload = dict(run_cfg)
+        config_run = config_payload.get("run", run_number)
+        try:
+            config_run = int(config_run)
+        except (TypeError, ValueError):
+            config_run = run_number
+        config_payload["run"] = config_run
+        if not _run_already_collected(runs_configs, config_run):
             if metrics_payload is None:
                 try:
                     metrics_payload = dict(sim.get_metrics())
+                    metrics_payload["run"] = run_number
                 except Exception:
                     metrics_payload = None
             if metrics_payload is not None:
