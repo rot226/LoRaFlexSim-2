@@ -10,6 +10,9 @@ import plotly.graph_objects as go
 import numpy as np
 import time
 import threading
+from datetime import datetime
+from pathlib import Path
+
 import pandas as pd
 
 # Assurer la résolution correcte des imports quel que soit le répertoire
@@ -1539,8 +1542,9 @@ def _build_qos_clusters_metrics_df(metrics_list: list[dict]) -> pd.DataFrame:
 
 # --- Export CSV local : Méthode universelle ---
 def exporter_csv(event=None):
-    """Export simulation results as normalized CSV files in the current directory."""
-    dest_dir = os.getcwd()
+    """Export simulation results as normalized CSV files in a timestamped folder."""
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    dest_dir = Path("results") / "dashboard_exports" / timestamp
     global runs_events, runs_metrics, runs_configs
 
     if not (runs_events or runs_metrics or runs_configs):
@@ -1548,7 +1552,8 @@ def exporter_csv(event=None):
         return
 
     try:
-        exported_files: list[tuple[str, str]] = []
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        exported_files: list[tuple[str, Path]] = []
         duration_by_run = pd.DataFrame(columns=["run", "sim_duration_s"])
 
         fallback_payload_bytes = int(getattr(sim, "payload_size_bytes", 0) or 0)
@@ -1636,7 +1641,7 @@ def exporter_csv(event=None):
                         ]
                     ]
 
-                    packets_path = os.path.join(dest_dir, "raw_packets.csv")
+                    packets_path = dest_dir / "raw_packets.csv"
                     packets_df.to_csv(packets_path, index=False, encoding="utf-8")
                     exported_files.append(("Raw packets", packets_path))
 
@@ -1665,17 +1670,17 @@ def exporter_csv(event=None):
                         on="run",
                         how="left",
                     )
-            metrics_complete_path = os.path.join(dest_dir, "metrics_complete.csv")
+            metrics_complete_path = dest_dir / "metrics_complete.csv"
             metrics_df.to_csv(metrics_complete_path, index=False, encoding="utf-8")
             exported_files.append(("Complete metrics", metrics_complete_path))
 
             nodes_metrics_df = _build_nodes_metrics_df(runs_metrics)
-            nodes_metrics_path = os.path.join(dest_dir, "nodes_metrics.csv")
+            nodes_metrics_path = dest_dir / "nodes_metrics.csv"
             nodes_metrics_df.to_csv(nodes_metrics_path, index=False, encoding="utf-8")
             exported_files.append(("Nodes metrics", nodes_metrics_path))
 
             gateways_metrics_df = _build_gateways_metrics_df(runs_metrics)
-            gateways_metrics_path = os.path.join(dest_dir, "gateways_metrics.csv")
+            gateways_metrics_path = dest_dir / "gateways_metrics.csv"
             gateways_metrics_df.to_csv(
                 gateways_metrics_path, index=False, encoding="utf-8"
             )
@@ -1686,7 +1691,7 @@ def exporter_csv(event=None):
                 "sf_distribution",
                 "sf",
             )
-            sf_distribution_path = os.path.join(dest_dir, "sf_distribution.csv")
+            sf_distribution_path = dest_dir / "sf_distribution.csv"
             sf_distribution_df.to_csv(
                 sf_distribution_path, index=False, encoding="utf-8"
             )
@@ -1697,20 +1702,14 @@ def exporter_csv(event=None):
                 "tx_power_distribution",
                 "tx_power_dbm",
             )
-            tx_power_distribution_path = os.path.join(
-                dest_dir,
-                "tx_power_distribution.csv",
-            )
+            tx_power_distribution_path = dest_dir / "tx_power_distribution.csv"
             tx_power_distribution_df.to_csv(
                 tx_power_distribution_path, index=False, encoding="utf-8"
             )
             exported_files.append(("TX power distribution", tx_power_distribution_path))
 
             qos_clusters_metrics_df = _build_qos_clusters_metrics_df(runs_metrics)
-            qos_clusters_metrics_path = os.path.join(
-                dest_dir,
-                "qos_clusters_metrics.csv",
-            )
+            qos_clusters_metrics_path = dest_dir / "qos_clusters_metrics.csv"
             qos_clusters_metrics_df.to_csv(
                 qos_clusters_metrics_path, index=False, encoding="utf-8"
             )
@@ -1733,12 +1732,12 @@ def exporter_csv(event=None):
                 ["run", "total_energy_joule", "sim_duration_s"]
             ]
             raw_energy_df = raw_energy_df.fillna(0.0)
-            raw_energy_path = os.path.join(dest_dir, "raw_energy.csv")
+            raw_energy_path = dest_dir / "raw_energy.csv"
             raw_energy_df.to_csv(raw_energy_path, index=False, encoding="utf-8")
             exported_files.append(("Raw energy compatibility", raw_energy_path))
-        written_configs: list[str] = []
+        written_configs: list[Path] = []
         for idx, run_cfg in enumerate(runs_configs, start=1):
-            cfg_path = os.path.join(dest_dir, f"run_{idx}_config.json")
+            cfg_path = dest_dir / f"run_{idx}_config.json"
             with open(cfg_path, "w", encoding="utf-8") as cfg_file:
                 json.dump(
                     run_cfg,
@@ -1758,18 +1757,19 @@ def exporter_csv(event=None):
             f"{label}: <b>{path}</b>" for label, path in exported_files
         )
         export_message.object = (
-            "✅ Exported files:<br>"
+            "✅ Export folder: "
+            f"<b>{dest_dir}</b><br>"
+            "Exported files:<br>"
             f"{exported_summary}"
             "<br>(Open them with Excel or pandas)"
         )
 
         try:
-            folder = dest_dir
             if sys.platform.startswith("win"):
-                os.startfile(folder)
+                os.startfile(dest_dir)
             else:
                 opener = "open" if sys.platform == "darwin" else "xdg-open"
-                subprocess.Popen([opener, folder])
+                subprocess.Popen([opener, str(dest_dir)])
         except Exception:
             pass
     except Exception as e:
