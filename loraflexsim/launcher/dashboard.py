@@ -1413,6 +1413,35 @@ def _build_gateways_metrics_df(metrics_list: list[dict]) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=base_columns + sorted(extra_breakdown_columns))
 
 
+def _build_distribution_df(
+    metrics_list: list[dict],
+    distribution_key: str,
+    value_column: str,
+) -> pd.DataFrame:
+    """Build a normalized DataFrame from per-run distribution metrics."""
+
+    rows: list[dict] = []
+    for run_number, metrics in enumerate(metrics_list, start=1):
+        if not isinstance(metrics, dict):
+            continue
+
+        distribution = metrics.get(distribution_key) or {}
+        if not isinstance(distribution, dict):
+            continue
+
+        run_value = metrics.get("run", run_number)
+        for value, node_count in distribution.items():
+            rows.append(
+                {
+                    "run": run_value,
+                    value_column: value,
+                    "node_count": node_count,
+                }
+            )
+
+    return pd.DataFrame(rows, columns=["run", value_column, "node_count"])
+
+
 # --- Export CSV local : Méthode universelle ---
 def exporter_csv(event=None):
     """Export simulation results as normalized CSV files in the current directory."""
@@ -1489,6 +1518,29 @@ def exporter_csv(event=None):
                 gateways_metrics_path, index=False, encoding="utf-8"
             )
 
+            sf_distribution_df = _build_distribution_df(
+                runs_metrics,
+                "sf_distribution",
+                "sf",
+            )
+            sf_distribution_path = os.path.join(dest_dir, "sf_distribution.csv")
+            sf_distribution_df.to_csv(
+                sf_distribution_path, index=False, encoding="utf-8"
+            )
+
+            tx_power_distribution_df = _build_distribution_df(
+                runs_metrics,
+                "tx_power_distribution",
+                "tx_power_dbm",
+            )
+            tx_power_distribution_path = os.path.join(
+                dest_dir,
+                "tx_power_distribution.csv",
+            )
+            tx_power_distribution_df.to_csv(
+                tx_power_distribution_path, index=False, encoding="utf-8"
+            )
+
             energy_by_run = pd.DataFrame(
                 {
                     "run": metrics_df["run"],
@@ -1501,6 +1553,17 @@ def exporter_csv(event=None):
             metrics_complete_path = None
             nodes_metrics_path = None
             gateways_metrics_path = None
+            sf_distribution_path = os.path.join(dest_dir, "sf_distribution.csv")
+            pd.DataFrame(
+                columns=["run", "sf", "node_count"]
+            ).to_csv(sf_distribution_path, index=False, encoding="utf-8")
+            tx_power_distribution_path = os.path.join(
+                dest_dir,
+                "tx_power_distribution.csv",
+            )
+            pd.DataFrame(
+                columns=["run", "tx_power_dbm", "node_count"]
+            ).to_csv(tx_power_distribution_path, index=False, encoding="utf-8")
             energy_by_run = pd.DataFrame(
                 {"run": duration_by_run["run"], "total_energy_joule": float("nan")}
             )
@@ -1537,11 +1600,19 @@ def exporter_csv(event=None):
             if gateways_metrics_path
             else "Gateways metrics: <b>not available</b><br>"
         )
+        sf_distribution_summary = (
+            f"SF distribution: <b>{sf_distribution_path}</b><br>"
+        )
+        tx_power_distribution_summary = (
+            f"TX power distribution: <b>{tx_power_distribution_path}</b><br>"
+        )
         export_message.object = (
             f"✅ Exported results: <b>{packets_path}</b><br>"
             f"{metrics_summary}"
             f"{nodes_metrics_summary}"
             f"{gateways_metrics_summary}"
+            f"{sf_distribution_summary}"
+            f"{tx_power_distribution_summary}"
             f"Raw energy compatibility: <b>{raw_energy_path}</b>{config_summary}"
             "<br>(Open them with Excel or pandas)"
         )
