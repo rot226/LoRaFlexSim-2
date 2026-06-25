@@ -1348,6 +1348,71 @@ def _build_nodes_metrics_df(metrics_list: list[dict]) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=base_columns + sorted(extra_breakdown_columns))
 
 
+def _build_gateways_metrics_df(metrics_list: list[dict]) -> pd.DataFrame:
+    """Build one gateway-level metrics row per run and gateway."""
+
+    base_columns = [
+        "run",
+        "gateway_id",
+        "pdr",
+        "energy_j",
+        "energy_tx_j",
+        "energy_rx_j",
+        "energy_sleep_j",
+        "energy_listen_j",
+    ]
+    breakdown_aliases = {
+        "tx": "energy_tx_j",
+        "rx": "energy_rx_j",
+        "sleep": "energy_sleep_j",
+        "listen": "energy_listen_j",
+    }
+    rows: list[dict] = []
+    extra_breakdown_columns: set[str] = set()
+
+    for run_number, metrics in enumerate(metrics_list, start=1):
+        if not isinstance(metrics, dict):
+            continue
+
+        run_value = metrics.get("run", run_number)
+        pdr_by_gateway = metrics.get("pdr_by_gateway") or {}
+        energy_by_gateway = metrics.get("energy_by_gateway") or {}
+        breakdown_by_gateway = metrics.get("energy_breakdown_by_gateway") or {}
+
+        gateway_ids = set()
+        for gateway_mapping in (
+            pdr_by_gateway,
+            energy_by_gateway,
+            breakdown_by_gateway,
+        ):
+            if isinstance(gateway_mapping, dict):
+                gateway_ids.update(gateway_mapping.keys())
+
+        for gateway_id in sorted(gateway_ids, key=lambda value: str(value)):
+            breakdown = breakdown_by_gateway.get(gateway_id, {})
+            if not isinstance(breakdown, dict):
+                breakdown = {}
+
+            row = {
+                "run": run_value,
+                "gateway_id": gateway_id,
+                "pdr": pdr_by_gateway.get(gateway_id),
+                "energy_j": energy_by_gateway.get(gateway_id, 0.0),
+                "energy_tx_j": breakdown.get("tx", 0.0),
+                "energy_rx_j": breakdown.get("rx", 0.0),
+                "energy_sleep_j": breakdown.get("sleep", 0.0),
+                "energy_listen_j": breakdown.get("listen", 0.0),
+            }
+            for key, value in breakdown.items():
+                column = breakdown_aliases.get(key, f"energy_{key}_j")
+                if column not in row:
+                    row[column] = value
+                    extra_breakdown_columns.add(column)
+            rows.append(row)
+
+    return pd.DataFrame(rows, columns=base_columns + sorted(extra_breakdown_columns))
+
+
 # --- Export CSV local : Méthode universelle ---
 def exporter_csv(event=None):
     """Export simulation results as normalized CSV files in the current directory."""
@@ -1418,6 +1483,12 @@ def exporter_csv(event=None):
             nodes_metrics_path = os.path.join(dest_dir, "nodes_metrics.csv")
             nodes_metrics_df.to_csv(nodes_metrics_path, index=False, encoding="utf-8")
 
+            gateways_metrics_df = _build_gateways_metrics_df(runs_metrics)
+            gateways_metrics_path = os.path.join(dest_dir, "gateways_metrics.csv")
+            gateways_metrics_df.to_csv(
+                gateways_metrics_path, index=False, encoding="utf-8"
+            )
+
             energy_by_run = pd.DataFrame(
                 {
                     "run": metrics_df["run"],
@@ -1429,6 +1500,7 @@ def exporter_csv(event=None):
         else:
             metrics_complete_path = None
             nodes_metrics_path = None
+            gateways_metrics_path = None
             energy_by_run = pd.DataFrame(
                 {"run": duration_by_run["run"], "total_energy_joule": float("nan")}
             )
@@ -1460,10 +1532,16 @@ def exporter_csv(event=None):
             if nodes_metrics_path
             else "Nodes metrics: <b>not available</b><br>"
         )
+        gateways_metrics_summary = (
+            f"Gateways metrics: <b>{gateways_metrics_path}</b><br>"
+            if gateways_metrics_path
+            else "Gateways metrics: <b>not available</b><br>"
+        )
         export_message.object = (
             f"✅ Exported results: <b>{packets_path}</b><br>"
             f"{metrics_summary}"
             f"{nodes_metrics_summary}"
+            f"{gateways_metrics_summary}"
             f"Raw energy compatibility: <b>{raw_energy_path}</b>{config_summary}"
             "<br>(Open them with Excel or pandas)"
         )
