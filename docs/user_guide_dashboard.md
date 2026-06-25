@@ -14,7 +14,7 @@ panel serve loraflexsim/launcher/dashboard.py --show
 2. Régler un petit scénario (ex. 10 nœuds, 1 passerelle).
 3. Cliquer sur **Lancer la simulation**.
 4. Lire les indicateurs (PDR, collisions, énergie, délai, débit).
-5. Exporter les résultats si nécessaire.
+5. Exporter les résultats si nécessaire. Voir la [documentation des exports CSV du dashboard](dashboard_export.md) pour comprendre les fichiers générés et les ouvrir sous Windows/Excel.
 
 ## Quand passer à la CLI ?
 
