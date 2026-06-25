@@ -1355,7 +1355,7 @@ def exporter_csv(event=None):
             )
 
         raw_energy_df = duration_by_run.merge(energy_by_run, on="run", how="left")
-        raw_energy_df = raw_energy_df[["total_energy_joule", "sim_duration_s"]]
+        raw_energy_df = raw_energy_df[["run", "total_energy_joule", "sim_duration_s"]]
         raw_energy_df = raw_energy_df.fillna(0.0)
         raw_energy_path = os.path.join(dest_dir, "raw_energy.csv")
         raw_energy_df.to_csv(raw_energy_path, index=False, encoding="utf-8")
