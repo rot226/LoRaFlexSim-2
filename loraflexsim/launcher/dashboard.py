@@ -93,6 +93,7 @@ timeline_fig = go.Figure()
 last_event_index = 0
 pause_prev_disabled = False
 node_paths: dict[int, list[tuple[float, float]]] = {}
+CSV_EXPORT_ENCODING = "utf-8-sig"
 
 
 def average_numeric_metrics(metrics_list: list[dict]) -> dict:
@@ -1721,7 +1722,9 @@ def exporter_csv(event=None):
                     ]
 
                     packets_path = dest_dir / "raw_packets.csv"
-                    packets_df.to_csv(packets_path, index=False, encoding="utf-8")
+                    packets_df.to_csv(
+                        packets_path, index=False, encoding=CSV_EXPORT_ENCODING
+                    )
                     written_files.append(packets_path)
 
                     duration_by_run = (
@@ -1750,18 +1753,22 @@ def exporter_csv(event=None):
                         how="left",
                     )
             metrics_complete_path = dest_dir / "metrics_complete.csv"
-            metrics_df.to_csv(metrics_complete_path, index=False, encoding="utf-8")
+            metrics_df.to_csv(
+                metrics_complete_path, index=False, encoding=CSV_EXPORT_ENCODING
+            )
             written_files.append(metrics_complete_path)
 
             nodes_metrics_df = _build_nodes_metrics_df(runs_metrics)
             nodes_metrics_path = dest_dir / "nodes_metrics.csv"
-            nodes_metrics_df.to_csv(nodes_metrics_path, index=False, encoding="utf-8")
+            nodes_metrics_df.to_csv(
+                nodes_metrics_path, index=False, encoding=CSV_EXPORT_ENCODING
+            )
             written_files.append(nodes_metrics_path)
 
             gateways_metrics_df = _build_gateways_metrics_df(runs_metrics)
             gateways_metrics_path = dest_dir / "gateways_metrics.csv"
             gateways_metrics_df.to_csv(
-                gateways_metrics_path, index=False, encoding="utf-8"
+                gateways_metrics_path, index=False, encoding=CSV_EXPORT_ENCODING
             )
             written_files.append(gateways_metrics_path)
 
@@ -1772,7 +1779,7 @@ def exporter_csv(event=None):
             )
             sf_distribution_path = dest_dir / "sf_distribution.csv"
             sf_distribution_df.to_csv(
-                sf_distribution_path, index=False, encoding="utf-8"
+                sf_distribution_path, index=False, encoding=CSV_EXPORT_ENCODING
             )
             written_files.append(sf_distribution_path)
 
@@ -1783,14 +1790,14 @@ def exporter_csv(event=None):
             )
             tx_power_distribution_path = dest_dir / "tx_power_distribution.csv"
             tx_power_distribution_df.to_csv(
-                tx_power_distribution_path, index=False, encoding="utf-8"
+                tx_power_distribution_path, index=False, encoding=CSV_EXPORT_ENCODING
             )
             written_files.append(tx_power_distribution_path)
 
             qos_clusters_metrics_df = _build_qos_clusters_metrics_df(runs_metrics)
             qos_clusters_metrics_path = dest_dir / "qos_clusters_metrics.csv"
             qos_clusters_metrics_df.to_csv(
-                qos_clusters_metrics_path, index=False, encoding="utf-8"
+                qos_clusters_metrics_path, index=False, encoding=CSV_EXPORT_ENCODING
             )
             written_files.append(qos_clusters_metrics_path)
 
@@ -1825,7 +1832,7 @@ def exporter_csv(event=None):
             energy_summary_df = energy_summary_df.fillna(0.0)
             energy_summary_path = dest_dir / "energy_summary.csv"
             energy_summary_df.to_csv(
-                energy_summary_path, index=False, encoding="utf-8"
+                energy_summary_path, index=False, encoding=CSV_EXPORT_ENCODING
             )
             written_files.append(energy_summary_path)
 
@@ -1833,7 +1840,9 @@ def exporter_csv(event=None):
                 ["run", "total_energy_joule", "sim_duration_s"]
             ].copy()
             raw_energy_path = dest_dir / "raw_energy.csv"
-            raw_energy_df.to_csv(raw_energy_path, index=False, encoding="utf-8")
+            raw_energy_df.to_csv(
+                raw_energy_path, index=False, encoding=CSV_EXPORT_ENCODING
+            )
             written_files.append(raw_energy_path)
 
         if runs_configs:
@@ -1850,7 +1859,9 @@ def exporter_csv(event=None):
                 ]
             ]
             runs_config_path = dest_dir / "runs_config.csv"
-            runs_config_df.to_csv(runs_config_path, index=False, encoding="utf-8")
+            runs_config_df.to_csv(
+                runs_config_path, index=False, encoding=CSV_EXPORT_ENCODING
+            )
             written_files.append(runs_config_path)
 
         for idx, run_cfg in enumerate(runs_configs, start=1):
