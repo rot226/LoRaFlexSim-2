@@ -72,6 +72,22 @@ current_run = 0
 runs_events: list[pd.DataFrame] = []
 runs_metrics: list[dict] = []
 runs_configs: list[dict] = []
+RUNS_CONFIG_REQUIRED_COLUMNS = [
+    "run",
+    "seed",
+    "traffic.mode",
+    "traffic.packet_interval_s",
+    "traffic.first_packet_interval_s",
+    "traffic.packets_per_node",
+    "traffic.payload_size_bytes",
+    "radio.phy_model",
+    "radio.fixed_sf",
+    "radio.fixed_tx_power_dbm",
+    "radio.num_channels",
+    "topology.num_nodes",
+    "topology.num_gateways",
+    "topology.area_size_m",
+]
 auto_fast_forward = False
 timeline_fig = go.Figure()
 last_event_index = 0
@@ -1736,6 +1752,24 @@ def exporter_csv(event=None):
             raw_energy_path = dest_dir / "raw_energy.csv"
             raw_energy_df.to_csv(raw_energy_path, index=False, encoding="utf-8")
             written_files.append(raw_energy_path)
+
+        if runs_configs:
+            runs_config_df = pd.json_normalize(runs_configs)
+            for required_column in RUNS_CONFIG_REQUIRED_COLUMNS:
+                if required_column not in runs_config_df.columns:
+                    runs_config_df[required_column] = pd.NA
+            runs_config_df = runs_config_df[
+                RUNS_CONFIG_REQUIRED_COLUMNS
+                + [
+                    column
+                    for column in runs_config_df.columns
+                    if column not in RUNS_CONFIG_REQUIRED_COLUMNS
+                ]
+            ]
+            runs_config_path = dest_dir / "runs_config.csv"
+            runs_config_df.to_csv(runs_config_path, index=False, encoding="utf-8")
+            written_files.append(runs_config_path)
+
         for idx, run_cfg in enumerate(runs_configs, start=1):
             cfg_path = dest_dir / f"run_{idx}_config.json"
             with open(cfg_path, "w", encoding="utf-8") as cfg_file:
