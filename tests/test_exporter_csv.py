@@ -85,6 +85,50 @@ def test_export_to_tmp_dir(tmp_path, monkeypatch):
     assert payload["radio"]["snir_mode"] is True
 
 
+def test_collect_current_run_results_is_idempotent_for_export(tmp_path, monkeypatch):
+    class FakeSim:
+        payload_size_bytes = 20
+        run_config = {"run": 1, "traffic": {"payload_size_bytes": 20}}
+
+        def get_events_dataframe(self):
+            return pd.DataFrame(
+                {
+                    "start_time": [0.0, 1.0],
+                    "node_id": [0, 1],
+                    "sf": [7, 8],
+                    "result": ["Success", "Success"],
+                }
+            )
+
+        def get_metrics(self):
+            return {"PDR": 100.0, "energy_J": 12.5}
+
+    dashboard.runs_events = []
+    dashboard.runs_metrics = []
+    dashboard.runs_configs = []
+    dashboard.current_run = 1
+    dashboard.sim = FakeSim()
+    dashboard.export_message = pn.pane.Markdown()
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **k: None)
+    monkeypatch.chdir(tmp_path)
+
+    dashboard._collect_current_run_results()
+    dashboard._collect_current_run_results()
+
+    assert len(dashboard.runs_events) == 1
+    assert len(dashboard.runs_metrics) == 1
+    assert len(dashboard.runs_configs) == 1
+    assert dashboard.runs_metrics[0]["run"] == 1
+    assert dashboard.runs_configs[0]["run"] == 1
+
+    dashboard.exporter_csv()
+
+    export_dir = _export_dir(tmp_path)
+    assert pd.read_csv(export_dir / "metrics_complete.csv")["run"].tolist() == [1]
+    assert pd.read_csv(export_dir / "raw_packets.csv")["run"].unique().tolist() == [1]
+    assert pd.read_csv(export_dir / "runs_config.csv")["run"].tolist() == [1]
+
+
 def test_export_energy_summary_keeps_multiple_runs_identifiable(tmp_path, monkeypatch):
     run_1_df = pd.DataFrame(
         {
