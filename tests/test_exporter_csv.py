@@ -28,7 +28,15 @@ def test_export_to_tmp_dir(tmp_path, monkeypatch):
         }
     )
     dashboard.runs_events = [df]
-    dashboard.runs_metrics = [{"PDR": 100, "energy_J": 12.5}]
+    dashboard.runs_metrics = [
+        {
+            "PDR": 100,
+            "energy_J": 12.5,
+            "energy_nodes_J": 8.0,
+            "energy_gateways_J": 4.5,
+            "simulation_duration_s": 1.0,
+        }
+    ]
     dashboard.runs_configs = [{"run": 1, "radio": {"snir_mode": True}}]
     dashboard.sim = type("S", (), {"payload_size_bytes": 20})()
     dashboard.export_message = pn.pane.Markdown()
@@ -38,8 +46,10 @@ def test_export_to_tmp_dir(tmp_path, monkeypatch):
     export_dir = _export_dir(tmp_path)
     raw_packets = export_dir / "raw_packets.csv"
     raw_energy = export_dir / "raw_energy.csv"
+    energy_summary = export_dir / "energy_summary.csv"
     assert raw_packets.exists()
     assert raw_energy.exists()
+    assert energy_summary.exists()
 
     packets_df = pd.read_csv(raw_packets)
     assert list(packets_df.columns)[:6] == [
@@ -56,13 +66,26 @@ def test_export_to_tmp_dir(tmp_path, monkeypatch):
     energy_df = pd.read_csv(raw_energy)
     assert list(energy_df.columns) == ["run", "total_energy_joule", "sim_duration_s"]
 
+    energy_summary_df = pd.read_csv(energy_summary)
+    assert list(energy_summary_df.columns) == [
+        "run",
+        "total_energy_joule",
+        "energy_nodes_joule",
+        "energy_gateways_joule",
+        "sim_duration_s",
+    ]
+    assert energy_summary_df.loc[0, "total_energy_joule"] == 12.5
+    assert energy_summary_df.loc[0, "energy_nodes_joule"] == 8.0
+    assert energy_summary_df.loc[0, "energy_gateways_joule"] == 4.5
+    assert energy_summary_df.loc[0, "sim_duration_s"] == 1.0
+
     run_config = export_dir / "run_1_config.json"
     assert run_config.exists()
     payload = json.loads(run_config.read_text(encoding="utf-8"))
     assert payload["radio"]["snir_mode"] is True
 
 
-def test_export_raw_energy_keeps_multiple_runs_identifiable(tmp_path, monkeypatch):
+def test_export_energy_summary_keeps_multiple_runs_identifiable(tmp_path, monkeypatch):
     run_1_df = pd.DataFrame(
         {
             "start_time": [0.0, 10.0],
@@ -83,8 +106,18 @@ def test_export_raw_energy_keeps_multiple_runs_identifiable(tmp_path, monkeypatc
     )
     dashboard.runs_events = [run_1_df, run_2_df]
     dashboard.runs_metrics = [
-        {"run": 1, "energy_J": 12.5},
-        {"run": 2, "energy_J": 25.0},
+        {
+            "run": 1,
+            "energy_J": 12.5,
+            "energy_nodes_J": 8.0,
+            "energy_gateways_J": 4.5,
+        },
+        {
+            "run": 2,
+            "energy_J": 25.0,
+            "energy_nodes_J": 16.0,
+            "energy_gateways_J": 9.0,
+        },
     ]
     dashboard.runs_configs = []
     dashboard.sim = type("S", (), {"payload_size_bytes": 20})()
@@ -95,15 +128,21 @@ def test_export_raw_energy_keeps_multiple_runs_identifiable(tmp_path, monkeypatc
     dashboard.exporter_csv()
 
     export_dir = _export_dir(tmp_path)
-    energy_df = pd.read_csv(export_dir / "raw_energy.csv")
-    assert list(energy_df.columns) == ["run", "total_energy_joule", "sim_duration_s"]
+    energy_df = pd.read_csv(export_dir / "energy_summary.csv")
+    assert list(energy_df.columns) == [
+        "run",
+        "total_energy_joule",
+        "energy_nodes_joule",
+        "energy_gateways_joule",
+        "sim_duration_s",
+    ]
     assert len(energy_df) == 2
     assert energy_df["run"].tolist() == [1, 2]
-    assert energy_df.set_index("run")["total_energy_joule"].to_dict() == {
-        1: 12.5,
-        2: 25.0,
-    }
-    assert energy_df.set_index("run")["sim_duration_s"].to_dict() == {1: 10.0, 2: 20.0}
+    energy_by_run = energy_df.set_index("run")
+    assert energy_by_run["total_energy_joule"].to_dict() == {1: 12.5, 2: 25.0}
+    assert energy_by_run["energy_nodes_joule"].to_dict() == {1: 8.0, 2: 16.0}
+    assert energy_by_run["energy_gateways_joule"].to_dict() == {1: 4.5, 2: 9.0}
+    assert energy_by_run["sim_duration_s"].to_dict() == {1: 10.0, 2: 20.0}
 
 
 def test_export_raw_packets_payload_uses_run_config(tmp_path, monkeypatch):
@@ -195,6 +234,7 @@ def test_export_writes_complete_multi_run_csv_and_configs(tmp_path, monkeypatch)
 
     export_dir = _export_dir(tmp_path)
     metrics_complete = export_dir / "metrics_complete.csv"
+    energy_summary = export_dir / "energy_summary.csv"
     raw_energy = export_dir / "raw_energy.csv"
     raw_packets = export_dir / "raw_packets.csv"
 
@@ -202,6 +242,9 @@ def test_export_writes_complete_multi_run_csv_and_configs(tmp_path, monkeypatch)
     metrics_df = pd.read_csv(metrics_complete)
     assert len(metrics_df) == 2
     assert metrics_df["run"].tolist() == [1, 2]
+
+    energy_summary_df = pd.read_csv(energy_summary)
+    assert "run" in energy_summary_df.columns
 
     raw_energy_df = pd.read_csv(raw_energy)
     assert "run" in raw_energy_df.columns
