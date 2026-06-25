@@ -1324,15 +1324,32 @@ def exporter_csv(event=None):
         )
         if runs_metrics:
             metrics_df = pd.json_normalize(runs_metrics)
+            if "run" not in metrics_df.columns:
+                metrics_df.insert(0, "run", range(1, len(metrics_df) + 1))
+            else:
+                metrics_df = metrics_df[["run"] + [
+                    col for col in metrics_df.columns if col != "run"
+                ]]
+            if "simulation_duration_s" not in metrics_df.columns:
+                metrics_df = metrics_df.merge(
+                    duration_by_run.rename(
+                        columns={"sim_duration_s": "simulation_duration_s"}
+                    ),
+                    on="run",
+                    how="left",
+                )
+            metrics_complete_path = os.path.join(dest_dir, "metrics_complete.csv")
+            metrics_df.to_csv(metrics_complete_path, index=False, encoding="utf-8")
             energy_by_run = pd.DataFrame(
                 {
-                    "run": list(range(1, len(metrics_df) + 1)),
+                    "run": metrics_df["run"],
                     "total_energy_joule": pd.to_numeric(
                         metrics_df.get("energy_J"), errors="coerce"
                     ),
                 }
             )
         else:
+            metrics_complete_path = None
             energy_by_run = pd.DataFrame(
                 {"run": duration_by_run["run"], "total_energy_joule": float("nan")}
             )
@@ -1340,8 +1357,8 @@ def exporter_csv(event=None):
         raw_energy_df = duration_by_run.merge(energy_by_run, on="run", how="left")
         raw_energy_df = raw_energy_df[["total_energy_joule", "sim_duration_s"]]
         raw_energy_df = raw_energy_df.fillna(0.0)
-        metrics_path = os.path.join(dest_dir, "raw_energy.csv")
-        raw_energy_df.to_csv(metrics_path, index=False, encoding="utf-8")
+        raw_energy_path = os.path.join(dest_dir, "raw_energy.csv")
+        raw_energy_df.to_csv(raw_energy_path, index=False, encoding="utf-8")
 
         written_configs: list[str] = []
         for idx, run_cfg in enumerate(runs_configs, start=1):
@@ -1354,9 +1371,16 @@ def exporter_csv(event=None):
         if written_configs:
             cfg_links = "<br>".join(f"Config run {i + 1}: <b>{path}</b>" for i, path in enumerate(written_configs))
             config_summary = f"<br>{cfg_links}"
+        metrics_summary = (
+            f"Metrics: <b>{metrics_complete_path}</b><br>"
+            if metrics_complete_path
+            else "Metrics: <b>not available</b><br>"
+        )
         export_message.object = (
             f"✅ Exported results: <b>{packets_path}</b><br>"
-            f"Metrics: <b>{metrics_path}</b>{config_summary}<br>(Open them with Excel or pandas)"
+            f"{metrics_summary}"
+            f"Raw energy compatibility: <b>{raw_energy_path}</b>{config_summary}"
+            "<br>(Open them with Excel or pandas)"
         )
 
         try:
