@@ -1442,6 +1442,101 @@ def _build_distribution_df(
     return pd.DataFrame(rows, columns=["run", value_column, "node_count"])
 
 
+def _compact_json(value) -> str:
+    """Serialize a value as compact JSON for CSV exports."""
+
+    if value is None:
+        return ""
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+
+
+def _cluster_metric_value(metric, cluster_id):
+    """Return a cluster metric from dict or sequence payloads."""
+
+    if isinstance(metric, dict):
+        if cluster_id in metric:
+            return metric[cluster_id]
+        cluster_key = str(cluster_id)
+        if cluster_key in metric:
+            return metric[cluster_key]
+        return None
+    if isinstance(metric, (list, tuple)):
+        try:
+            return metric[int(cluster_id)]
+        except (IndexError, TypeError, ValueError):
+            return None
+    return None
+
+
+def _qos_cluster_ids(*metrics):
+    """Collect QoS cluster identifiers from dict or sequence metrics."""
+
+    cluster_ids = set()
+    for metric in metrics:
+        if isinstance(metric, dict):
+            cluster_ids.update(metric.keys())
+        elif isinstance(metric, (list, tuple)):
+            cluster_ids.update(range(len(metric)))
+
+    def _sort_key(cluster_id):
+        try:
+            return (0, int(cluster_id))
+        except (TypeError, ValueError):
+            return (1, str(cluster_id))
+
+    return sorted(cluster_ids, key=_sort_key)
+
+
+def _build_qos_clusters_metrics_df(metrics_list: list[dict]) -> pd.DataFrame:
+    """Build one CSV row per run and QoS cluster metrics payload."""
+
+    columns = [
+        "run",
+        "cluster_id",
+        "pdr",
+        "pdr_target",
+        "pdr_gap",
+        "throughput_bps",
+        "node_count",
+        "sf_channel",
+    ]
+    rows: list[dict] = []
+    for run_number, metrics in enumerate(metrics_list, start=1):
+        if not isinstance(metrics, dict):
+            continue
+
+        pdr = metrics.get("qos_cluster_pdr")
+        targets = metrics.get("qos_cluster_targets")
+        gaps = metrics.get("qos_cluster_pdr_gap")
+        throughput = metrics.get("qos_cluster_throughput_bps")
+        node_counts = metrics.get("qos_cluster_node_counts")
+        sf_channel = metrics.get("qos_cluster_sf_channel")
+        cluster_ids = _qos_cluster_ids(
+            pdr, targets, gaps, throughput, node_counts, sf_channel
+        )
+        if not cluster_ids:
+            continue
+
+        run_value = metrics.get("run", run_number)
+        for cluster_id in cluster_ids:
+            rows.append(
+                {
+                    "run": run_value,
+                    "cluster_id": cluster_id,
+                    "pdr": _cluster_metric_value(pdr, cluster_id),
+                    "pdr_target": _cluster_metric_value(targets, cluster_id),
+                    "pdr_gap": _cluster_metric_value(gaps, cluster_id),
+                    "throughput_bps": _cluster_metric_value(throughput, cluster_id),
+                    "node_count": _cluster_metric_value(node_counts, cluster_id),
+                    "sf_channel": _compact_json(
+                        _cluster_metric_value(sf_channel, cluster_id)
+                    ),
+                }
+            )
+
+    return pd.DataFrame(rows, columns=columns)
+
+
 # --- Export CSV local : Méthode universelle ---
 def exporter_csv(event=None):
     """Export simulation results as normalized CSV files in the current directory."""
@@ -1541,6 +1636,15 @@ def exporter_csv(event=None):
                 tx_power_distribution_path, index=False, encoding="utf-8"
             )
 
+            qos_clusters_metrics_df = _build_qos_clusters_metrics_df(runs_metrics)
+            qos_clusters_metrics_path = os.path.join(
+                dest_dir,
+                "qos_clusters_metrics.csv",
+            )
+            qos_clusters_metrics_df.to_csv(
+                qos_clusters_metrics_path, index=False, encoding="utf-8"
+            )
+
             energy_by_run = pd.DataFrame(
                 {
                     "run": metrics_df["run"],
@@ -1564,6 +1668,22 @@ def exporter_csv(event=None):
             pd.DataFrame(
                 columns=["run", "tx_power_dbm", "node_count"]
             ).to_csv(tx_power_distribution_path, index=False, encoding="utf-8")
+            qos_clusters_metrics_path = os.path.join(
+                dest_dir,
+                "qos_clusters_metrics.csv",
+            )
+            pd.DataFrame(
+                columns=[
+                    "run",
+                    "cluster_id",
+                    "pdr",
+                    "pdr_target",
+                    "pdr_gap",
+                    "throughput_bps",
+                    "node_count",
+                    "sf_channel",
+                ]
+            ).to_csv(qos_clusters_metrics_path, index=False, encoding="utf-8")
             energy_by_run = pd.DataFrame(
                 {"run": duration_by_run["run"], "total_energy_joule": float("nan")}
             )
@@ -1606,6 +1726,9 @@ def exporter_csv(event=None):
         tx_power_distribution_summary = (
             f"TX power distribution: <b>{tx_power_distribution_path}</b><br>"
         )
+        qos_clusters_metrics_summary = (
+            f"QoS clusters metrics: <b>{qos_clusters_metrics_path}</b><br>"
+        )
         export_message.object = (
             f"✅ Exported results: <b>{packets_path}</b><br>"
             f"{metrics_summary}"
@@ -1613,6 +1736,7 @@ def exporter_csv(event=None):
             f"{gateways_metrics_summary}"
             f"{sf_distribution_summary}"
             f"{tx_power_distribution_summary}"
+            f"{qos_clusters_metrics_summary}"
             f"Raw energy compatibility: <b>{raw_energy_path}</b>{config_summary}"
             "<br>(Open them with Excel or pandas)"
         )
