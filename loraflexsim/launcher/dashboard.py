@@ -1,4 +1,5 @@
 import inspect
+import html
 import json
 import os
 import sys
@@ -1553,7 +1554,7 @@ def exporter_csv(event=None):
 
     try:
         dest_dir.mkdir(parents=True, exist_ok=True)
-        exported_files: list[tuple[str, Path]] = []
+        written_files: list[Path] = []
         duration_by_run = pd.DataFrame(columns=["run", "sim_duration_s"])
 
         fallback_payload_bytes = int(getattr(sim, "payload_size_bytes", 0) or 0)
@@ -1643,7 +1644,7 @@ def exporter_csv(event=None):
 
                     packets_path = dest_dir / "raw_packets.csv"
                     packets_df.to_csv(packets_path, index=False, encoding="utf-8")
-                    exported_files.append(("Raw packets", packets_path))
+                    written_files.append(packets_path)
 
                     duration_by_run = (
                         packets_df.groupby("run", as_index=False)["time"].max().rename(
@@ -1672,19 +1673,19 @@ def exporter_csv(event=None):
                     )
             metrics_complete_path = dest_dir / "metrics_complete.csv"
             metrics_df.to_csv(metrics_complete_path, index=False, encoding="utf-8")
-            exported_files.append(("Complete metrics", metrics_complete_path))
+            written_files.append(metrics_complete_path)
 
             nodes_metrics_df = _build_nodes_metrics_df(runs_metrics)
             nodes_metrics_path = dest_dir / "nodes_metrics.csv"
             nodes_metrics_df.to_csv(nodes_metrics_path, index=False, encoding="utf-8")
-            exported_files.append(("Nodes metrics", nodes_metrics_path))
+            written_files.append(nodes_metrics_path)
 
             gateways_metrics_df = _build_gateways_metrics_df(runs_metrics)
             gateways_metrics_path = dest_dir / "gateways_metrics.csv"
             gateways_metrics_df.to_csv(
                 gateways_metrics_path, index=False, encoding="utf-8"
             )
-            exported_files.append(("Gateways metrics", gateways_metrics_path))
+            written_files.append(gateways_metrics_path)
 
             sf_distribution_df = _build_distribution_df(
                 runs_metrics,
@@ -1695,7 +1696,7 @@ def exporter_csv(event=None):
             sf_distribution_df.to_csv(
                 sf_distribution_path, index=False, encoding="utf-8"
             )
-            exported_files.append(("SF distribution", sf_distribution_path))
+            written_files.append(sf_distribution_path)
 
             tx_power_distribution_df = _build_distribution_df(
                 runs_metrics,
@@ -1706,14 +1707,14 @@ def exporter_csv(event=None):
             tx_power_distribution_df.to_csv(
                 tx_power_distribution_path, index=False, encoding="utf-8"
             )
-            exported_files.append(("TX power distribution", tx_power_distribution_path))
+            written_files.append(tx_power_distribution_path)
 
             qos_clusters_metrics_df = _build_qos_clusters_metrics_df(runs_metrics)
             qos_clusters_metrics_path = dest_dir / "qos_clusters_metrics.csv"
             qos_clusters_metrics_df.to_csv(
                 qos_clusters_metrics_path, index=False, encoding="utf-8"
             )
-            exported_files.append(("QoS clusters metrics", qos_clusters_metrics_path))
+            written_files.append(qos_clusters_metrics_path)
 
         if runs_metrics:
             raw_energy_df = metrics_df[["run"]].copy()
@@ -1734,8 +1735,7 @@ def exporter_csv(event=None):
             raw_energy_df = raw_energy_df.fillna(0.0)
             raw_energy_path = dest_dir / "raw_energy.csv"
             raw_energy_df.to_csv(raw_energy_path, index=False, encoding="utf-8")
-            exported_files.append(("Raw energy compatibility", raw_energy_path))
-        written_configs: list[Path] = []
+            written_files.append(raw_energy_path)
         for idx, run_cfg in enumerate(runs_configs, start=1):
             cfg_path = dest_dir / f"run_{idx}_config.json"
             with open(cfg_path, "w", encoding="utf-8") as cfg_file:
@@ -1746,22 +1746,22 @@ def exporter_csv(event=None):
                     ensure_ascii=False,
                     sort_keys=True,
                 )
-            written_configs.append(cfg_path)
-            exported_files.append((f"Config run {idx}", cfg_path))
+            written_files.append(cfg_path)
 
-        if not exported_files:
+        if not written_files:
             export_message.object = "⚠️ No data to export!"
             return
 
-        exported_summary = "<br>".join(
-            f"{label}: <b>{path}</b>" for label, path in exported_files
+        files_list = "".join(
+            f"<li><code>{html.escape(path.name)}</code></li>" for path in written_files
         )
         export_message.object = (
-            "✅ Export folder: "
-            f"<b>{dest_dir}</b><br>"
-            "Exported files:<br>"
-            f"{exported_summary}"
-            "<br>(Open them with Excel or pandas)"
+            "✅ Export completed in "
+            f"<b>{html.escape(str(dest_dir))}</b><br>"
+            "<ul>"
+            f"{files_list}"
+            "</ul>"
+            "(Open them with Excel or pandas)"
         )
 
         try:
