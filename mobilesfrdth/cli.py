@@ -1223,6 +1223,12 @@ def _ensure_supported_python() -> bool:
 
 
 def main(argv: list[str] | None = None) -> int:
+    effective_argv = list(sys.argv[1:] if argv is None else argv)
+    if effective_argv and effective_argv[0] == "jamming":
+        from .jamming.cli import main as jamming_main
+
+        return jamming_main(effective_argv[1:])
+
     if not _ensure_supported_python():
         print(
             "Version Python non supportée: utiliser une version >=3.11 et <3.13.",
@@ -1232,7 +1238,7 @@ def main(argv: list[str] | None = None) -> int:
 
     parser = build_parser()
     try:
-        args = parser.parse_args(argv)
+        args = parser.parse_args(effective_argv)
         if getattr(args, "command", None) == "run":
             if not getattr(args, "preset", None):
                 if getattr(args, "config", None) is None:
