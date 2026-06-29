@@ -5,7 +5,7 @@ from __future__ import annotations
 from .campaigns import JammingCampaign, build_campaign
 from .channel_selection import DEFAULT_LORAWAN_CHANNELS_HZ, fixed_channels, random_channel, round_robin_channel
 from .csv_exporter import export_jamming_rows
-from .jammer import Jammer, JammerConfig, JammerObservation, build_jammers
+from .jammer import JammingEvent, Jammer, JammerConfig, JammerNode, JammerObservation, build_jammers
 from .jammer_scheduler import JammerScheduler, JammerWindow, periodic_windows
 from .metrics import JammingMetrics, summarize_jamming
 from .placement import grid_placement, random_placement
@@ -14,6 +14,8 @@ from .scenarios import JammingScenario, no_jamming_scenario
 __all__ = [
     "DEFAULT_LORAWAN_CHANNELS_HZ",
     "Jammer",
+    "JammerNode",
+    "JammingEvent",
     "JammerConfig",
     "JammerObservation",
     "JammerScheduler",
