@@ -2,7 +2,7 @@
 
 Cette extension ajoute un sous-package `mobilesfrdth.jamming` dédié à la préparation de campagnes de brouillage LoRa/LoRaWAN. Elle s'intègre au package Python `mobilesfrdth` et conserve les points d'entrée existants : les fichiers `mobilesfrdth/simulator/engine.py`, `mobilesfrdth/simulator/io.py` et `mobilesfrdth/cli.py` ne sont ni déplacés ni renommés.
 
-> Note de compatibilité : certaines commandes historiques ou consignes de reproduction peuvent encore mentionner `loraflexsim`. Dans ce dépôt, l'extension de brouillage décrite ici cible bien `mobilesfrdth` ; utilisez donc les imports `mobilesfrdth.jamming` pour les campagnes Python.
+> Note de compatibilité : certaines commandes historiques ou consignes de reproduction peuvent encore mentionner `loraflexsim`. Le package racine `loraflexsim` est désormais disponible comme façade CLI de compatibilité : `python -m loraflexsim.cli run`, `python -m loraflexsim.cli campaign` (alias de `run`) et `python -m loraflexsim.cli aggregate` délèguent à la CLI de campagnes `mobilesfrdth`. Les imports Python de brouillage restent ceux de `mobilesfrdth.jamming`, et le comportement existant de `python -m mobilesfrdth` n'est pas modifié.
 
 ## API publique stable
 

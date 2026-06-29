@@ -1,11 +1,15 @@
 """Top-level package for LoRaFlexSim."""
 
-from .mac import LoRaMAC
-from .phy import LoRaPHY
+from __future__ import annotations
+
 from .application import Application
-from .loranode import Node
 from .gateway import Gateway
+from .loranode import Node
+from .mac import LoRaMAC
 from .network_server import NetworkServer
+from .phy import LoRaPHY
+
+__version__ = "1.0.1"
 
 __all__ = [
     "LoRaMAC",
@@ -14,4 +18,5 @@ __all__ = [
     "Node",
     "Gateway",
     "NetworkServer",
+    "__version__",
 ]
