@@ -29,7 +29,7 @@ dependencies = [
 ]
 
 [project.scripts]
-loraflexsim = "loraflexsim.__main__:main"
+loraflexsim = "loraflexsim.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "."}
