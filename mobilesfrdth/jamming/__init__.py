@@ -21,6 +21,7 @@ from .csv_exporter import export_jamming_rows
 from .jammer import JammingEvent, Jammer, JammerConfig, JammerNode, JammerObservation, build_jammers
 from .jammer_scheduler import JammerScheduler, JammerWindow, periodic_windows
 from .metrics import JammingMetrics, summarize_jamming
+from .runner import JammingRunResult, LegitimateNode, build_legitimate_nodes, run_jamming_simulation
 from .placement import circle_placement, grid_placement, place_jammers_on_circle, random_placement
 from .scenarios import (
     BASELINE_JAMMING_SINGLE_CHANNEL,
@@ -52,6 +53,8 @@ __all__ = [
     "JammerWindow",
     "JammingCampaign",
     "JammingMetrics",
+    "JammingRunResult",
+    "LegitimateNode",
     "BASELINE_JAMMING_SINGLE_CHANNEL",
     "MULTICHANNEL_JAMMING_ADR_CHANNEL_SELECTION",
     "JammingScenario",
@@ -62,6 +65,7 @@ __all__ = [
     "build_campaign",
     "build_channel_selection_policy",
     "build_jammers",
+    "build_legitimate_nodes",
     "export_jamming_rows",
     "fixed_channels",
     "circle_placement",
@@ -73,5 +77,6 @@ __all__ = [
     "random_channel",
     "random_placement",
     "round_robin_channel",
+    "run_jamming_simulation",
     "summarize_jamming",
 ]
