@@ -22,7 +22,17 @@ from .jammer import JammingEvent, Jammer, JammerConfig, JammerNode, JammerObserv
 from .jammer_scheduler import JammerScheduler, JammerWindow, periodic_windows
 from .metrics import JammingMetrics, summarize_jamming
 from .placement import circle_placement, grid_placement, place_jammers_on_circle, random_placement
-from .scenarios import JammingScenario, circle_shifted_jamming_scenario, circle_static_jamming_scenario, no_jamming_scenario
+from .scenarios import (
+    BASELINE_JAMMING_SINGLE_CHANNEL,
+    MULTICHANNEL_JAMMING_ADR_CHANNEL_SELECTION,
+    JammingScenario,
+    JammingScenarioParameters,
+    baseline_jamming_single_channel,
+    circle_shifted_jamming_scenario,
+    circle_static_jamming_scenario,
+    multichannel_jamming_adr_channel_selection,
+    no_jamming_scenario,
+)
 
 __all__ = [
     "DEFAULT_LORAWAN_CHANNELS_HZ",
@@ -42,7 +52,11 @@ __all__ = [
     "JammerWindow",
     "JammingCampaign",
     "JammingMetrics",
+    "BASELINE_JAMMING_SINGLE_CHANNEL",
+    "MULTICHANNEL_JAMMING_ADR_CHANNEL_SELECTION",
     "JammingScenario",
+    "JammingScenarioParameters",
+    "baseline_jamming_single_channel",
     "circle_shifted_jamming_scenario",
     "circle_static_jamming_scenario",
     "build_campaign",
@@ -52,6 +66,7 @@ __all__ = [
     "fixed_channels",
     "circle_placement",
     "grid_placement",
+    "multichannel_jamming_adr_channel_selection",
     "no_jamming_scenario",
     "periodic_windows",
     "place_jammers_on_circle",
