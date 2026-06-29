@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import random
 import shlex
 import sys
@@ -26,6 +27,8 @@ EXPECTED_RUN_CSVS = (
     "raw/channel_timeseries_*.csv",
     "raw/sf_timeseries_*.csv",
 )
+
+CAMPAIGN_LOGGER_NAME = "mobilesfrdth.jamming.campaign"
 
 
 @dataclass(frozen=True)
@@ -214,7 +217,14 @@ def run_campaign(
     dry_run: bool = False,
     config: Mapping[str, Any] | None = None,
 ) -> tuple[JammingRunKey, ...]:
-    """Exécute une campagne complète puis lance l'agrégation finale."""
+    """Exécute une campagne complète puis lance l'agrégation finale.
+
+    Comportement d'erreur actuel: la campagne est en mode fail-fast. Si un run échoue,
+    son statut est marqué ``failed`` quand le dossier de run a pu être créé, l'erreur
+    est journalisée, puis l'exception est relevée. Une future option CLI
+    ``--continue-on-error`` pourra s'appuyer sur ces journaux et statuts pour continuer
+    les runs suivants au lieu d'interrompre la campagne.
+    """
 
     campaign_layout = _coerce_layout(layout)
     runs = expand_run_matrix(
@@ -230,6 +240,7 @@ def run_campaign(
 
     campaign_layout.root.mkdir(parents=True, exist_ok=True)
     campaign_layout.logs_dir.mkdir(parents=True, exist_ok=True)
+    _campaign_logger(campaign_layout)
     _write_campaign_metadata(campaign_layout, runs, config=config)
     scenario_by_name = {scenario.name: scenario for scenario in scenarios}
     for run_key in runs:
@@ -278,32 +289,48 @@ def _execute_run(layout: CampaignLayout, scenario: JammingScenario, run_key: Jam
     run_dir = layout.run_dir(run_key)
     run_dir.mkdir(parents=True, exist_ok=True)
     status_path = run_dir / "status.json"
-    status_path.write_text(json.dumps({"status": "running", "run_key": run_key.to_dict()}, indent=2), encoding="utf-8")
-    windows = _jamming_windows(scenario, seed=run_key.seed)
-    result = run_jamming_simulation(
-        node_count=run_key.node_count,
-        until_s=float(scenario.metadata.get("sim_time_s", DEFAULT_SIM_TIME_S)),
-        seed=run_key.seed,
-        jamming_windows=windows,
-        algo="adr" if run_key.adr_enabled else "none",
-    )
-    result.run_summary.update(
-        {
-            "scenario": run_key.scenario,
-            "scenario_name": run_key.scenario,
-            "nodes": run_key.node_count,
-            "node_count": run_key.node_count,
-            "adr": "on" if run_key.adr_enabled else "off",
-            "adr_enabled": run_key.adr_enabled,
-            "channel_selection": run_key.channel_selection,
-        }
-    )
-    written = write_run_csvs(result, {"root": run_dir, "raw": run_dir / "raw", "per_run": run_dir / "per_run"})
-    status_path.write_text(
-        json.dumps({"status": "completed", "run_key": run_key.to_dict(), "csv": {k: str(v) for k, v in written.items()}}, indent=2),
-        encoding="utf-8",
-    )
-    _log(layout, "run_completed", run_key=run_key.to_dict(), run_dir=str(run_dir))
+    run_params = _effective_run_params(scenario, run_key, run_dir=run_dir)
+    _log(layout, "run_started", run_key=run_key.to_dict(), parameters=run_params, run_log=str(_run_log_path(layout, run_key)))
+    _log_run(layout, run_key, "run_started", parameters=run_params, seed=run_key.seed)
+    status_path.write_text(json.dumps({"status": "running", "run_key": run_key.to_dict(), "parameters": run_params}, indent=2), encoding="utf-8")
+    try:
+        windows = _jamming_windows(scenario, seed=run_key.seed)
+        result = run_jamming_simulation(
+            node_count=run_key.node_count,
+            until_s=run_params["sim_time_s"],
+            seed=run_key.seed,
+            jamming_windows=windows,
+            algo=run_params["algo"],
+        )
+        result.run_summary.update(
+            {
+                "scenario": run_key.scenario,
+                "scenario_name": run_key.scenario,
+                "nodes": run_key.node_count,
+                "node_count": run_key.node_count,
+                "adr": "on" if run_key.adr_enabled else "off",
+                "adr_enabled": run_key.adr_enabled,
+                "channel_selection": run_key.channel_selection,
+                "seed": run_key.seed,
+                "status": "completed",
+            }
+        )
+        written = write_run_csvs(result, {"root": run_dir, "raw": run_dir / "raw", "per_run": run_dir / "per_run"})
+        csv_paths = {k: str(v) for k, v in written.items()}
+        status_path.write_text(
+            json.dumps({"status": "completed", "run_key": run_key.to_dict(), "parameters": run_params, "csv": csv_paths}, indent=2),
+            encoding="utf-8",
+        )
+        _log_run(layout, run_key, "run_completed", parameters=run_params, csv=csv_paths, status="completed")
+        _log(layout, "run_completed", run_key=run_key.to_dict(), run_dir=str(run_dir), csv=csv_paths, status="completed")
+    except Exception as exc:
+        failure_payload = {"status": "failed", "run_key": run_key.to_dict(), "parameters": run_params, "error": repr(exc)}
+        try:
+            status_path.write_text(json.dumps(failure_payload, indent=2), encoding="utf-8")
+        finally:
+            _log_run(layout, run_key, "run_failed", parameters=run_params, status="failed", error=repr(exc))
+            _log(layout, "run_failed", run_key=run_key.to_dict(), run_dir=str(run_dir), status="failed", error=repr(exc))
+        raise
 
 
 def _jamming_windows(scenario: JammingScenario, *, seed: int) -> list[JammingEvent]:
@@ -335,8 +362,46 @@ def _write_campaign_metadata(layout: CampaignLayout, runs: Sequence[JammingRunKe
 def _log(layout: CampaignLayout, event: str, **payload: Any) -> None:
     layout.logs_dir.mkdir(parents=True, exist_ok=True)
     record = {"timestamp": datetime.now(timezone.utc).isoformat(), "event": event, **payload}
-    with (layout.logs_dir / "campaign.log").open("a", encoding="utf-8") as handle:
+    _campaign_logger(layout).info(json.dumps(record, ensure_ascii=False))
+
+
+def _log_run(layout: CampaignLayout, run_key: JammingRunKey, event: str, **payload: Any) -> None:
+    layout.logs_dir.mkdir(parents=True, exist_ok=True)
+    record = {"timestamp": datetime.now(timezone.utc).isoformat(), "event": event, "run_key": run_key.to_dict(), **payload}
+    with _run_log_path(layout, run_key).open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def _campaign_logger(layout: CampaignLayout) -> logging.Logger:
+    layout.logs_dir.mkdir(parents=True, exist_ok=True)
+    log_path = layout.logs_dir / "campaign.log"
+    logger = logging.getLogger(f"{CAMPAIGN_LOGGER_NAME}.{id(layout.root.resolve())}")
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+    if not any(isinstance(handler, logging.FileHandler) and Path(handler.baseFilename) == log_path for handler in logger.handlers):
+        handler = logging.FileHandler(log_path, encoding="utf-8")
+        handler.setFormatter(logging.Formatter("%(message)s"))
+        logger.addHandler(handler)
+    return logger
+
+
+def _run_log_path(layout: CampaignLayout, run_key: JammingRunKey) -> Path:
+    adr = "on" if run_key.adr_enabled else "off"
+    return layout.logs_dir / f"run_{_safe_token(run_key.scenario)}_n{run_key.node_count}_adr_{adr}_seed_{run_key.seed}.log"
+
+
+def _effective_run_params(scenario: JammingScenario, run_key: JammingRunKey, *, run_dir: Path) -> dict[str, Any]:
+    return {
+        "scenario": run_key.scenario,
+        "node_count": run_key.node_count,
+        "adr": "on" if run_key.adr_enabled else "off",
+        "adr_enabled": run_key.adr_enabled,
+        "seed": run_key.seed,
+        "channel_selection": run_key.channel_selection,
+        "sim_time_s": float(scenario.metadata.get("sim_time_s", DEFAULT_SIM_TIME_S)),
+        "algo": "adr" if run_key.adr_enabled else "none",
+        "run_dir": str(run_dir),
+    }
 
 
 def _coerce_layout(layout: CampaignLayout | str | Path | Mapping[str, Any]) -> CampaignLayout:
