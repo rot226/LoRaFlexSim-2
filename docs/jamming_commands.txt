@@ -1,0 +1,108 @@
+Commandes de brouillage LoRaFlexSim pour Windows 11
+====================================================
+
+Ces commandes sont des exemples à copier-coller depuis la racine du dépôt,
+après activation de l'environnement Python du projet. Elles ne doivent pas
+être appelées depuis une étape d'installation ou de test automatique : les
+campagnes ne se lancent que si vous exécutez explicitement une des commandes
+ci-dessous.
+
+1. Run baseline unique
+----------------------
+PowerShell, avec retours ligne par backtick :
+
+python -m mobilesfrdth jamming run `
+  --config config\jamming\baseline_single_channel.yaml `
+  --scenario baseline_jamming_single_channel `
+  --nodes 20 `
+  --adr off `
+  --seed 0 `
+  --sim-time 3600 `
+  --channels 868.1 `
+  --jammed-channel 868.1 `
+  --channel-selection static `
+  --time-bin-size 60 `
+  --out results\jamming\baseline_single_run `
+  --overwrite
+
+CMD, en une seule ligne :
+
+python -m mobilesfrdth jamming run --config config\jamming\baseline_single_channel.yaml --scenario baseline_jamming_single_channel --nodes 20 --adr off --seed 0 --sim-time 3600 --channels 868.1 --jammed-channel 868.1 --channel-selection static --time-bin-size 60 --out results\jamming\baseline_single_run --overwrite
+
+2. Campagne baseline complète
+-----------------------------
+PowerShell, avec retours ligne par backtick :
+
+python -m mobilesfrdth jamming campaign `
+  --config config\jamming\baseline_single_channel.yaml `
+  --scenario baseline_jamming_single_channel `
+  --nodes 20 `
+  --adr off `
+  --seeds 0:49 `
+  --sim-time 3600 `
+  --channels 868.1 `
+  --jammed-channel 868.1 `
+  --channel-selection static `
+  --time-bin-size 60 `
+  --out results\jamming\baseline_campaign `
+  --resume
+
+CMD, en une seule ligne :
+
+python -m mobilesfrdth jamming campaign --config config\jamming\baseline_single_channel.yaml --scenario baseline_jamming_single_channel --nodes 20 --adr off --seeds 0:49 --sim-time 3600 --channels 868.1 --jammed-channel 868.1 --channel-selection static --time-bin-size 60 --out results\jamming\baseline_campaign --resume
+
+3. Campagne multicanal complète
+-------------------------------
+PowerShell, avec retours ligne par backtick :
+
+python -m mobilesfrdth jamming campaign `
+  --config config\jamming\multichannel_adr_selection.yaml `
+  --scenario multichannel_jamming_adr_channel_selection `
+  --nodes 20 `
+  --adr on `
+  --seeds 0:49 `
+  --sim-time 3600 `
+  --channels 868.1,868.3,868.5,867.1,867.3,867.5,867.7,867.9 `
+  --jammed-channel 868.1 `
+  --channel-selection adr-assisted `
+  --time-bin-size 60 `
+  --out results\jamming\multichannel_campaign `
+  --resume
+
+CMD, en une seule ligne :
+
+python -m mobilesfrdth jamming campaign --config config\jamming\multichannel_adr_selection.yaml --scenario multichannel_jamming_adr_channel_selection --nodes 20 --adr on --seeds 0:49 --sim-time 3600 --channels 868.1,868.3,868.5,867.1,867.3,867.5,867.7,867.9 --jammed-channel 868.1 --channel-selection adr-assisted --time-bin-size 60 --out results\jamming\multichannel_campaign --resume
+
+4. Agrégation seule
+-------------------
+PowerShell, avec retours ligne par backtick :
+
+python -m mobilesfrdth jamming aggregate `
+  --input results\jamming\multichannel_campaign `
+  --output results\jamming\multichannel_summary.csv
+
+CMD, en une seule ligne :
+
+python -m mobilesfrdth jamming aggregate --input results\jamming\multichannel_campaign --output results\jamming\multichannel_summary.csv
+
+5. Dry-run
+----------
+PowerShell, avec retours ligne par backtick :
+
+python -m mobilesfrdth jamming campaign `
+  --config config\jamming\multichannel_adr_selection.yaml `
+  --scenario multichannel_jamming_adr_channel_selection `
+  --nodes 20 `
+  --adr on `
+  --seeds 0:2 `
+  --sim-time 3600 `
+  --channels 868.1,868.3,868.5,867.1,867.3,867.5,867.7,867.9 `
+  --jammed-channel 868.1 `
+  --channel-selection adr-assisted `
+  --time-bin-size 60 `
+  --out results\jamming\dry_run_preview `
+  --dry-run
+
+CMD, en une seule ligne :
+
+python -m mobilesfrdth jamming campaign --config config\jamming\multichannel_adr_selection.yaml --scenario multichannel_jamming_adr_channel_selection --nodes 20 --adr on --seeds 0:2 --sim-time 3600 --channels 868.1,868.3,868.5,867.1,867.3,867.5,867.7,867.9 --jammed-channel 868.1 --channel-selection adr-assisted --time-bin-size 60 --out results\jamming\dry_run_preview --dry-run
