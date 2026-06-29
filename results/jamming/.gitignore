@@ -1,0 +1,41 @@
+# Conserver la documentation du dossier.
+!README.md
+!.gitignore
+
+# Fichiers de traçabilité générés pour une campagne locale.
+config_used.yaml
+commands.txt
+
+# Exports CSV générés par les runs et agrégations.
+*.csv
+*.tsv
+raw/
+per_run/
+aggregate/
+
+# Journaux et traces d'exécution.
+*.log
+logs/
+
+# Sorties volumineuses ou temporaires de simulation/analyse.
+*.jsonl
+*.parquet
+*.feather
+*.h5
+*.hdf5
+*.npz
+*.npy
+*.pkl
+*.pickle
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.pdf
+*.SKIPPED.txt
+__pycache__/
