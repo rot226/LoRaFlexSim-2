@@ -611,6 +611,15 @@ def cmd_run(args: argparse.Namespace) -> int:
             print(f"- {count}x | {label}")
 
     print(f"Résumé batch écrit dans {summary_file}")
+    try:
+        from .jamming.aggregate import aggregate_existing_results
+
+        jamming_summary = aggregate_existing_results(
+            out_dir, out_dir / "aggregate" / "campaign_summary.csv"
+        )
+        print(f"Résumé campagne de brouillage écrit dans {jamming_summary}")
+    except FileNotFoundError:
+        pass
     _append_campaign_log(
         campaign_log_file,
         step="run",
@@ -632,6 +641,19 @@ def cmd_run(args: argparse.Namespace) -> int:
 def cmd_aggregate(args: argparse.Namespace) -> int:
     out_dir: Path = args.out
     out_dir.mkdir(parents=True, exist_ok=True)
+    exit_code = 0
+
+    try:
+        from .jamming.aggregate import aggregate_existing_results
+
+        jamming_summary = aggregate_existing_results(
+            args.results[0] if len(args.results) == 1 else out_dir,
+            out_dir / "aggregate" / "campaign_summary.csv",
+        )
+        if len(args.results) == 1:
+            print(f"Résumé campagne de brouillage écrit dans {jamming_summary}")
+    except FileNotFoundError:
+        jamming_summary = None
 
     try:
         from .simulator.io import aggregate_runs, summarize_run_completeness
@@ -665,6 +687,18 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
             sinr_cdf_metadata=sinr_cdf_metadata,
         )
     except (ValueError, json.JSONDecodeError, FileNotFoundError) as exc:
+        if jamming_summary is not None:
+            output_file = out_dir / "aggregate.json"
+            _dump_json(
+                output_file,
+                {
+                    "num_inputs": len(args.results),
+                    "sources": [str(path) for path in args.results],
+                    "jamming_campaign_summary": str(jamming_summary),
+                },
+            )
+            print(f"Agrégation brouillage écrite dans {output_file}")
+            return 0
         print(f"Erreur pendant l'agrégation: {exc}")
         return 2
 
@@ -678,6 +712,8 @@ def cmd_aggregate(args: argparse.Namespace) -> int:
         "ignored_runs": ignored_runs,
         "files": {name: str(path) for name, path in files.items()},
     }
+    if jamming_summary is not None:
+        manifest["jamming_campaign_summary"] = str(jamming_summary)
 
     metric_by_factor_path = files.get("metric_by_factor")
     distinct_groups_by_algo: dict[str, int] = {}

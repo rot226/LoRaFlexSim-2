@@ -1,6 +1,7 @@
 import csv
 from pathlib import Path
 
+from mobilesfrdth.jamming.aggregate import aggregate_existing_results
 from mobilesfrdth.jamming.csv_exporter import (
     CHANNEL_TIMESERIES_COLUMNS,
     NODE_METRICS_COLUMNS,
@@ -111,3 +112,69 @@ def test_write_run_csvs_can_skip_packet_events_with_note(tmp_path: Path) -> None
     assert written["node_metrics"].exists()
     assert written["channel_timeseries"].exists()
     assert written["sf_timeseries"].exists()
+
+
+def test_aggregate_existing_results_groups_runs_and_writes_ci95(tmp_path: Path) -> None:
+    run1 = tmp_path / "run1" / "per_run"
+    run2 = tmp_path / "run2" / "per_run"
+    run1.mkdir(parents=True)
+    run2.mkdir(parents=True)
+    header = [
+        "scenario",
+        "node_count",
+        "adr",
+        "channel_selection",
+        "seed",
+        "pdr",
+        "lost_packets",
+        "jammed_packets",
+        "mean_delay_s",
+        "collided_packets",
+        "channel_changes",
+        "sf_changes",
+    ]
+    for path, seed, pdr, lost in [
+        (run1 / "run_summary.csv", 1, 0.8, 2),
+        (run2 / "run_summary.csv", 2, 1.0, 0),
+    ]:
+        with path.open("w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=header)
+            writer.writeheader()
+            writer.writerow(
+                {
+                    "scenario": "baseline",
+                    "node_count": "20",
+                    "adr": "True",
+                    "channel_selection": "static",
+                    "seed": seed,
+                    "pdr": pdr,
+                    "lost_packets": lost,
+                    "jammed_packets": 1,
+                    "mean_delay_s": 0.1,
+                    "collided_packets": 3,
+                    "channel_changes": 4,
+                    "sf_changes": 5,
+                }
+            )
+
+    output = aggregate_existing_results(
+        tmp_path, tmp_path / "aggregate" / "campaign_summary.csv"
+    )
+
+    with output.open(newline="", encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["scenario_name"] == "baseline"
+    assert row["node_count"] == "20"
+    assert row["adr_enabled"] == "true"
+    assert row["channel_selection"] == "static"
+    assert row["seeds_count"] == "2"
+    assert row["pdr_mean"] == "0.9"
+    assert row["pdr_ci95_half_width"] != ""
+    assert row["lost_packets_mean"] == "1"
+    assert row["jammed_packets_mean"] == "1"
+    assert row["mean_delay_s_mean"] == "0.1"
+    assert row["collided_packets_mean"] == "3"
+    assert row["channel_changes_mean"] == "4"
+    assert row["sf_changes_mean"] == "5"
