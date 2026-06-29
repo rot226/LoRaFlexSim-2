@@ -3,7 +3,20 @@
 from __future__ import annotations
 
 from .campaigns import JammingCampaign, build_campaign
-from .channel_selection import DEFAULT_LORAWAN_CHANNELS_HZ, fixed_channels, random_channel, round_robin_channel
+from .channel_selection import (
+    DEFAULT_LORAWAN_CHANNELS_HZ,
+    EU868_DEFAULT_CHANNELS_MHZ,
+    AdrAssistedChannelSelectionPolicy,
+    ChannelSelectionPolicy,
+    ChannelSet,
+    DegradationAwareChannelSelectionPolicy,
+    RandomChannelSelectionPolicy,
+    StaticChannelSelectionPolicy,
+    build_channel_selection_policy,
+    fixed_channels,
+    random_channel,
+    round_robin_channel,
+)
 from .csv_exporter import export_jamming_rows
 from .jammer import JammingEvent, Jammer, JammerConfig, JammerNode, JammerObservation, build_jammers
 from .jammer_scheduler import JammerScheduler, JammerWindow, periodic_windows
@@ -13,7 +26,14 @@ from .scenarios import JammingScenario, circle_shifted_jamming_scenario, circle_
 
 __all__ = [
     "DEFAULT_LORAWAN_CHANNELS_HZ",
+    "EU868_DEFAULT_CHANNELS_MHZ",
+    "AdrAssistedChannelSelectionPolicy",
+    "ChannelSelectionPolicy",
+    "ChannelSet",
+    "DegradationAwareChannelSelectionPolicy",
     "Jammer",
+    "RandomChannelSelectionPolicy",
+    "StaticChannelSelectionPolicy",
     "JammerNode",
     "JammingEvent",
     "JammerConfig",
@@ -26,6 +46,7 @@ __all__ = [
     "circle_shifted_jamming_scenario",
     "circle_static_jamming_scenario",
     "build_campaign",
+    "build_channel_selection_policy",
     "build_jammers",
     "export_jamming_rows",
     "fixed_channels",
