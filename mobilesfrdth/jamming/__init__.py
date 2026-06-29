@@ -20,7 +20,7 @@ from .channel_selection import (
 from .csv_exporter import export_jamming_rows
 from .jammer import JammingEvent, Jammer, JammerConfig, JammerNode, JammerObservation, build_jammers
 from .jammer_scheduler import JammerScheduler, JammerWindow, periodic_windows
-from .metrics import JammingMetrics, summarize_jamming
+from .metrics import JammingMetrics, compute_packet_metrics, summarize_jamming
 from .runner import JammingRunResult, LegitimateNode, build_legitimate_nodes, run_jamming_simulation
 from .placement import circle_placement, grid_placement, place_jammers_on_circle, random_placement
 from .scenarios import (
@@ -63,6 +63,7 @@ __all__ = [
     "circle_shifted_jamming_scenario",
     "circle_static_jamming_scenario",
     "build_campaign",
+    "compute_packet_metrics",
     "build_channel_selection_policy",
     "build_jammers",
     "build_legitimate_nodes",
