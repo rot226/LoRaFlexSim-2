@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .aggregate import aggregate_existing_results
 from .campaigns import JammingCampaign, build_campaign
 from .channel_selection import (
     DEFAULT_LORAWAN_CHANNELS_HZ,
@@ -94,6 +95,7 @@ __all__ = [
     "baseline_jamming_single_channel",
     "circle_shifted_jamming_scenario",
     "circle_static_jamming_scenario",
+    "aggregate_existing_results",
     "build_campaign",
     "compute_packet_metrics",
     "build_channel_selection_policy",
