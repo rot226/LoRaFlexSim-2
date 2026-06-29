@@ -3,7 +3,20 @@
 from __future__ import annotations
 
 from .aggregate import aggregate_existing_results
-from .campaigns import JammingCampaign, build_campaign
+from .campaigns import (
+    CampaignLayout,
+    EXPECTED_RUN_CSVS,
+    JammingCampaign,
+    JammingRunKey,
+    build_campaign,
+    dry_run_plan,
+    expand_adr_modes,
+    expand_run_matrix,
+    is_run_complete,
+    parse_nodes_spec,
+    parse_seed_spec,
+    run_campaign,
+)
 from .channel_selection import (
     DEFAULT_LORAWAN_CHANNELS_HZ,
     EU868_DEFAULT_CHANNELS_MHZ,
@@ -64,6 +77,8 @@ from .scenarios import (
 
 __all__ = [
     "CAMPAIGN_SUMMARY_COLUMNS",
+    "CampaignLayout",
+    "EXPECTED_RUN_CSVS",
     "CHANNEL_TIMESERIES_COLUMNS",
     "NODE_METRICS_COLUMNS",
     "PACKET_EVENTS_COLUMNS",
@@ -86,6 +101,7 @@ __all__ = [
     "JammerWindow",
     "JammingCampaign",
     "JammingMetrics",
+    "JammingRunKey",
     "JammingRunResult",
     "LegitimateNode",
     "BASELINE_JAMMING_SINGLE_CHANNEL",
@@ -114,5 +130,12 @@ __all__ = [
     "random_placement",
     "round_robin_channel",
     "run_jamming_simulation",
+    "dry_run_plan",
+    "expand_adr_modes",
+    "expand_run_matrix",
+    "is_run_complete",
+    "parse_nodes_spec",
+    "parse_seed_spec",
+    "run_campaign",
     "summarize_jamming",
 ]
