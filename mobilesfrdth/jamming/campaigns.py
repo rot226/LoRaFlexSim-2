@@ -238,6 +238,8 @@ def run_campaign(
     progress_callback: (
         Callable[[JammingRunKey, int, int, float, dict[str, Any]], None] | None
     ) = None,
+    progress_step_percent: float | None = None,
+    show_progress: bool = False,
 ) -> tuple[JammingRunKey, ...]:
     """Exécute une campagne complète puis lance l'agrégation finale.
 
@@ -266,31 +268,111 @@ def run_campaign(
     _write_campaign_metadata(campaign_layout, runs, config=config)
     scenario_by_name = {scenario.name: scenario for scenario in scenarios}
     total_runs = len(runs)
-    for run_index, run_key in enumerate(runs, start=1):
+    completed_runs = 0
+    progress_state: dict[str, float] = {}
+    for current_run_index, run_key in enumerate(runs, start=1):
         if resume and not overwrite and is_run_complete(campaign_layout, run_key):
-            _log(campaign_layout, "skip_completed", run_key=run_key.to_dict())
+            completed_runs += 1
+            _emit_campaign_progress(
+                campaign_layout,
+                "run_skipped_resume",
+                run_key=run_key,
+                current_run_index=current_run_index,
+                total_runs=total_runs,
+                completed_runs=completed_runs,
+                run_progress=1.0,
+                progress_callback=progress_callback,
+                progress_state=progress_state,
+                progress_step_percent=progress_step_percent,
+                show_progress=show_progress,
+            )
             continue
         if overwrite:
             _log(campaign_layout, "overwrite", run_key=run_key.to_dict())
+        _emit_campaign_progress(
+            campaign_layout,
+            "run_started",
+            run_key=run_key,
+            current_run_index=current_run_index,
+            total_runs=total_runs,
+            completed_runs=completed_runs,
+            run_progress=0.0,
+            progress_callback=progress_callback,
+            progress_state=progress_state,
+            progress_step_percent=progress_step_percent,
+            show_progress=show_progress,
+        )
+
+        def run_progress_callback(
+            run_progress: float,
+            context: dict[str, Any],
+            *,
+            run_key: JammingRunKey = run_key,
+            current_run_index: int = current_run_index,
+            completed_runs: int = completed_runs,
+        ) -> None:
+            _emit_campaign_progress(
+                campaign_layout,
+                "run_progress",
+                run_key=run_key,
+                current_run_index=current_run_index,
+                total_runs=total_runs,
+                completed_runs=completed_runs,
+                run_progress=run_progress,
+                context=context,
+                progress_callback=progress_callback,
+                progress_state=progress_state,
+                progress_step_percent=progress_step_percent,
+                show_progress=show_progress,
+            )
+
         _execute_run(
             campaign_layout,
             scenario_by_name[run_key.scenario],
             run_key,
-            progress_callback=(
-                None
-                if progress_callback is None
-                else lambda progress, context, run_key=run_key, run_index=run_index: progress_callback(
-                    run_key, run_index, total_runs, progress, context
-                )
-            ),
+            progress_callback=run_progress_callback,
         )
-    aggregate_existing_results(
-        campaign_layout.runs_dir, campaign_layout.aggregate_dir / "campaign_summary.csv"
+        completed_runs += 1
+        _emit_campaign_progress(
+            campaign_layout,
+            "run_completed",
+            run_key=run_key,
+            current_run_index=current_run_index,
+            total_runs=total_runs,
+            completed_runs=completed_runs,
+            run_progress=1.0,
+            progress_callback=progress_callback,
+            progress_state=progress_state,
+            progress_step_percent=progress_step_percent,
+            show_progress=show_progress,
+        )
+    aggregate_path = campaign_layout.aggregate_dir / "campaign_summary.csv"
+    _emit_campaign_progress(
+        campaign_layout,
+        "aggregate_started",
+        current_run_index=total_runs,
+        total_runs=total_runs,
+        completed_runs=completed_runs,
+        run_progress=1.0,
+        progress_callback=None,
+        progress_state=progress_state,
+        progress_step_percent=progress_step_percent,
+        show_progress=show_progress,
+        extra={"path": str(aggregate_path)},
     )
-    _log(
+    aggregate_existing_results(campaign_layout.runs_dir, aggregate_path)
+    _emit_campaign_progress(
         campaign_layout,
         "aggregate_completed",
-        path=str(campaign_layout.aggregate_dir / "campaign_summary.csv"),
+        current_run_index=total_runs,
+        total_runs=total_runs,
+        completed_runs=completed_runs,
+        run_progress=1.0,
+        progress_callback=None,
+        progress_state=progress_state,
+        progress_step_percent=progress_step_percent,
+        show_progress=show_progress,
+        extra={"path": str(aggregate_path)},
     )
     return runs
 
@@ -493,6 +575,99 @@ def _write_campaign_metadata(
     command = " ".join(shlex.quote(part) for part in sys.argv) if sys.argv else ""
     (layout.root / "commands.txt").write_text(command + "\n", encoding="utf-8")
     _log(layout, "campaign_prepared", runs=len(runs), command=command)
+
+
+def _emit_campaign_progress(
+    layout: CampaignLayout,
+    event: str,
+    *,
+    current_run_index: int,
+    total_runs: int,
+    completed_runs: int,
+    run_progress: float,
+    run_key: JammingRunKey | None = None,
+    context: Mapping[str, Any] | None = None,
+    progress_callback: (
+        Callable[[JammingRunKey, int, int, float, dict[str, Any]], None] | None
+    ) = None,
+    progress_state: dict[str, float] | None = None,
+    progress_step_percent: float | None = None,
+    show_progress: bool = False,
+    extra: Mapping[str, Any] | None = None,
+) -> None:
+    bounded_run_progress = min(max(float(run_progress), 0.0), 1.0)
+    safe_total_runs = max(int(total_runs), 1)
+    global_progress = min(
+        max((float(completed_runs) + bounded_run_progress) / safe_total_runs, 0.0),
+        1.0,
+    )
+    payload = {
+        "current_run_index": int(current_run_index),
+        "total_runs": int(total_runs),
+        "completed_runs": int(completed_runs),
+        "run_progress": bounded_run_progress,
+        "global_progress": global_progress,
+        **dict(context or {}),
+        **dict(extra or {}),
+    }
+    if run_key is not None:
+        payload["run_key"] = run_key.to_dict()
+    _log(layout, event, **payload)
+    if run_key is not None and event not in {"run_started", "run_completed"}:
+        run_payload = dict(payload)
+        run_payload.pop("run_key", None)
+        _log_run(layout, run_key, event, **run_payload)
+    should_emit = _should_emit_campaign_progress(
+        event,
+        global_progress,
+        progress_state=progress_state,
+        progress_step_percent=progress_step_percent,
+    )
+    if show_progress and should_emit:
+        print(_format_campaign_progress(event, payload), file=sys.stderr)
+    if progress_callback is not None and run_key is not None and should_emit:
+        progress_callback(
+            run_key,
+            int(current_run_index),
+            int(total_runs),
+            global_progress,
+            payload,
+        )
+
+
+def _should_emit_campaign_progress(
+    event: str,
+    global_progress: float,
+    *,
+    progress_state: dict[str, float] | None,
+    progress_step_percent: float | None,
+) -> bool:
+    if event != "run_progress" or progress_step_percent is None:
+        return True
+    if progress_step_percent <= 0.0:
+        return True
+    progress_pct = min(max(float(global_progress) * 100.0, 0.0), 100.0)
+    last_pct = None if progress_state is None else progress_state.get("last_pct")
+    if (
+        progress_pct >= 100.0
+        or last_pct is None
+        or progress_pct - last_pct >= progress_step_percent
+    ):
+        if progress_state is not None:
+            progress_state["last_pct"] = progress_pct
+        return True
+    return False
+
+
+def _format_campaign_progress(event: str, payload: Mapping[str, Any]) -> str:
+    run_key = payload.get("run_key") or {}
+    run_id = run_key.get("run_id", "n/a") if isinstance(run_key, Mapping) else "n/a"
+    global_pct = float(payload["global_progress"]) * 100.0
+    run_pct = float(payload["run_progress"]) * 100.0
+    return (
+        f"Campagne {event}: run {payload['current_run_index']}/{payload['total_runs']} "
+        f"({run_id}) | global {global_pct:.1f} % | run {run_pct:.1f} %"
+    )
 
 
 def _log(layout: CampaignLayout, event: str, **payload: Any) -> None:

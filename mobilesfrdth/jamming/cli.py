@@ -494,7 +494,6 @@ def cmd_campaign(args: argparse.Namespace) -> int:
     campaign_progress_callback = None
     if args.progress and not args.dry_run:
         write_progress, progress_finish = _make_progress_writer()
-        progress_state: dict[str, float] = {}
 
         def campaign_progress_callback(
             run_key: Any,
@@ -503,15 +502,14 @@ def cmd_campaign(args: argparse.Namespace) -> int:
             progress: float,
             context: dict[str, Any],
         ) -> None:
-            run_pct = min(max(float(progress) * 100.0, 0.0), 100.0)
-            global_pct = (
-                (float(run_index - 1) + float(progress)) / max(total_runs, 1) * 100.0
+            run_pct = min(
+                max(float(context.get("run_progress", 0.0)) * 100.0, 0.0), 100.0
             )
-            if _should_emit_progress(global_pct, progress_state, args.progress_step):
-                write_progress(
-                    f"Campagne : run {run_index}/{total_runs} | "
-                    f"{global_pct:.1f} % global | run courant {run_pct:.1f} %"
-                )
+            global_pct = min(max(float(progress) * 100.0, 0.0), 100.0)
+            write_progress(
+                f"Campagne : run {run_index}/{total_runs} | "
+                f"{global_pct:.1f} % global | run courant {run_pct:.1f} %"
+            )
 
     try:
         run_campaign(
@@ -536,6 +534,8 @@ def cmd_campaign(args: argparse.Namespace) -> int:
                 "time_bin_size": args.time_bin_size,
             },
             progress_callback=campaign_progress_callback,
+            progress_step_percent=args.progress_step,
+            show_progress=False,
         )
     finally:
         if progress_finish is not None:
