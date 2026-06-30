@@ -269,13 +269,14 @@ def run_campaign(
     scenario_by_name = {scenario.name: scenario for scenario in scenarios}
     total_runs = len(runs)
     completed_runs = 0
-    progress_state: dict[str, float] = {}
+    progress_state: dict[str, Any] = {}
+    _log(campaign_layout, "campaign_started", total_runs=total_runs)
     for current_run_index, run_key in enumerate(runs, start=1):
         if resume and not overwrite and is_run_complete(campaign_layout, run_key):
             completed_runs += 1
             _emit_campaign_progress(
                 campaign_layout,
-                "run_skipped_resume",
+                "run_skipped",
                 run_key=run_key,
                 current_run_index=current_run_index,
                 total_runs=total_runs,
@@ -326,11 +327,37 @@ def run_campaign(
                 show_progress=show_progress,
             )
 
+        _emit_campaign_progress(
+            campaign_layout,
+            "run_progress",
+            run_key=run_key,
+            current_run_index=current_run_index,
+            total_runs=total_runs,
+            completed_runs=completed_runs,
+            run_progress=0.0,
+            progress_callback=progress_callback,
+            progress_state=progress_state,
+            progress_step_percent=progress_step_percent,
+            show_progress=show_progress,
+        )
         _execute_run(
             campaign_layout,
             scenario_by_name[run_key.scenario],
             run_key,
             progress_callback=run_progress_callback,
+        )
+        _emit_campaign_progress(
+            campaign_layout,
+            "run_progress",
+            run_key=run_key,
+            current_run_index=current_run_index,
+            total_runs=total_runs,
+            completed_runs=completed_runs,
+            run_progress=1.0,
+            progress_callback=progress_callback,
+            progress_state=progress_state,
+            progress_step_percent=progress_step_percent,
+            show_progress=show_progress,
         )
         completed_runs += 1
         _emit_campaign_progress(
@@ -590,7 +617,7 @@ def _emit_campaign_progress(
     progress_callback: (
         Callable[[JammingRunKey, int, int, float, dict[str, Any]], None] | None
     ) = None,
-    progress_state: dict[str, float] | None = None,
+    progress_state: dict[str, Any] | None = None,
     progress_step_percent: float | None = None,
     show_progress: bool = False,
     extra: Mapping[str, Any] | None = None,
@@ -612,11 +639,30 @@ def _emit_campaign_progress(
     }
     if run_key is not None:
         payload["run_key"] = run_key.to_dict()
-    _log(layout, event, **payload)
-    if run_key is not None and event not in {"run_started", "run_completed"}:
-        run_payload = dict(payload)
-        run_payload.pop("run_key", None)
-        _log_run(layout, run_key, event, **run_payload)
+    log_run_progress_values = _run_progress_values_to_log(
+        event,
+        bounded_run_progress,
+        run_key=run_key,
+        progress_state=progress_state,
+    )
+    if event == "run_progress" and run_key is not None:
+        for log_run_progress in log_run_progress_values:
+            log_payload = dict(payload)
+            log_payload["run_progress"] = log_run_progress
+            log_payload["global_progress"] = min(
+                max((float(completed_runs) + log_run_progress) / safe_total_runs, 0.0),
+                1.0,
+            )
+            _log(layout, event, **log_payload)
+            run_payload = dict(log_payload)
+            run_payload.pop("run_key", None)
+            _log_run(layout, run_key, event, **run_payload)
+    else:
+        _log(layout, event, **payload)
+        if run_key is not None and event not in {"run_started", "run_completed"}:
+            run_payload = dict(payload)
+            run_payload.pop("run_key", None)
+            _log_run(layout, run_key, event, **run_payload)
     should_emit = _should_emit_campaign_progress(
         event,
         global_progress,
@@ -633,6 +679,30 @@ def _emit_campaign_progress(
             global_progress,
             payload,
         )
+
+
+def _run_progress_values_to_log(
+    event: str,
+    run_progress: float,
+    *,
+    run_key: JammingRunKey | None,
+    progress_state: dict[str, Any] | None,
+) -> tuple[float, ...]:
+    if event != "run_progress" or run_key is None:
+        return ()
+    milestones = (0.0, 0.25, 0.5, 0.75, 1.0)
+    if progress_state is None:
+        return tuple(milestone for milestone in milestones if run_progress >= milestone)
+    logged_milestones = progress_state.setdefault("logged_run_milestones", {})
+    last_milestone = logged_milestones.get(run_key.run_id, -1.0)
+    values = tuple(
+        milestone
+        for milestone in milestones
+        if last_milestone < milestone <= run_progress
+    )
+    if values:
+        logged_milestones[run_key.run_id] = values[-1]
+    return values
 
 
 def _should_emit_campaign_progress(
