@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field, is_dataclass
 import math
 import random
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any, Callable, Iterable, Mapping, Sequence
 
 from mobilesfrdth.simulator.engine import Event, EventDrivenEngine, Node
 
@@ -113,6 +113,7 @@ def run_jamming_simulation(
     channels_mhz: Sequence[float] = tuple(EU868_DEFAULT_CHANNELS_MHZ[:3]),
     spreading_factors: Sequence[int] = (7, 8, 9, 10, 11, 12),
     jamming_windows: Iterable[JammerWindow | JammingEvent | Mapping[str, Any]] | None = None,
+    progress_callback: Callable[[float, dict], None] | None = None,
     mode: str = "snir_on",
     algo: str = "adr",
     **engine_kwargs: Any,
@@ -161,6 +162,10 @@ def run_jamming_simulation(
         nodes_by_id={node.node_id: node for node in legitimate_nodes},
         gateway_id=gateway_id,
         jamming_windows=normalized_windows,
+        progress_callback=progress_callback,
+        until_s=until_s,
+        node_count=node_count,
+        seed=seed,
     )
     metrics_by_node = _metrics_by_node(raw_events)
     timeseries = _channel_sf_timeseries(raw_events)
@@ -189,9 +194,22 @@ def _normalize_window(window: JammerWindow | JammingEvent | Mapping[str, Any]) -
     return {**data, "start_s": start, "end_s": end, "sf": data.get("sf"), "frequency_mhz": freq}
 
 
-def _enrich_legitimate_events(*, raw_engine_events: list[Event], nodes_by_id: dict[int, LegitimateNode], gateway_id: str, jamming_windows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _enrich_legitimate_events(
+    *,
+    raw_engine_events: list[Event],
+    nodes_by_id: dict[int, LegitimateNode],
+    gateway_id: str,
+    jamming_windows: list[dict[str, Any]],
+    progress_callback: Callable[[float, dict], None] | None,
+    until_s: float,
+    node_count: int,
+    seed: int | None,
+) -> list[dict[str, Any]]:
     enriched: list[dict[str, Any]] = []
     packet_seq = 0
+    rx_packets = 0
+    jammed_packets = 0
+    next_progress_bucket = 0
     for event in raw_engine_events:
         if event.kind != "uplink" or event.node_id not in nodes_by_id:
             continue
@@ -217,7 +235,67 @@ def _enrich_legitimate_events(*, raw_engine_events: list[Event], nodes_by_id: di
             "delay_s": float(getattr(event, "airtime_s", 0.0)),
             "gateway_id": gateway_id,
         })
+        rx_packets += int(received)
+        jammed_packets += int(jammed)
+        if progress_callback is not None:
+            progress = _progress_for_time(event.time_s, until_s)
+            bucket = int(progress * 100)
+            if bucket >= next_progress_bucket:
+                _emit_progress(
+                    progress_callback,
+                    progress,
+                    time_s=float(event.time_s),
+                    until_s=until_s,
+                    node_count=node_count,
+                    seed=seed,
+                    tx_packets=packet_seq,
+                    rx_packets=rx_packets,
+                    jammed_packets=jammed_packets,
+                )
+                next_progress_bucket = bucket + 1
+    if progress_callback is not None:
+        _emit_progress(
+            progress_callback,
+            1.0,
+            time_s=until_s,
+            until_s=until_s,
+            node_count=node_count,
+            seed=seed,
+            tx_packets=packet_seq,
+            rx_packets=rx_packets,
+            jammed_packets=jammed_packets,
+        )
     return enriched
+
+
+def _progress_for_time(time_s: float, until_s: float) -> float:
+    if until_s <= 0.0:
+        return 1.0
+    return min(max(float(time_s) / float(until_s), 0.0), 1.0)
+
+
+def _emit_progress(
+    progress_callback: Callable[[float, dict], None],
+    progress: float,
+    *,
+    time_s: float,
+    until_s: float,
+    node_count: int,
+    seed: int | None,
+    tx_packets: int,
+    rx_packets: int,
+    jammed_packets: int,
+) -> None:
+    context = {
+        "time_s": float(time_s),
+        "until_s": float(until_s),
+        "node_count": int(node_count),
+        "seed": seed,
+        "tx_packets": int(tx_packets),
+        "rx_packets": int(rx_packets),
+        "jammed_packets": int(jammed_packets),
+    }
+    progress_callback(min(max(float(progress), 0.0), 1.0), context)
 
 
 def _is_jammed(start_s: float, end_s: float, sf: int, frequency_mhz: float, windows: list[dict[str, Any]]) -> bool:
