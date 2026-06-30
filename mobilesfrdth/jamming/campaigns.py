@@ -10,7 +10,7 @@ import sys
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Sequence, TextIO
+from typing import Any, Callable, Iterable, Mapping, Sequence, TextIO
 
 import yaml
 
@@ -94,11 +94,19 @@ def parse_seed_spec(value: str | Sequence[int]) -> tuple[int, ...]:
             if text.count(":") != 1:
                 raise ValueError("Format seed attendu: début:fin, par exemple 0:49.")
             left, right = (part.strip() for part in text.split(":", 1))
-            start, end = _parse_non_negative_int(left, "seed début"), _parse_non_negative_int(right, "seed fin")
+            start, end = _parse_non_negative_int(
+                left, "seed début"
+            ), _parse_non_negative_int(right, "seed fin")
             if end < start:
-                raise ValueError("La borne finale des seeds doit être >= à la borne initiale.")
+                raise ValueError(
+                    "La borne finale des seeds doit être >= à la borne initiale."
+                )
             return tuple(range(start, end + 1))
-        seeds = tuple(_parse_non_negative_int(part.strip(), "seed") for part in text.split(",") if part.strip())
+        seeds = tuple(
+            _parse_non_negative_int(part.strip(), "seed")
+            for part in text.split(",")
+            if part.strip()
+        )
     else:
         seeds = tuple(int(seed) for seed in value)
     if not seeds:
@@ -112,7 +120,11 @@ def parse_nodes_spec(value: str | Sequence[int]) -> tuple[int, ...]:
     """Analyse une liste de nombres de nœuds, par exemple ``"20,50,100"``."""
 
     if isinstance(value, str):
-        nodes = tuple(_parse_positive_int(part.strip(), "node_count") for part in value.split(",") if part.strip())
+        nodes = tuple(
+            _parse_positive_int(part.strip(), "node_count")
+            for part in value.split(",")
+            if part.strip()
+        )
     else:
         nodes = tuple(int(node) for node in value)
     if not nodes:
@@ -152,7 +164,10 @@ def expand_run_matrix(
 ) -> tuple[JammingRunKey, ...]:
     """Génère la matrice ``(scenario, node_count, adr_enabled, seed, channel_selection)``."""
 
-    scenario_names = tuple(scenario.name if isinstance(scenario, JammingScenario) else str(scenario) for scenario in scenarios)
+    scenario_names = tuple(
+        scenario.name if isinstance(scenario, JammingScenario) else str(scenario)
+        for scenario in scenarios
+    )
     nodes = tuple(int(value) for value in node_counts)
     adrs = tuple(bool(value) for value in adr_modes)
     seed_values = tuple(int(value) for value in seeds)
@@ -169,7 +184,9 @@ def expand_run_matrix(
     )
 
 
-def dry_run_plan(runs: Iterable[JammingRunKey], *, stream: TextIO | None = None) -> None:
+def dry_run_plan(
+    runs: Iterable[JammingRunKey], *, stream: TextIO | None = None
+) -> None:
     """Affiche tous les runs planifiés sans exécution."""
 
     output = stream or sys.stdout
@@ -184,7 +201,9 @@ def dry_run_plan(runs: Iterable[JammingRunKey], *, stream: TextIO | None = None)
         )
 
 
-def is_run_complete(layout: CampaignLayout | str | Path | Mapping[str, Any], run_key: JammingRunKey) -> bool:
+def is_run_complete(
+    layout: CampaignLayout | str | Path | Mapping[str, Any], run_key: JammingRunKey
+) -> bool:
     """Vérifie les CSV attendus et un statut ``completed`` pour un run."""
 
     run_dir = _coerce_layout(layout).run_dir(run_key)
@@ -216,6 +235,9 @@ def run_campaign(
     overwrite: bool = False,
     dry_run: bool = False,
     config: Mapping[str, Any] | None = None,
+    progress_callback: (
+        Callable[[JammingRunKey, int, int, float, dict[str, Any]], None] | None
+    ) = None,
 ) -> tuple[JammingRunKey, ...]:
     """Exécute une campagne complète puis lance l'agrégation finale.
 
@@ -243,15 +265,33 @@ def run_campaign(
     _campaign_logger(campaign_layout)
     _write_campaign_metadata(campaign_layout, runs, config=config)
     scenario_by_name = {scenario.name: scenario for scenario in scenarios}
-    for run_key in runs:
+    total_runs = len(runs)
+    for run_index, run_key in enumerate(runs, start=1):
         if resume and not overwrite and is_run_complete(campaign_layout, run_key):
             _log(campaign_layout, "skip_completed", run_key=run_key.to_dict())
             continue
         if overwrite:
             _log(campaign_layout, "overwrite", run_key=run_key.to_dict())
-        _execute_run(campaign_layout, scenario_by_name[run_key.scenario], run_key)
-    aggregate_existing_results(campaign_layout.runs_dir, campaign_layout.aggregate_dir / "campaign_summary.csv")
-    _log(campaign_layout, "aggregate_completed", path=str(campaign_layout.aggregate_dir / "campaign_summary.csv"))
+        _execute_run(
+            campaign_layout,
+            scenario_by_name[run_key.scenario],
+            run_key,
+            progress_callback=(
+                None
+                if progress_callback is None
+                else lambda progress, context, run_key=run_key, run_index=run_index: progress_callback(
+                    run_key, run_index, total_runs, progress, context
+                )
+            ),
+        )
+    aggregate_existing_results(
+        campaign_layout.runs_dir, campaign_layout.aggregate_dir / "campaign_summary.csv"
+    )
+    _log(
+        campaign_layout,
+        "aggregate_completed",
+        path=str(campaign_layout.aggregate_dir / "campaign_summary.csv"),
+    )
     return runs
 
 
@@ -272,27 +312,65 @@ def build_campaign(
     scenarios: list[JammingScenario] = []
     for count in jammer_counts:
         if placement == "random":
-            configs = random_placement(count=count, area_size_m=area_size_m, seed=None if seed is None else seed + count)
+            configs = random_placement(
+                count=count,
+                area_size_m=area_size_m,
+                seed=None if seed is None else seed + count,
+            )
         elif placement == "grid":
             configs = grid_placement(count=count, area_size_m=area_size_m)
         elif placement == "circle":
             center_x = area_size_m / 2 if gateway_x is None else gateway_x
             center_y = area_size_m / 2 if gateway_y is None else gateway_y
-            configs = circle_placement(gateway_x=center_x, gateway_y=center_y, radius_m=jammer_radius_m, count=count, start_angle_deg=start_angle_deg)
+            configs = circle_placement(
+                gateway_x=center_x,
+                gateway_y=center_y,
+                radius_m=jammer_radius_m,
+                count=count,
+                start_angle_deg=start_angle_deg,
+            )
         else:
             raise ValueError("placement doit valoir 'grid', 'random' ou 'circle'.")
-        scenarios.append(JammingScenario(name=f"{name}_jammers_{count}", jammers=tuple(configs), metadata={"placement": placement}))
+        scenarios.append(
+            JammingScenario(
+                name=f"{name}_jammers_{count}",
+                jammers=tuple(configs),
+                metadata={"placement": placement},
+            )
+        )
     return JammingCampaign(name=name, scenarios=tuple(scenarios))
 
 
-def _execute_run(layout: CampaignLayout, scenario: JammingScenario, run_key: JammingRunKey) -> None:
+def _execute_run(
+    layout: CampaignLayout,
+    scenario: JammingScenario,
+    run_key: JammingRunKey,
+    *,
+    progress_callback: Callable[[float, dict[str, Any]], None] | None = None,
+) -> None:
     run_dir = layout.run_dir(run_key)
     run_dir.mkdir(parents=True, exist_ok=True)
     status_path = run_dir / "status.json"
     run_params = _effective_run_params(scenario, run_key, run_dir=run_dir)
-    _log(layout, "run_started", run_key=run_key.to_dict(), parameters=run_params, run_log=str(_run_log_path(layout, run_key)))
+    _log(
+        layout,
+        "run_started",
+        run_key=run_key.to_dict(),
+        parameters=run_params,
+        run_log=str(_run_log_path(layout, run_key)),
+    )
     _log_run(layout, run_key, "run_started", parameters=run_params, seed=run_key.seed)
-    status_path.write_text(json.dumps({"status": "running", "run_key": run_key.to_dict(), "parameters": run_params}, indent=2), encoding="utf-8")
+    status_path.write_text(
+        json.dumps(
+            {
+                "status": "running",
+                "run_key": run_key.to_dict(),
+                "parameters": run_params,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
     try:
         windows = _jamming_windows(scenario, seed=run_key.seed)
         result = run_jamming_simulation(
@@ -301,6 +379,7 @@ def _execute_run(layout: CampaignLayout, scenario: JammingScenario, run_key: Jam
             seed=run_key.seed,
             jamming_windows=windows,
             algo=run_params["algo"],
+            progress_callback=progress_callback,
         )
         result.run_summary.update(
             {
@@ -315,21 +394,67 @@ def _execute_run(layout: CampaignLayout, scenario: JammingScenario, run_key: Jam
                 "status": "completed",
             }
         )
-        written = write_run_csvs(result, {"root": run_dir, "raw": run_dir / "raw", "per_run": run_dir / "per_run"})
+        written = write_run_csvs(
+            result,
+            {"root": run_dir, "raw": run_dir / "raw", "per_run": run_dir / "per_run"},
+        )
         csv_paths = {k: str(v) for k, v in written.items()}
         status_path.write_text(
-            json.dumps({"status": "completed", "run_key": run_key.to_dict(), "parameters": run_params, "csv": csv_paths}, indent=2),
+            json.dumps(
+                {
+                    "status": "completed",
+                    "run_key": run_key.to_dict(),
+                    "parameters": run_params,
+                    "csv": csv_paths,
+                },
+                indent=2,
+            ),
             encoding="utf-8",
         )
-        _log_run(layout, run_key, "run_completed", parameters=run_params, csv=csv_paths, status="completed")
-        _log(layout, "run_completed", run_key=run_key.to_dict(), run_dir=str(run_dir), csv=csv_paths, status="completed")
+        _log_run(
+            layout,
+            run_key,
+            "run_completed",
+            parameters=run_params,
+            csv=csv_paths,
+            status="completed",
+        )
+        _log(
+            layout,
+            "run_completed",
+            run_key=run_key.to_dict(),
+            run_dir=str(run_dir),
+            csv=csv_paths,
+            status="completed",
+        )
     except Exception as exc:
-        failure_payload = {"status": "failed", "run_key": run_key.to_dict(), "parameters": run_params, "error": repr(exc)}
+        failure_payload = {
+            "status": "failed",
+            "run_key": run_key.to_dict(),
+            "parameters": run_params,
+            "error": repr(exc),
+        }
         try:
-            status_path.write_text(json.dumps(failure_payload, indent=2), encoding="utf-8")
+            status_path.write_text(
+                json.dumps(failure_payload, indent=2), encoding="utf-8"
+            )
         finally:
-            _log_run(layout, run_key, "run_failed", parameters=run_params, status="failed", error=repr(exc))
-            _log(layout, "run_failed", run_key=run_key.to_dict(), run_dir=str(run_dir), status="failed", error=repr(exc))
+            _log_run(
+                layout,
+                run_key,
+                "run_failed",
+                parameters=run_params,
+                status="failed",
+                error=repr(exc),
+            )
+            _log(
+                layout,
+                "run_failed",
+                run_key=run_key.to_dict(),
+                run_dir=str(run_dir),
+                status="failed",
+                error=repr(exc),
+            )
         raise
 
 
@@ -351,9 +476,20 @@ def _jamming_windows(scenario: JammingScenario, *, seed: int) -> list[JammingEve
     return windows
 
 
-def _write_campaign_metadata(layout: CampaignLayout, runs: Sequence[JammingRunKey], *, config: Mapping[str, Any] | None) -> None:
-    payload = {"created_at": datetime.now(timezone.utc).isoformat(), "runs": [run.to_dict() for run in runs], **dict(config or {})}
-    (layout.root / "config_used.yaml").write_text(yaml.safe_dump(payload, sort_keys=True, allow_unicode=True), encoding="utf-8")
+def _write_campaign_metadata(
+    layout: CampaignLayout,
+    runs: Sequence[JammingRunKey],
+    *,
+    config: Mapping[str, Any] | None,
+) -> None:
+    payload = {
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "runs": [run.to_dict() for run in runs],
+        **dict(config or {}),
+    }
+    (layout.root / "config_used.yaml").write_text(
+        yaml.safe_dump(payload, sort_keys=True, allow_unicode=True), encoding="utf-8"
+    )
     command = " ".join(shlex.quote(part) for part in sys.argv) if sys.argv else ""
     (layout.root / "commands.txt").write_text(command + "\n", encoding="utf-8")
     _log(layout, "campaign_prepared", runs=len(runs), command=command)
@@ -361,13 +497,24 @@ def _write_campaign_metadata(layout: CampaignLayout, runs: Sequence[JammingRunKe
 
 def _log(layout: CampaignLayout, event: str, **payload: Any) -> None:
     layout.logs_dir.mkdir(parents=True, exist_ok=True)
-    record = {"timestamp": datetime.now(timezone.utc).isoformat(), "event": event, **payload}
+    record = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "event": event,
+        **payload,
+    }
     _campaign_logger(layout).info(json.dumps(record, ensure_ascii=False))
 
 
-def _log_run(layout: CampaignLayout, run_key: JammingRunKey, event: str, **payload: Any) -> None:
+def _log_run(
+    layout: CampaignLayout, run_key: JammingRunKey, event: str, **payload: Any
+) -> None:
     layout.logs_dir.mkdir(parents=True, exist_ok=True)
-    record = {"timestamp": datetime.now(timezone.utc).isoformat(), "event": event, "run_key": run_key.to_dict(), **payload}
+    record = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "event": event,
+        "run_key": run_key.to_dict(),
+        **payload,
+    }
     with _run_log_path(layout, run_key).open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(record, ensure_ascii=False) + "\n")
 
@@ -378,7 +525,11 @@ def _campaign_logger(layout: CampaignLayout) -> logging.Logger:
     logger = logging.getLogger(f"{CAMPAIGN_LOGGER_NAME}.{id(layout.root.resolve())}")
     logger.setLevel(logging.INFO)
     logger.propagate = False
-    if not any(isinstance(handler, logging.FileHandler) and Path(handler.baseFilename) == log_path for handler in logger.handlers):
+    if not any(
+        isinstance(handler, logging.FileHandler)
+        and Path(handler.baseFilename) == log_path
+        for handler in logger.handlers
+    ):
         handler = logging.FileHandler(log_path, encoding="utf-8")
         handler.setFormatter(logging.Formatter("%(message)s"))
         logger.addHandler(handler)
@@ -387,10 +538,15 @@ def _campaign_logger(layout: CampaignLayout) -> logging.Logger:
 
 def _run_log_path(layout: CampaignLayout, run_key: JammingRunKey) -> Path:
     adr = "on" if run_key.adr_enabled else "off"
-    return layout.logs_dir / f"run_{_safe_token(run_key.scenario)}_n{run_key.node_count}_adr_{adr}_seed_{run_key.seed}.log"
+    return (
+        layout.logs_dir
+        / f"run_{_safe_token(run_key.scenario)}_n{run_key.node_count}_adr_{adr}_seed_{run_key.seed}.log"
+    )
 
 
-def _effective_run_params(scenario: JammingScenario, run_key: JammingRunKey, *, run_dir: Path) -> dict[str, Any]:
+def _effective_run_params(
+    scenario: JammingScenario, run_key: JammingRunKey, *, run_dir: Path
+) -> dict[str, Any]:
     return {
         "scenario": run_key.scenario,
         "node_count": run_key.node_count,
@@ -404,13 +560,17 @@ def _effective_run_params(scenario: JammingScenario, run_key: JammingRunKey, *, 
     }
 
 
-def _coerce_layout(layout: CampaignLayout | str | Path | Mapping[str, Any]) -> CampaignLayout:
+def _coerce_layout(
+    layout: CampaignLayout | str | Path | Mapping[str, Any],
+) -> CampaignLayout:
     if isinstance(layout, CampaignLayout):
         return layout
     if isinstance(layout, Mapping):
         root = layout.get("root", layout.get("base_dir", layout.get("output_dir")))
         if root is None:
-            raise ValueError("Le layout mapping doit contenir root, base_dir ou output_dir.")
+            raise ValueError(
+                "Le layout mapping doit contenir root, base_dir ou output_dir."
+            )
         return CampaignLayout(Path(root))
     return CampaignLayout(Path(layout))
 
@@ -440,7 +600,12 @@ def _parse_int(value: str, label: str) -> int:
 
 def _safe_token(value: object) -> str:
     text = str(value).strip().lower().replace(" ", "_")
-    return "".join(char if char.isalnum() or char in {"_", "-", "."} else "_" for char in text) or "unknown"
+    return (
+        "".join(
+            char if char.isalnum() or char in {"_", "-", "."} else "_" for char in text
+        )
+        or "unknown"
+    )
 
 
 __all__ = [

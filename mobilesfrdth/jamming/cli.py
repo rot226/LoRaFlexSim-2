@@ -6,7 +6,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Callable, Sequence
 
 import yaml
 
@@ -75,6 +75,60 @@ def _channels_hz(value: str) -> tuple[int, ...]:
             raise argparse.ArgumentTypeError(f"canal invalide: {token!r}") from exc
         channels.append(int(number * 1_000_000) if number < 10_000 else int(number))
     return tuple(channels)
+
+
+def _format_seconds(value: Any) -> str:
+    number = float(value)
+    return str(int(number)) if number.is_integer() else f"{number:.1f}"
+
+
+def _make_progress_writer() -> tuple[Callable[[str], None], Callable[[], None]]:
+    interactive = sys.stdout.isatty()
+    last_len = 0
+
+    def write(line: str) -> None:
+        nonlocal last_len
+        if interactive:
+            padding = " " * max(last_len - len(line), 0)
+            sys.stdout.write("\r" + line + padding)
+            sys.stdout.flush()
+            last_len = len(line)
+        else:
+            print(line)
+
+    def finish() -> None:
+        nonlocal last_len
+        if interactive and last_len:
+            sys.stdout.write("\n")
+            sys.stdout.flush()
+            last_len = 0
+
+    return write, finish
+
+
+def _should_emit_progress(
+    progress_pct: float, state: dict[str, float], step: float
+) -> bool:
+    if progress_pct >= 100.0:
+        state["last_pct"] = 100.0
+        return True
+    last_pct = state.get("last_pct")
+    if last_pct is None or progress_pct - last_pct >= step:
+        state["last_pct"] = progress_pct
+        return True
+    return False
+
+
+def _format_run_progress(
+    prefix: str, progress_pct: float, context: dict[str, Any]
+) -> str:
+    return (
+        f"{prefix} : {progress_pct:.1f} % | "
+        f"t={_format_seconds(context.get('time_s', 0.0))}/{_format_seconds(context.get('until_s', 0.0))} s | "
+        f"tx={context.get('tx_packets', 0)} | "
+        f"rx={context.get('rx_packets', 0)} | "
+        f"jammed={context.get('jammed_packets', 0)}"
+    )
 
 
 def _load_config(path: Path | None) -> dict[str, Any]:
@@ -328,6 +382,25 @@ def _common_options(
         type=Path,
         help="Fichier YAML/JSON optionnel à recopier dans la sortie.",
     )
+    parser.add_argument(
+        "--progress",
+        dest="progress",
+        action="store_true",
+        default=True,
+        help="Affiche la progression pendant l'exécution (activé par défaut).",
+    )
+    parser.add_argument(
+        "--no-progress",
+        dest="progress",
+        action="store_false",
+        help="Désactive l'affichage de progression.",
+    )
+    parser.add_argument(
+        "--progress-step",
+        type=_positive_float,
+        default=5.0,
+        help="Pas d'affichage de la progression en pourcentage (défaut: 5.0).",
+    )
 
 
 def cmd_run(args: argparse.Namespace) -> int:
@@ -356,13 +429,30 @@ def cmd_run(args: argparse.Namespace) -> int:
             f"Le répertoire de sortie existe déjà et n'est pas vide: {args.out}"
         )
     args.out.mkdir(parents=True, exist_ok=True)
-    result = run_jamming_simulation(
-        node_count=args.nodes,
-        until_s=args.sim_time,
-        seed=args.seed,
-        jamming_windows=_jamming_windows(scenario, seed=args.seed),
-        algo="adr" if args.adr else "none",
-    )
+    progress_finish: Callable[[], None] | None = None
+    progress_callback: Callable[[float, dict], None] | None = None
+    if args.progress:
+        write_progress, progress_finish = _make_progress_writer()
+        progress_state: dict[str, float] = {}
+        prefix = f"Run {scenario.name} seed={args.seed}"
+
+        def progress_callback(progress: float, context: dict) -> None:
+            progress_pct = min(max(float(progress) * 100.0, 0.0), 100.0)
+            if _should_emit_progress(progress_pct, progress_state, args.progress_step):
+                write_progress(_format_run_progress(prefix, progress_pct, context))
+
+    try:
+        result = run_jamming_simulation(
+            node_count=args.nodes,
+            until_s=args.sim_time,
+            seed=args.seed,
+            jamming_windows=_jamming_windows(scenario, seed=args.seed),
+            algo="adr" if args.adr else "none",
+            progress_callback=progress_callback,
+        )
+    finally:
+        if progress_finish is not None:
+            progress_finish()
     result.run_summary.update(
         {
             "scenario": scenario.name,
@@ -400,28 +490,56 @@ def cmd_campaign(args: argparse.Namespace) -> int:
         )
     config = _load_config(args.config)
     scenario = _scenario_from_args(args)
-    run_campaign(
-        layout=args.out,
-        scenarios=(scenario,),
-        node_counts=(
-            args.nodes
-            if isinstance(args.nodes, Sequence)
-            and not isinstance(args.nodes, (str, bytes, bytearray))
-            else (args.nodes,)
-        ),
-        seeds=args.seeds,
-        adr_modes=(args.adr,),
-        channel_selections=(args.channel_selection,),
-        resume=args.resume,
-        overwrite=args.overwrite,
-        dry_run=args.dry_run,
-        config={
-            **config,
-            "channels_hz": args.channels,
-            "jammed_channel_hz": args.jammed_channel,
-            "time_bin_size": args.time_bin_size,
-        },
-    )
+    progress_finish: Callable[[], None] | None = None
+    campaign_progress_callback = None
+    if args.progress and not args.dry_run:
+        write_progress, progress_finish = _make_progress_writer()
+        progress_state: dict[str, float] = {}
+
+        def campaign_progress_callback(
+            run_key: Any,
+            run_index: int,
+            total_runs: int,
+            progress: float,
+            context: dict[str, Any],
+        ) -> None:
+            run_pct = min(max(float(progress) * 100.0, 0.0), 100.0)
+            global_pct = (
+                (float(run_index - 1) + float(progress)) / max(total_runs, 1) * 100.0
+            )
+            if _should_emit_progress(global_pct, progress_state, args.progress_step):
+                write_progress(
+                    f"Campagne : run {run_index}/{total_runs} | "
+                    f"{global_pct:.1f} % global | run courant {run_pct:.1f} %"
+                )
+
+    try:
+        run_campaign(
+            layout=args.out,
+            scenarios=(scenario,),
+            node_counts=(
+                args.nodes
+                if isinstance(args.nodes, Sequence)
+                and not isinstance(args.nodes, (str, bytes, bytearray))
+                else (args.nodes,)
+            ),
+            seeds=args.seeds,
+            adr_modes=(args.adr,),
+            channel_selections=(args.channel_selection,),
+            resume=args.resume,
+            overwrite=args.overwrite,
+            dry_run=args.dry_run,
+            config={
+                **config,
+                "channels_hz": args.channels,
+                "jammed_channel_hz": args.jammed_channel,
+                "time_bin_size": args.time_bin_size,
+            },
+            progress_callback=campaign_progress_callback,
+        )
+    finally:
+        if progress_finish is not None:
+            progress_finish()
     return 0
 
 
