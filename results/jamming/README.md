@@ -22,7 +22,7 @@ results/jamming/
 - `logs/` : journaux d'exécution, traces standard output/error et diagnostics de batch. Ce dossier peut grossir rapidement et reste ignoré par Git.
 - `raw/` : exports bruts par run, notamment les événements paquets, métriques par nœud et séries temporelles par canal ou spreading factor. Ces CSV peuvent être volumineux et ne doivent pas être commités.
 - `per_run/` : métriques résumées au niveau run, dont `run_summary.csv`, utilisées comme entrée pour l'agrégation de campagne.
-- `aggregate/` : sorties agrégées multi-runs ou multi-seeds, comme `campaign_summary.csv` et les tableaux destinés à l'analyse.
+- `aggregate/` : sorties agrégées multi-runs ou multi-seeds, comme `campaign_summary.csv` et les tableaux destinés à l'analyse. La commande `aggregate` sert uniquement à recalculer ces agrégats à partir des `per_run/run_summary.csv` déjà présents ; elle ne rejoue pas les runs, ne recrée pas les CSV bruts dans `raw/` et ne complète pas les métriques absentes des résumés existants.
 
 ## Bonnes pratiques
 
