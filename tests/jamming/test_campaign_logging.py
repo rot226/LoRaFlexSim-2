@@ -54,10 +54,12 @@ def test_run_campaign_writes_campaign_and_run_logs(tmp_path, monkeypatch):
     run_events = [
         json.loads(line) for line in run_log.read_text(encoding="utf-8").splitlines()
     ]
-    assert run_events[0]["parameters"]["sim_time_s"] == 12.0
-    assert run_events[0]["seed"] == 7
-    assert run_events[-1]["status"] == "completed"
-    assert "run_summary" in run_events[-1]["csv"]
+    run_started = next(event for event in run_events if event["event"] == "run_started")
+    run_completed = next(event for event in run_events if event["event"] == "run_completed")
+    assert run_started["parameters"]["sim_time_s"] == 12.0
+    assert run_started["seed"] == 7
+    assert run_completed["status"] == "completed"
+    assert "run_summary" in run_completed["csv"]
 
 
 def test_run_campaign_marks_failed_status_before_reraising(tmp_path, monkeypatch):
@@ -297,5 +299,79 @@ def test_run_campaign_reports_global_progress_and_skipped_runs(
     assert global_progress_values[-1] == 1.0
     campaign_log = tmp_path / "logs" / "campaign.log"
     log_text = campaign_log.read_text(encoding="utf-8")
-    assert '"event": "run_skipped_resume"' in log_text
+    assert '"event": "run_skipped"' in log_text
     assert '"event": "aggregate_completed"' in log_text
+
+
+def test_run_campaign_logs_required_events_and_throttled_run_milestones(
+    tmp_path, monkeypatch
+):
+    def fake_run_jamming_simulation(**kwargs):
+        for progress in (0.01, 0.10, 0.24, 0.26, 0.49, 0.51, 0.74, 0.76, 0.99):
+            kwargs["progress_callback"](progress, {"tx_packets": int(progress * 100)})
+        return DummyResult()
+
+    def fake_write_run_csvs(result, layout):
+        written = {
+            "run_summary": layout["per_run"] / "run_summary.csv",
+            "node_metrics": layout["raw"] / "node_metrics_3.csv",
+            "channel_timeseries": layout["raw"] / "channel_timeseries_3.csv",
+            "sf_timeseries": layout["raw"] / "sf_timeseries_3.csv",
+        }
+        for path in written.values():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("ok\n", encoding="utf-8")
+        return written
+
+    monkeypatch.setattr(
+        "mobilesfrdth.jamming.campaigns.run_jamming_simulation",
+        fake_run_jamming_simulation,
+    )
+    monkeypatch.setattr(
+        "mobilesfrdth.jamming.campaigns.write_run_csvs", fake_write_run_csvs
+    )
+    monkeypatch.setattr(
+        "mobilesfrdth.jamming.campaigns.aggregate_existing_results",
+        lambda *_args, **_kwargs: None,
+    )
+
+    console_progress = []
+    run_campaign(
+        layout=tmp_path,
+        scenarios=[JammingScenario(name="Milestones", metadata={"sim_time_s": 1})],
+        node_counts=[1],
+        seeds=[3],
+        adr_modes=[False],
+        channel_selections=["static"],
+        progress_callback=lambda *args: console_progress.append(args),
+        progress_step_percent=1.0,
+    )
+
+    campaign_events = [
+        json.loads(line)
+        for line in (tmp_path / "logs" / "campaign.log")
+        .read_text(encoding="utf-8")
+        .splitlines()
+    ]
+    event_names = {event["event"] for event in campaign_events}
+    assert {
+        "campaign_started",
+        "run_started",
+        "run_progress",
+        "run_completed",
+        "aggregate_completed",
+    } <= event_names
+
+    run_events = [
+        json.loads(line)
+        for line in (tmp_path / "logs" / "run_milestones_n1_adr_off_seed_3.log")
+        .read_text(encoding="utf-8")
+        .splitlines()
+    ]
+    run_progress_values = [
+        event["run_progress"]
+        for event in run_events
+        if event["event"] == "run_progress"
+    ]
+    assert run_progress_values == [0.0, 0.25, 0.5, 0.75, 1.0]
+    assert len(console_progress) > len(run_progress_values)
