@@ -34,7 +34,7 @@ def test_campaign_config_populates_arguments_from_yaml() -> None:
     assert args.channels == (868_100_000,)
     assert args.jammed_channel == 868_100_000
     assert args.channel_selection == "static"
-    assert args.adr is False
+    assert args.adr == (False,)
     assert args.out == Path("runs/jamming-baseline")
 
 
@@ -56,7 +56,7 @@ def test_cli_arguments_override_config_values() -> None:
         ]
     )
 
-    assert args.nodes == 50
+    assert args.nodes == (50,)
     assert args.channels == (868_300_000,)
-    assert args.adr is False
+    assert args.adr == (False,)
     assert args.jammed_channel == 868_100_000
