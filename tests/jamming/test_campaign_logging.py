@@ -236,3 +236,66 @@ def test_completed_campaign_runs_keep_raw_csvs_and_run_summary(tmp_path, monkeyp
         assert list((run_dir / "raw").glob("node_metrics_*.csv"))
         assert list((run_dir / "raw").glob("channel_timeseries_*.csv"))
         assert list((run_dir / "raw").glob("sf_timeseries_*.csv"))
+
+
+def test_run_campaign_reports_global_progress_and_skipped_runs(
+    tmp_path, monkeypatch
+):
+    def fake_run_jamming_simulation(**kwargs):
+        kwargs["progress_callback"](0.5, {"tx_packets": 1})
+        return DummyResult()
+
+    def fake_write_run_csvs(result, layout):
+        written = {
+            "run_summary": layout["per_run"] / "run_summary.csv",
+            "node_metrics": layout["raw"] / "node_metrics_1.csv",
+            "channel_timeseries": layout["raw"] / "channel_timeseries_1.csv",
+            "sf_timeseries": layout["raw"] / "sf_timeseries_1.csv",
+        }
+        for path in written.values():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("ok\n", encoding="utf-8")
+        return written
+
+    monkeypatch.setattr(
+        "mobilesfrdth.jamming.campaigns.run_jamming_simulation",
+        fake_run_jamming_simulation,
+    )
+    monkeypatch.setattr(
+        "mobilesfrdth.jamming.campaigns.write_run_csvs", fake_write_run_csvs
+    )
+    monkeypatch.setattr(
+        "mobilesfrdth.jamming.campaigns.aggregate_existing_results",
+        lambda *_args, **_kwargs: None,
+    )
+
+    progress_calls = []
+    scenario = JammingScenario(name="Progress", metadata={"sim_time_s": 1})
+    run_campaign(
+        layout=tmp_path,
+        scenarios=[scenario],
+        node_counts=[1],
+        seeds=[1, 2],
+        adr_modes=[False],
+        channel_selections=["static"],
+        progress_callback=lambda *args: progress_calls.append(args),
+        progress_step_percent=10.0,
+    )
+    run_campaign(
+        layout=tmp_path,
+        scenarios=[scenario],
+        node_counts=[1],
+        seeds=[1, 2],
+        adr_modes=[False],
+        channel_selections=["static"],
+        resume=True,
+        progress_callback=lambda *args: progress_calls.append(args),
+    )
+
+    global_progress_values = [call[3] for call in progress_calls]
+    assert 0.25 in global_progress_values
+    assert global_progress_values[-1] == 1.0
+    campaign_log = tmp_path / "logs" / "campaign.log"
+    log_text = campaign_log.read_text(encoding="utf-8")
+    assert '"event": "run_skipped_resume"' in log_text
+    assert '"event": "aggregate_completed"' in log_text
