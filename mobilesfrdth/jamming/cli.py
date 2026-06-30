@@ -450,13 +450,20 @@ def build_parser() -> argparse.ArgumentParser:
     campaign_parser.set_defaults(func=cmd_campaign)
 
     aggregate_parser = subparsers.add_parser(
-        "aggregate", help="Agrège des résultats de brouillage existants."
+        "aggregate",
+        help=(
+            "Recalcule uniquement l'agrégat depuis les run_summary.csv existants; "
+            "ne complète pas les métriques manquantes."
+        ),
     )
     aggregate_parser.add_argument(
         "--input",
         required=True,
         type=Path,
-        help="Dossier ou CSV run_summary.csv en entrée.",
+        help=(
+            "Dossier ou CSV run_summary.csv existant en entrée. "
+            "La commande ne régénère aucun CSV brut ni métrique manquante."
+        ),
     )
     aggregate_parser.add_argument(
         "--output", required=True, type=Path, help="CSV agrégé à écrire."
