@@ -11,7 +11,12 @@ from typing import Any, Callable, Sequence
 import yaml
 
 from .aggregate import aggregate_existing_results
-from .campaigns import _jamming_windows, run_campaign
+from .campaigns import (
+    _jamming_windows,
+    expand_adr_modes,
+    parse_nodes_spec,
+    run_campaign,
+)
 from .csv_exporter import write_run_csvs
 from .jammer import JammerConfig
 from .runner import run_jamming_simulation
@@ -64,6 +69,26 @@ def _csv_tokens(value: str) -> tuple[str, ...]:
     if not values:
         raise argparse.ArgumentTypeError("la liste ne doit pas être vide")
     return values
+
+
+def _campaign_nodes(value: str) -> tuple[int, ...]:
+    try:
+        return parse_nodes_spec(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from exc
+
+
+def _campaign_adr(value: str) -> tuple[bool, ...]:
+    try:
+        return expand_adr_modes(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from exc
+
+
+def _adr_allows_channel_selection(adr: bool | Sequence[bool]) -> bool:
+    if isinstance(adr, bool):
+        return adr
+    return all(bool(item) for item in adr)
 
 
 def _channels_hz(value: str) -> tuple[int, ...]:
@@ -231,21 +256,24 @@ def _merge_config_args(
             value = _coerce_channels(value)
         elif dest == "jammed_channel":
             value = _coerce_channels(value)[0]
+        elif dest == "adr":
+            value = (
+                expand_adr_modes(value)
+                if hasattr(args, "seeds")
+                else _coerce_bool(value)
+            )
         elif dest in {
-            "adr",
             "export_raw_events",
             "allow_channel_selection_without_adr",
         }:
             value = _coerce_bool(value)
         elif dest == "nodes":
-            if isinstance(value, Sequence) and not isinstance(
+            if hasattr(args, "seeds"):
+                value = parse_nodes_spec(value)
+            elif isinstance(value, Sequence) and not isinstance(
                 value, (str, bytes, bytearray)
             ):
-                value = (
-                    tuple(int(item) for item in value)
-                    if hasattr(args, "seeds")
-                    else int(value[0])
-                )
+                value = int(value[0])
             else:
                 value = int(value)
         elif dest == "seed":
@@ -320,12 +348,24 @@ def _common_options(
     parser: argparse.ArgumentParser, *, seed: bool = False, seeds: bool = False
 ) -> None:
     parser.add_argument("--scenario", help="Nom du scénario de brouillage à exécuter.")
-    parser.add_argument(
-        "--nodes", type=_positive_int, help="Nombre de nœuds légitimes."
-    )
-    parser.add_argument(
-        "--adr", type=_bool_token, help="Active ou désactive ADR (on/off)."
-    )
+    if seeds:
+        parser.add_argument(
+            "--nodes",
+            type=_campaign_nodes,
+            help="Nombres de nœuds légitimes: entier unique ou liste séparée par des virgules.",
+        )
+        parser.add_argument(
+            "--adr",
+            type=_campaign_adr,
+            help="Modes ADR de campagne: on, off ou both.",
+        )
+    else:
+        parser.add_argument(
+            "--nodes", type=_positive_int, help="Nombre de nœuds légitimes."
+        )
+        parser.add_argument(
+            "--adr", type=_bool_token, help="Active ou désactive ADR (on/off)."
+        )
     if seed:
         parser.add_argument(
             "--seed", type=_non_negative_int, help="Seed unique du run."
@@ -406,7 +446,7 @@ def _common_options(
 def cmd_run(args: argparse.Namespace) -> int:
     if (
         args.channel_selection != "static"
-        and not args.adr
+        and not _adr_allows_channel_selection(args.adr)
         and not args.allow_channel_selection_without_adr
     ):
         raise ValueError(
@@ -482,7 +522,7 @@ def cmd_run(args: argparse.Namespace) -> int:
 def cmd_campaign(args: argparse.Namespace) -> int:
     if (
         args.channel_selection != "static"
-        and not args.adr
+        and not _adr_allows_channel_selection(args.adr)
         and not args.allow_channel_selection_without_adr
     ):
         raise ValueError(
@@ -515,14 +555,9 @@ def cmd_campaign(args: argparse.Namespace) -> int:
         run_campaign(
             layout=args.out,
             scenarios=(scenario,),
-            node_counts=(
-                args.nodes
-                if isinstance(args.nodes, Sequence)
-                and not isinstance(args.nodes, (str, bytes, bytearray))
-                else (args.nodes,)
-            ),
+            node_counts=args.nodes,
             seeds=args.seeds,
-            adr_modes=(args.adr,),
+            adr_modes=args.adr,
             channel_selections=(args.channel_selection,),
             resume=args.resume,
             overwrite=args.overwrite,
